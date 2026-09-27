@@ -17,7 +17,7 @@
   <img src="https://img.shields.io/badge/Obsidian-1.8.0%2B-7C3AED?style=flat-square&logo=obsidian&logoColor=white" alt="Obsidian">
   <img src="https://img.shields.io/badge/TypeScript-5.9-3178C6?style=flat-square&logo=typescript&logoColor=white" alt="TypeScript">
   <img src="https://img.shields.io/badge/React-18-61DAFB?style=flat-square&logo=react&logoColor=black" alt="React">
-  <img src="https://img.shields.io/badge/License-See%20Notices-lightgrey?style=flat-square" alt="License">
+  <img src="https://img.shields.io/badge/License-GPL--3.0--blue?style=flat-square" alt="License">
 </p>
 
 <p>
@@ -26,6 +26,7 @@
   <a href="#-快速开始">快速开始</a> •
   <a href="#-架构">架构</a> •
   <a href="#-byok-配置">BYOK 配置</a> •
+  <a href="#-网络使用">网络使用</a> •
   <a href="#-致谢">致谢</a>
 </p>
 
@@ -178,6 +179,22 @@ Catea Paper 是自带密钥（bring-your-own-key）：
 - **Key 存储**——模型元数据写入 `.catea/config.json`；API Key 保存在 Obsidian 安全存储（不可用时仅在当次运行的内存中有效）
 - **无锁定**——侧栏只列出完整配置的模型并记住上次选择；没有预置模型列表，也不需要 Catea 账号
 
+## 🌐 网络使用
+
+Catea Paper 只在你可见、可控的场景下联网——没有遥测、没有统计、也没有 Catea 运营的后端。
+
+| 目标地址 | 触发时机 | 用途 |
+| --- | --- | --- |
+| 你配置的模型端点——`api.openai.com`、`api.anthropic.com`，或任何你设置的 OpenAI / Anthropic 兼容地址 | 每次对话 | 发送提示词、上下文与工具结果；接收模型输出 |
+| Exa MCP（`mcp.exa.ai`） | Agent 执行网络搜索时 | 首选搜索引擎 |
+| Jina（`r.jina.ai`、`s.jina.ai`） | 搜索回退与网页阅读 | 搜索回退与页面正文提取 |
+| DuckDuckGo（`html.duckduckgo.com`、`api.duckduckgo.com`） | 搜索回退 | 最后一级搜索回退 |
+
+- 联网可在设置中关闭；Agent 只在任务需要时发起搜索。
+- 抓取的网页内容按不可信资料处理。
+- 仓库数据、记忆与 `.catea/config.json` 都留在本地；API Key 保存在 Obsidian 安全存储。不会向 O-Pencil 或 Catea 发送任何数据。
+- 涉及的凭证仅为你为自己 Provider 配置的 API Key。
+
 ## 📦 致谢
 
 Catea Paper 站在优秀的开源工作之上——完整详情见 [THIRD_PARTY_NOTICES.md](./THIRD_PARTY_NOTICES.md)：
@@ -189,7 +206,7 @@ Catea Paper 站在优秀的开源工作之上——完整详情见 [THIRD_PARTY_
 
 ## 📄 许可证
 
-本仓库当前尚未附带顶层许可证。内置与第三方组件保留其原始许可——尤其是 `packages/memory/upstream` 下的 GPL-3.0 记忆核心。再分发或基于此代码构建前，请阅读 [THIRD_PARTY_NOTICES.md](./THIRD_PARTY_NOTICES.md)。
+Catea Paper 以 **GNU General Public License v3.0** 发布——见 [LICENSE](./LICENSE)。内置与第三方组件保留其原始许可——尤其是 `packages/memory/upstream` 下的 GPL-3.0 记忆核心。完整清单见 [THIRD_PARTY_NOTICES.md](./THIRD_PARTY_NOTICES.md)。
 
 ---
 

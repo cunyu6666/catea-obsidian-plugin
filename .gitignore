@@ -1,0 +1,16 @@
+node_modules/
+dist/
+.DS_Store
+
+# Runtime data written by the plugin into the vault (sessions, memory, skills).
+# May contain private note content — must never be committed or distributed.
+.catea/
+
+# Leftover temporary files from atomic JSON writes
+*.tmp
+
+# Isolated git worktrees
+.worktrees/
+
+# Logs
+*.log

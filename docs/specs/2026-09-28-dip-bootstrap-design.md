@@ -52,9 +52,39 @@ Explicitly out of scope, to keep the change reviewable:
 | `node_modules` | not installed |
 | `../catea-design-system` | **missing** — build input is unresolvable |
 
+### Concurrent work in the tree (observed 2026-09-28 01:00)
+
+A separate process is preparing the Obsidian community-marketplace submission in
+this same working tree, concurrently with this work. Confirmed with the user.
+Its changes, present but uncommitted when this spec was updated:
+
+| File | Change |
+|---|---|
+| `README.md`, `README_CN.md` | License badge switched to GPL-3.0; new "Network Use" disclosure section |
+| `apps/obsidian/package.json` | version 0.3.0 → 0.3.1 |
+| `scripts/build.mjs` | now reads a root `manifest.json` and copies the root `LICENSE` |
+| `manifest.json` (new, root) | plugin manifest, version 0.3.1 |
+| `package-lock.json` (new) | lockfile |
+
+Consequences for this work:
+
+1. **None of those files are modified, staged, or committed by this work.** The
+   `LICENSE` created here has the canonical GPL-3.0 text (`md5 1ebbd3e34237af26da5dc08a4e440464`,
+   35149 bytes, identical to `packages/memory/LICENSE`), which is what the updated
+   `scripts/build.mjs` now copies — the two efforts agree rather than conflict.
+2. **`scripts/build.mjs` is deferred out of DIP scope** (see §4.2). It was edited
+   one minute before this work started and is likely to be edited again for the
+   marketplace submission; adding a header now would race the other writer.
+3. **`.gitignore` is edited additively**, preserving the other writer's three
+   lines and appending `.catea/`, `*.tmp`, `.worktrees/`, `*.log`.
+4. The repo-wide verify gate is written to **tolerate** new non-source directories
+   (for example a future `.github/`) so that concurrent additions do not break it
+   spuriously: it asserts no phantom entries and full coverage of source
+   directories, not strict equality with the filesystem.
+
 ## 4. Scope of DIP Coverage
 
-### 4.1 Files receiving a P3 header (33)
+### 4.1 Files receiving a P3 header (32)
 
 `apps/obsidian/src/` (12)
 `ChatMarkdown.tsx`, `DiagramDialog.tsx`, `MermaidDiagram.tsx`, `StreamingChatResponse.tsx`,
@@ -74,13 +104,11 @@ Explicitly out of scope, to keep the change reviewable:
 `packages/personas/src/` (1)
 `index.ts`
 
-`scripts/` (1)
-`build.mjs`
-
 ### 4.2 Files deliberately skipped
 
 | File | Reason |
 |---|---|
+| `scripts/build.mjs` | **Deferred** — being edited concurrently for the marketplace submission (see §3) |
 | `apps/obsidian/src/paper.cjs` | Generated bundle, 1.6 MB, embedded Tabler icon data |
 | `apps/obsidian/src/assets.d.ts` | `.d.ts` declaration file |
 | `apps/obsidian/src/skills/obsidian.md` | Markdown asset consumed as agent prompt |
@@ -124,7 +152,7 @@ Each member line follows `{file}: {responsibility}, {technical points}, {key par
 Each carries a parent link back to the root `AGENTS.md` and the covenant footer.
 Directories with 1–2 files (`scripts/`) get no P2; their contents are listed in P1.
 
-### 5.3 P3 headers (33, English)
+### 5.3 P3 headers (32, English)
 
 Four fields per the `oh-my-dev` P3 template, placed after any existing file-level
 comment, followed by one blank line:
@@ -138,7 +166,7 @@ comment, followed by one blank line:
  */
 ```
 
-### 5.4 Harness — 34 zero-dependency tests
+### 5.4 Harness — 33 zero-dependency tests
 
 Runner: Node's built-in `node:test` + `node:assert/strict`. No new dependencies,
 no `node_modules`, no network. Why this over Vitest: the module graph imports

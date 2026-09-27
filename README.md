@@ -17,7 +17,7 @@
   <img src="https://img.shields.io/badge/Obsidian-1.8.0%2B-7C3AED?style=flat-square&logo=obsidian&logoColor=white" alt="Obsidian">
   <img src="https://img.shields.io/badge/TypeScript-5.9-3178C6?style=flat-square&logo=typescript&logoColor=white" alt="TypeScript">
   <img src="https://img.shields.io/badge/React-18-61DAFB?style=flat-square&logo=react&logoColor=black" alt="React">
-  <img src="https://img.shields.io/badge/License-See%20Notices-lightgrey?style=flat-square" alt="License">
+  <img src="https://img.shields.io/badge/License-GPL--3.0--blue?style=flat-square" alt="License">
 </p>
 
 <p>
@@ -26,6 +26,7 @@
   <a href="#-quick-start">Quick Start</a> •
   <a href="#-architecture">Architecture</a> •
   <a href="#-configuration-byok">Configuration</a> •
+  <a href="#-network-use">Network Use</a> •
   <a href="#-credits">Credits</a>
 </p>
 
@@ -178,6 +179,22 @@ Catea Paper is bring-your-own-key:
 - **Key storage** — model metadata goes to `.catea/config.json`; API keys are kept in Obsidian's secure storage (when unavailable, they live only in memory for the session)
 - **No lock-in** — the sidebar lists only fully configured models and remembers your last choice; no preset model list, no Catea account
 
+## 🌐 Network Use
+
+Catea Paper reaches the network only in visible, user-initiated ways — there is no telemetry, no analytics, and no Catea-operated backend.
+
+| Destination | When | Purpose |
+| --- | --- | --- |
+| Your model endpoint — `api.openai.com`, `api.anthropic.com`, or any OpenAI/Anthropic-compatible URL you configure | Every conversation | Prompts, context, and tool results out; model output back |
+| Exa MCP (`mcp.exa.ai`) | When the agent searches the web | Primary web search provider |
+| Jina (`r.jina.ai`, `s.jina.ai`) | Web search fallback and page reading | Search fallback and page extraction |
+| DuckDuckGo (`html.duckduckgo.com`, `api.duckduckgo.com`) | Web search fallback | Final search fallback |
+
+- Web search can be turned off in settings; the agent searches only when a task needs it.
+- Fetched web content is treated as untrusted.
+- Vault data, memory, and `.catea/config.json` stay local; API keys live in Obsidian's secure storage. Nothing is sent to O-Pencil or Catea.
+- The only credentials involved are the API keys you configure for your own providers.
+
 ## 📦 Credits
 
 Catea Paper stands on excellent open-source work — full details in [THIRD_PARTY_NOTICES.md](./THIRD_PARTY_NOTICES.md):
@@ -189,7 +206,7 @@ Catea Paper stands on excellent open-source work — full details in [THIRD_PART
 
 ## 📄 License
 
-This repository does not currently ship a top-level license. Vendored and third-party components keep their original licenses — most notably the GPL-3.0 memory core under `packages/memory/upstream`. Review [THIRD_PARTY_NOTICES.md](./THIRD_PARTY_NOTICES.md) before redistributing or building on this code.
+Catea Paper is released under the **GNU General Public License v3.0** — see [LICENSE](./LICENSE). Vendored and third-party components keep their original licenses — most notably the GPL-3.0 memory core under `packages/memory/upstream`. Full inventory in [THIRD_PARTY_NOTICES.md](./THIRD_PARTY_NOTICES.md).
 
 ---
 
