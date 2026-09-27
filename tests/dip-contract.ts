@@ -50,6 +50,8 @@ export function listRepoFiles(): string[] {
 
 export function isDIPSource(rel: string): boolean {
   if (rel.includes('/upstream/')) return false
+  // Test files are out of scope: a contract test for a contract test is circular.
+  if (rel.includes('/__tests__/')) return false
   if (rel.endsWith('.d.ts')) return false
   if (DEFERRED.has(rel)) return false
   return /^(?:apps\/[^/]+\/src|packages\/[^/]+\/src)\/.+\.(?:ts|tsx)$/.test(rel)
@@ -172,30 +174,41 @@ export function extractExports(text: string): ExportInfo {
 
 // ---------- imports ----------
 
-function normalizeImportStatements(text: string): string {
-  // Collapse whitespace inside `import|export ... from '...'` so multi-line
-  // statements become a single logical line before the line scan below.
-  return text.replace(
-    /\b(import|export)\b([^'"]*?)\bfrom\b\s*['"]([^'"]+)['"]/g,
-    (_all, keyword: string, middle: string, spec: string) =>
-      `${keyword} ${middle.replace(/\s+/g, ' ').trim()} from '${spec}'`,
-  )
+// Block comments are removed before import/export scanning: the P3 header itself
+// contains prose such as "consumers import the submodules", and a scanner that
+// reads it as code will swallow following statements.
+function stripBlockComments(text: string): string {
+  return text.replace(/\/\*[\s\S]*?\*\//g, ' ')
 }
 
 export function extractImports(text: string): Set<string> {
   const specs = new Set<string>()
-  const normalized = normalizeImportStatements(text)
-  for (const line of normalized.split('\n')) {
-    const trimmed = line.trim()
-    const fromMatch = trimmed.match(/^(?:import|export)\b.*\bfrom\s*['"]([^'"]+)['"]/)
+  const source = stripBlockComments(text)
+  let buffer = ''
+  for (const raw of source.split('\n')) {
+    const line = raw.trim()
+    if (!buffer) {
+      if (!/^(?:import|export)\b/.test(line)) continue
+      buffer = line
+    } else {
+      buffer = `${buffer} ${line}`
+    }
+    const fromMatch = buffer.match(/^(?:import|export)\b[\s\S]*?\bfrom\s*['"]([^'"]+)['"]/)
     if (fromMatch) {
       specs.add(fromMatch[1])
+      buffer = ''
       continue
     }
-    const bare = trimmed.match(/^import\s*['"]([^'"]+)['"]/)
-    if (bare) specs.add(bare[1])
+    const sideEffect = buffer.match(/^import\s*['"]([^'"]+)['"]/)
+    if (sideEffect) {
+      specs.add(sideEffect[1])
+      buffer = ''
+      continue
+    }
+    // Guard against an unterminated statement swallowing the rest of the file.
+    if (buffer.length > 600) buffer = ''
   }
-  for (const m of text.matchAll(/require\s*\(\s*['"]([^'"]+)['"]\s*\)/g)) specs.add(m[1])
+  for (const m of source.matchAll(/require\s*\(\s*['"]([^'"]+)['"]\s*\)/g)) specs.add(m[1])
   return specs
 }
 
@@ -274,7 +287,16 @@ export function contractTest(targetRel: string): void {
   })
 
   test(`${targetRel} | [FROM] imports present`, () => {
+    assert.ok(p3.from.length > 0, `[FROM] is empty in ${targetRel}; use "(none)" when the file has no imports`)
     for (const dep of p3.from) {
+      if (dep === '(none)') {
+        assert.equal(
+          imports.size,
+          0,
+          `[FROM] declares "(none)" but ${targetRel} imports: ${[...imports].sort().join(', ')}`,
+        )
+        continue
+      }
       assert.ok(
         imports.has(dep),
         `[FROM] claims "${dep}" but ${targetRel} has no such import. Actual imports: ${[...imports].sort().join(', ') || '(none)'}`,
