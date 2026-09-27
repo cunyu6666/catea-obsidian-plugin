@@ -202,7 +202,7 @@ packages/agent-core/src/__tests__/*.test.ts    10
 packages/integrations/src/__tests__/*.test.ts   6
 packages/memory/src/__tests__/*.test.ts         3
 packages/personas/src/__tests__/index.test.ts   1
-tests/dip-verify.test.mjs                       1  repo-wide isomorphism gate
+tests/dip-verify.test.ts                        1  repo-wide isomorphism gate
 tests/dip-contract.ts                             shared helper (not a test)
 ```
 
@@ -228,6 +228,14 @@ never from the header it is checking, otherwise it is tautological:
 - the P1 directory tree lists exactly the real top-level directories.
 
 ### 5.5 Release hygiene
+
+**Outcome note (2026-09-28):** these three files were already committed before
+this work could commit them — the concurrent marketplace process ran a
+working-tree-wide commit (`74b907c Prepare 0.3.1 release...`) that swept up this
+work's in-progress `.gitignore`, `LICENSE`, and `package.json`. Their content in
+HEAD is exactly what this spec specifies and is verified below, so no separate
+hygiene commit was needed. Recording it here because the history attributes the
+work to the other commit.
 
 | File | Content |
 |---|---|
@@ -272,10 +280,24 @@ concurrently-modified marketplace files (`README.md`, `README_CN.md`,
 `apps/obsidian/package.json`, `scripts/build.mjs`, `manifest.json`,
 `package-lock.json`) are never staged.
 
-Note on ordering: the repo-wide verify gate (`tests/dip-verify.test.mjs`) is
-written early but is expected to fail until step 10 completes, since it asserts
-that every in-scope file has a P3 header. It is committed with step 3 and its
-passing state is demonstrated at step 12.
+Note on ordering: the shared helper `tests/dip-contract.ts` is committed at step 3
+because it is inert on its own. The repo-wide gate `tests/dip-verify.test.ts` is
+written at step 3 but committed at step 11, together with the P1/P2 maps it checks.
+Reason: the gate asserts that every in-scope file carries a P3 header, so it cannot
+pass until step 10 is complete. Committing a knowingly-red suite to `main` while a
+separate process may push `main` to a public remote is an avoidable risk; the gate's
+first appearance in history is therefore green.
+
+Verified behaviour of the harness before relying on it (not assumed):
+
+- the gate correctly identifies exactly 32 in-scope files and reports all of them as
+  missing P3 headers, i.e. it fails for the intended reason rather than a parser bug;
+- `extractExports` correctly reads a type-only file (`types.ts`, 20 names) and a
+  default-exported class (`main.tsx` → `Catea` + `default`);
+- `extractImports` and `resolveSpecifier` resolve relative cross-package specifiers
+  to real files and ignore bare specifiers such as `obsidian`;
+- `extractP3` accepts both the template's prose form (`Provides X`, `Depends on Y`,
+  `Consumed by Z`) and bare comma-separated lists.
 
 Rationale for not using a git worktree: `scripts/build.mjs` resolves its
 design-system input as `../catea-design-system` relative to the repo root, so an
