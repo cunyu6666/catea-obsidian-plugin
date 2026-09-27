@@ -1,3 +1,9 @@
+/**
+ * [WHO]: Provides emptyUsage, fromTranscript, providerStream, streamSimple, toTranscript
+ * [FROM]: Depends on ../upstream/ai/events, ./providers, ./types
+ * [TO]: Consumed by packages/agent-core/src/context.ts, packages/agent-core/src/index.ts
+ * [HERE]: packages/agent-core/src/upstream-stream.ts - converts between the internal transcript and CatUI messages; providerStream retries 3x at 500*2^n ms and records delivery diagnostics
+ */
 import {AssistantMessageEventStream} from '../upstream/ai/events'
 import {streamModel,ModelServiceError} from './providers'
 import type {ModelConfig,TranscriptItem,ChatAttachment} from './types'

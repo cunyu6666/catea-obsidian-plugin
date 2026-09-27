@@ -1,3 +1,9 @@
+/**
+ * [WHO]: Provides serviceFetch
+ * [FROM]: Depends on obsidian, node:https, node:http, electron, @electron/remote
+ * [TO]: Consumed by packages/agent-core/src/providers.ts, packages/integrations/src/web.ts
+ * [HERE]: packages/agent-core/src/transport.ts - streams over Node http/https with a 120 s timeout and rejects redirects; falls back to Electron net only on X.509 chain errors, then to buffered requestUrl
+ */
 import {requestUrl} from 'obsidian'
 import { request as httpsRequest } from 'node:https'
 import { request as httpRequest } from 'node:http'

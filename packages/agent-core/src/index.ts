@@ -1,3 +1,13 @@
+/**
+ * [WHO]: Provides Agent, Hooks, Message, Session, Settings
+ * [FROM]: Depends on ../../integrations/src/tools, ../../integrations/src/mcp, ../../integrations/src/skills,
+ *   ../../integrations/src/storage, ../../integrations/src/web, ../../memory/src,
+ *   ../../memory/src/tools, ../../personas/src, ../upstream/loop/agent-loop, ./context,
+ *   ./providers, ./upstream-stream, ./byok, ./ask-user-question, ./types, node:fs/promises
+ * [TO]: Consumed by apps/obsidian/src/main.tsx, apps/obsidian/src/panel.tsx,
+ *   packages/agent-core/src/context.ts
+ * [HERE]: packages/agent-core/src/index.ts - class Agent owns one session: persists it, repairs interrupted tool calls, assembles tools, drives agentLoop and enqueues memory; index capped at 500
+ */
 import {unlink} from 'node:fs/promises'
 import {agentLoop} from '../upstream/loop/agent-loop'
 import {WorkingContext} from './context'

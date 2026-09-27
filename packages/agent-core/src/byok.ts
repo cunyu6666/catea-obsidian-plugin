@@ -1,3 +1,10 @@
+/**
+ * [WHO]: Provides configuredModels, defaultBaseUrl, normalizeModel, selectedModel
+ * [FROM]: Depends on ./types
+ * [TO]: Consumed by apps/obsidian/src/panel.tsx, apps/obsidian/src/settings.ts,
+ *   packages/agent-core/src/index.ts
+ * [HERE]: packages/agent-core/src/byok.ts - validates ModelConfig and resolves configured and selected models; requires name, model and key; contextWindow integer 4096-2000000; credential-free HTTP(S) URL
+ */
 import type {ModelConfig} from './types'
 
 export const defaultBaseUrl = (protocol: ModelConfig['protocol']) => protocol === 'anthropic'

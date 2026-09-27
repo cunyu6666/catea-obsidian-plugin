@@ -1,3 +1,12 @@
+/**
+ * [WHO]: Provides ModelReply, ModelServiceError, ToolDefinition, streamModel
+ * [FROM]: Depends on ./attachments, ./i18n, ./transport, ./types
+ * [TO]: Consumed by apps/obsidian/src/obsidian-tools.ts, packages/agent-core/src/index.ts,
+ *   packages/agent-core/src/upstream-stream.ts, packages/integrations/src/mcp.ts,
+ *   packages/integrations/src/tools.ts, packages/integrations/src/web.ts,
+ *   packages/memory/src/index.ts, packages/memory/src/tools.ts
+ * [HERE]: packages/agent-core/src/providers.ts - streamModel maps transcripts to OpenAI or Anthropic requests and parses SSE or buffered JSON; retries once without usage on 400/422; error bodies cut to 2000 chars
+ */
 import type { ChatAttachment, ModelConfig, TokenUsage, ToolCall, TranscriptItem } from './types'
 import { t } from './i18n'
 import { serviceFetch } from './transport'

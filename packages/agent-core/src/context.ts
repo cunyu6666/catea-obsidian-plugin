@@ -1,3 +1,10 @@
+/**
+ * [WHO]: Provides WorkingContext
+ * [FROM]: Depends on ../upstream/context/boundaries, ../upstream/context/controller,
+ *   ../upstream/context/index, ./index, ./upstream-stream
+ * [TO]: Consumed by packages/agent-core/src/index.ts
+ * [HERE]: packages/agent-core/src/context.ts - keeps the full journal while presenting a checkpoint-windowed message view; estimates prompt tokens as (system + tools) / 3
+ */
 import contextExtension from '../upstream/context/index'
 import {ContextWindowController} from '../upstream/context/controller'
 import {estimateContextTokens} from '../upstream/context/boundaries'

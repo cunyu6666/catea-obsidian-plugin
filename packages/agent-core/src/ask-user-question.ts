@@ -1,3 +1,9 @@
+/**
+ * [WHO]: Provides askUserQuestionTool, formatAskUserQuestionResult, parseAskUserQuestion
+ * [FROM]: Depends on ./types
+ * [TO]: Consumed by packages/agent-core/src/index.ts
+ * [HERE]: packages/agent-core/src/ask-user-question.ts - declares, validates and formats the AskUserQuestion tool; 1-4 questions, 2-4 unique option labels, headers clipped to 12 chars
+ */
 import type { AskUserQuestion, AskUserQuestionAnswer } from './types'
 
 export const askUserQuestionTool = {

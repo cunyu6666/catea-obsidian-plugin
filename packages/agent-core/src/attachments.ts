@@ -1,3 +1,9 @@
+/**
+ * [WHO]: Provides attachmentIsText, attachmentText, readDroppedAttachments, readPickedAttachments
+ * [FROM]: Depends on ./types
+ * [TO]: Consumed by apps/obsidian/src/panel.tsx, packages/agent-core/src/providers.ts
+ * [HERE]: packages/agent-core/src/attachments.ts - converts dropped or picked files into base64 ChatAttachment data URLs; rejects dot and node_modules paths; 10 MB each, 32 MB total, 64 files, depth 16
+ */
 import type { ChatAttachment } from './types'
 
 interface DroppedEntry {
