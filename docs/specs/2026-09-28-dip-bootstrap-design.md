@@ -40,7 +40,7 @@ Explicitly out of scope, to keep the change reviewable:
 | Item | State |
 |---|---|
 | Commits | 2 (`Import catea-source v0.3.1`, bilingual README) |
-| Remote | `github.com/O-Pencil/catea-obsidian-plugin`, `main` in sync |
+| Remote | `github.com/cunyu6666/catea-obsidian-plugin`, `main` in sync |
 | Own source files | 40 (excluding `upstream/`) |
 | Vendored upstream files | 74 across `packages/agent-core/upstream`, `packages/memory/upstream` |
 | DIP documents | none — no `AGENTS.md` anywhere |

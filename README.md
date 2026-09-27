@@ -82,7 +82,7 @@ Catea Paper is not another chat sidebar bolted onto Obsidian. It is a **Paper wo
 ### Build the Plugin
 
 ```bash
-git clone https://github.com/O-Pencil/catea-obsidian-plugin.git catea
+git clone https://github.com/cunyu6666/catea-obsidian-plugin.git catea
 cd catea
 
 # layout expected by the build:
@@ -211,6 +211,6 @@ Catea Paper is released under the **GNU General Public License v3.0** — see [L
 ---
 
 <div align="center">
-  <sub>Built with ✎ by <a href="https://github.com/O-Pencil">O-Pencil</a> — your vault deserves a mind.</sub><br>
+  <sub>Built with ✎ by <a href="https://github.com/cunyu6666">Cunyu</a> — your vault deserves a mind.</sub><br>
   <sub>Catea Paper is an independent project, not affiliated with or endorsed by Obsidian.</sub>
 </div>

@@ -82,7 +82,7 @@ Catea Paper 不是又一个挂在 Obsidian 旁边的聊天框。它是一个**�
 ### 构建插件
 
 ```bash
-git clone https://github.com/O-Pencil/catea-obsidian-plugin.git catea
+git clone https://github.com/cunyu6666/catea-obsidian-plugin.git catea
 cd catea
 
 # 构建期望的目录结构：
@@ -211,6 +211,6 @@ Catea Paper 以 **GNU General Public License v3.0** 发布——见 [LICENSE](./
 ---
 
 <div align="center">
-  <sub>由 <a href="https://github.com/O-Pencil">O-Pencil</a> 用 ✎ 打造 —— 你的仓库值得拥有一个大脑。</sub><br>
+  <sub>由 <a href="https://github.com/cunyu6666">Cunyu</a> 用 ✎ 打造 —— 你的仓库值得拥有一个大脑。</sub><br>
   <sub>Catea Paper 是独立项目，与 Obsidian 官方无隶属或背书关系。</sub>
 </div>
