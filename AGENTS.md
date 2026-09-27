@@ -241,7 +241,7 @@ P3 headers are machine-checked, so the fields have a fixed grammar:
 | Field | Grammar | Verified by |
 |-------|---------|-------------|
 | `[WHO]` | Comma-separated exported symbol names, exactly as declared in the file | each name must appear in the file's actual exports |
-| `[FROM]` | Comma-separated import specifiers, exactly as written in the imports | each must appear in the file's actual import list |
+| `[FROM]` | Comma-separated import specifiers, exactly as written in the imports, or `(none)` | each must appear in the file's actual import list; `(none)` requires zero imports |
 | `[TO]` | Comma-separated repo-relative paths of files that import this one, or `(entry)` | each path must exist and must actually import this file; `(entry)` requires zero importers |
 | `[HERE]` | `repo-relative/path.ext - role` | the text must begin with the file's own path |
 
@@ -266,11 +266,18 @@ list content is not. Renaming an export without updating `[WHO]` fails `npm test
 
 ### P3 — File Contracts
 
-**Status**: partial — 32 in-scope source files carry a P3 header and a matching
-contract test. Vendored upstream (74 files under `packages/*/upstream/`) is
-excluded on purpose: it is byte-verified against
-`packages/agent-core/upstream/SOURCE_HASHES.json`, and inserting a header would
-invalidate that verification.
+**Status**: complete for every in-scope file — 32 source files carry a P3 header
+and a matching contract test, and `npm test` passes.
+
+Three deliberate exclusions:
+
+1. **Vendored upstream** — 74 files under `packages/*/upstream/`, byte-verified
+   against `packages/agent-core/upstream/SOURCE_HASHES.json`. Inserting a header
+   would invalidate that verification.
+2. **`scripts/build.mjs`** — deferred because a concurrent process is editing it
+   for the Obsidian marketplace submission.
+3. **Tests** — files under `__tests__/` are out of scope, since a contract test
+   for a contract test is circular.
 
 ### Related Documents
 
