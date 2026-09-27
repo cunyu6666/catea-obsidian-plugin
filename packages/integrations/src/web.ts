@@ -2,7 +2,7 @@
 /**
  * [WHO]: Provides runWeb, webSources, webTools
  * [FROM]: Depends on ../../agent-core/src/providers, ../../agent-core/src/transport,
- *   @modelcontextprotocol/sdk/client/index.js,
+ *   ../../agent-core/src/version, @modelcontextprotocol/sdk/client/index.js,
  *   @modelcontextprotocol/sdk/client/streamableHttp.js, node:child_process, node:util
  * [TO]: Consumed by packages/agent-core/src/index.ts
  * [HERE]: packages/integrations/src/web.ts - web_search and web_fetch via Exa MCP, agent-reach, Jina, DuckDuckGo or direct fetch; blocks local and private hosts; 10 results, 24000 chars, 30 s
@@ -13,6 +13,7 @@ import {execFile} from 'node:child_process'
 import {promisify} from 'node:util'
 import {serviceFetch} from '../../agent-core/src/transport'
 import type {ToolDefinition} from '../../agent-core/src/providers'
+import {PLUGIN_VERSION} from '../../agent-core/src/version'
 const exec=promisify(execFile)
 const JINA_READER_BASE='https://r.jina.ai',JINA_SEARCH_BASE='https://s.jina.ai',NATIVE_TIMEOUT_MS=30000
 export const webTools:ToolDefinition[]=[
@@ -39,7 +40,7 @@ function capabilities(){return cli??= (async()=>{
  return undefined
 })()}
 async function exaSearch(query:string,limit:number,signal:AbortSignal){
- const client=new Client({name:'catea-web',version:'0.3.0'})
+ const client=new Client({name:'catea-web',version:PLUGIN_VERSION})
  const transport=new StreamableHTTPClientTransport(new URL('https://mcp.exa.ai/mcp'),{fetch:async(input,init)=>serviceFetch(typeof input==='string'?input:input instanceof URL?input.toString():input.url,{...init,body:typeof init?.body==='string'?init.body:undefined})})
  const abort=()=>{void transport.close()};signal.addEventListener('abort',abort,{once:true})
  try{

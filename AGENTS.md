@@ -133,7 +133,7 @@ installed, and this repository's `node_modules` was installed.
 | Command | Result |
 |---------|--------|
 | `npm run build` | **exit 0** — wrote `dist/catea-paper/`: `main.js` (17.8 MB), `styles.css` (124 KB), `manifest.json` (version 0.3.1), `LICENSE`, `THIRD_PARTY_NOTICES.md`, `TABLER-LICENSE.txt` and the two design-system licence files |
-| `npm test` | **exit 0** — 171 assertions, 171 passing |
+| `npm test` | **exit 0** — 183 assertions, 183 passing |
 | `npx tsc --noEmit` | **exit 2** — 88 errors, all pre-existing and none from the harness: 84 in vendored `packages/*/upstream/**` (the snapshot omits sibling modules such as `@catui/agent-core`, so it cannot typecheck standalone), 3 in the external `catea-design-system` components, and **1 in this repository's own source** — `packages/integrations/src/web.ts:43` reaches `input.url` after narrowing `input` to `never` |
 
 Loading the built plugin inside Obsidian has **not** been verified here; that
@@ -273,7 +273,7 @@ list content is not. Renaming an export without updating `[WHO]` fails `npm test
 
 ### P3 — File Contracts
 
-**Status**: complete for every in-scope file — 32 source files carry a P3 header
+**Status**: complete for every in-scope file — 33 source files carry a P3 header
 and a matching contract test, and `npm test` passes.
 
 Three deliberate exclusions:
@@ -281,8 +281,9 @@ Three deliberate exclusions:
 1. **Vendored upstream** — 74 files under `packages/*/upstream/`, byte-verified
    against `packages/agent-core/upstream/SOURCE_HASHES.json`. Inserting a header
    would invalidate that verification.
-2. **`scripts/build.mjs`** — deferred because a concurrent process is editing it
-   for the Obsidian marketplace submission.
+2. **`scripts/`** — the scope rule above covers `apps/*/src` and `packages/*/src`
+   only, so `scripts/build.mjs` is unheadered. Adding a header now would also race
+   the concurrent marketplace work that edits that file.
 3. **Tests** — files under `__tests__/` are out of scope, since a contract test
    for a contract test is circular.
 

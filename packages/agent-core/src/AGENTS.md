@@ -18,6 +18,7 @@ providers.ts: `streamModel` maps transcripts to OpenAI or Anthropic requests and
 transport.ts: `serviceFetch` streams over Node http/https with a 120 s timeout and rejects redirects; falls back to Electron net only on X.509 chain errors, then to buffered requestUrl.
 types.ts: Shared type declarations for models, transcripts, attachments, tools and search configuration; type-only, emits no runtime code, and holds several currently unreferenced interfaces.
 upstream-stream.ts: Converts between the internal transcript and CatUI messages; `providerStream` retries 3x at 500*2^n ms and records delivery diagnostics; `streamSimple` throws to force host injection.
+version.ts: Exports `PLUGIN_VERSION`, the single runtime source for the plugin version; a governance test keeps it equal to manifest.json and versions.json.
 
 ## Notes
 
