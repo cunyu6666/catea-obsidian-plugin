@@ -202,7 +202,6 @@ packages/agent-core/src/__tests__/*.test.ts    10
 packages/integrations/src/__tests__/*.test.ts   6
 packages/memory/src/__tests__/*.test.ts         3
 packages/personas/src/__tests__/index.test.ts   1
-scripts/__tests__/build.test.mjs                1
 tests/dip-verify.test.mjs                       1  repo-wide isomorphism gate
 tests/dip-contract.ts                             shared helper (not a test)
 ```
@@ -232,9 +231,9 @@ never from the header it is checking, otherwise it is tautological:
 
 | File | Content |
 |---|---|
-| `.gitignore` | `node_modules/`, `dist/`, `.catea/`, `*.tmp`, `.worktrees/`, OS/editor noise |
-| `LICENSE` | GPL-3.0 full text (user decision; required because GPL-3.0 `mem-core` is linked into the plugin artifact) |
-| `package.json` | `"test": "node --test"` script; document the Node PATH caveat |
+| `.gitignore` | **Additive edit** — keeps the other writer's `node_modules/`, `dist/`, `.DS_Store` and appends `.catea/`, `*.tmp`, `.worktrees/`, `*.log`. `.catea/` is the important one: it holds raw sessions and memory and may contain private note content |
+| `LICENSE` | Canonical GPL-3.0 text, copied verbatim from `packages/memory/LICENSE` (user decision; GPL-3.0 `mem-core` is linked into the plugin artifact). The concurrently-updated `scripts/build.mjs` copies this root file, so it is required regardless |
+| `package.json` | `"test": "node --test"` added to `scripts`; the Node PATH caveat is documented in P1 |
 
 ### 5.6 `docs/ARCHITECTURE.md` — English rewrite
 
@@ -263,10 +262,15 @@ Order:
 6. `docs(dip): add P3 headers and contract tests for agent-core`
 7. `docs(dip): add P3 headers and contract tests for integrations`
 8. `docs(dip): add P3 headers and contract tests for memory`
-9. `docs(dip): add P3 headers and contract tests for personas and scripts`
+9. `docs(dip): add P3 headers and contract tests for personas`
 10. `docs(dip): add P3 headers and contract tests for the Obsidian host`
 11. `docs: rewrite ARCHITECTURE.md in English`
 12. Run the full suite as the completion gate; report the raw output.
+
+Every commit stages **only the files this work creates or edits**. The
+concurrently-modified marketplace files (`README.md`, `README_CN.md`,
+`apps/obsidian/package.json`, `scripts/build.mjs`, `manifest.json`,
+`package-lock.json`) are never staged.
 
 Note on ordering: the repo-wide verify gate (`tests/dip-verify.test.mjs`) is
 written early but is expected to fail until step 10 completes, since it asserts
@@ -307,6 +311,8 @@ What **will** be demonstrated with fresh evidence:
 | Static contract tests prove little about runtime behavior | Stated plainly in §7; behavior tests are blocked by the missing dependency graph and are a separate, later effort |
 | Adding `LICENSE` GPL-3.0 changes distribution terms | User explicitly selected GPL-3.0; `THIRD_PARTY_NOTICES.md` and the vendored `LICENSE` are retained |
 | Committing 1.6 MB `paper.cjs` in a public repo | Out of scope; flagged as an observation only |
+| **Concurrent marketplace work overwrites this work's files** | Minimised by additive edits, by never staging the other writer's files, and by re-checking `.gitignore` before each commit. `scripts/build.mjs` is deferred entirely. If the other writer replaces `.gitignore` again, the appended rules are re-applied before the final commit |
+| Marketplace work adds directories, breaking the P1 tree check | Verify gate tolerates new non-source directories; P1 tree is re-read from the filesystem at write time |
 
 ## 9. Approval
 
