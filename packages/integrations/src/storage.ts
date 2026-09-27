@@ -1,3 +1,11 @@
+/**
+ * [WHO]: Provides Serial, readJson, within, writeJson
+ * [FROM]: Depends on node:fs/promises, node:path
+ * [TO]: Consumed by apps/obsidian/src/main.tsx, packages/agent-core/src/index.ts,
+ *   packages/integrations/src/index.ts, packages/integrations/src/skills.ts,
+ *   packages/integrations/src/tools.ts, packages/memory/src/index.ts
+ * [HERE]: packages/integrations/src/storage.ts - vault confinement via within() with realpath checks and explicit symlink rejection, atomic temp+rename JSON writes, and the Serial promise queue
+ */
 import {mkdir, readFile, writeFile, rename, realpath, lstat} from 'node:fs/promises'
 import {resolve, relative, isAbsolute, dirname} from 'node:path'
 

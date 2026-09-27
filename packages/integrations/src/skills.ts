@@ -1,3 +1,10 @@
+/**
+ * [WHO]: Provides Skill, listSkills, loadSkills, readSkillResource
+ * [FROM]: Depends on ./storage, node:fs/promises
+ * [TO]: Consumed by apps/obsidian/src/settings.ts, packages/agent-core/src/index.ts,
+ *   packages/integrations/src/index.ts
+ * [HERE]: packages/integrations/src/skills.ts - loads enabled .catea/skills/<id>/SKILL.md packages and reads path-guarded resources; content capped at 48000 chars, traversal rejected
+ */
 import {readdir,readFile} from 'node:fs/promises'
 import {within} from './storage'
 export interface Skill {id:string;description:string;content:string}

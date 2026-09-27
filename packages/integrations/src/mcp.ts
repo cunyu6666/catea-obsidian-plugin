@@ -1,3 +1,11 @@
+/**
+ * [WHO]: Provides McpConfig, McpPool
+ * [FROM]: Depends on ../../agent-core/src/providers, @modelcontextprotocol/sdk/client/index.js,
+ *   @modelcontextprotocol/sdk/client/stdio.js,
+ *   @modelcontextprotocol/sdk/client/streamableHttp.js
+ * [TO]: Consumed by packages/agent-core/src/index.ts, packages/integrations/src/index.ts
+ * [HERE]: packages/integrations/src/mcp.ts - connects enabled stdio and HTTP MCP servers, paginates tool discovery and namespaces tool names to 64 chars; catalog cap 1000, call timeout 120 s, output 24000 chars
+ */
 import {Client} from '@modelcontextprotocol/sdk/client/index.js'
 import {StdioClientTransport} from '@modelcontextprotocol/sdk/client/stdio.js'
 import {StreamableHTTPClientTransport} from '@modelcontextprotocol/sdk/client/streamableHttp.js'

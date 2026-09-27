@@ -1,3 +1,11 @@
+/**
+ * [WHO]: Provides Approve, VaultTools, fileTools
+ * [FROM]: Depends on ../../agent-core/src/providers, ./storage, node:child_process, node:fs/promises,
+ *   node:path
+ * [TO]: Consumed by apps/obsidian/src/obsidian-tools.ts, packages/agent-core/src/index.ts,
+ *   packages/integrations/src/index.ts
+ * [HERE]: packages/integrations/src/tools.ts - filesystem tool surface (time/read/ls/find/grep/write/edit/bash); 1 MB text cap, 10000-file walk, 300-line read, 80 grep hits, 100 KB write, 60 s bash
+ */
 import {readFile,readdir,stat,mkdir,writeFile} from 'node:fs/promises'
 import {dirname} from 'node:path'
 import {spawn} from 'node:child_process'

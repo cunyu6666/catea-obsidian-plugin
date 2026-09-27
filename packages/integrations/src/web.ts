@@ -1,4 +1,12 @@
 // Adapted from CatUI link-world/index.ts (GPL-3.0); see THIRD_PARTY_NOTICES.md.
+/**
+ * [WHO]: Provides runWeb, webSources, webTools
+ * [FROM]: Depends on ../../agent-core/src/providers, ../../agent-core/src/transport,
+ *   @modelcontextprotocol/sdk/client/index.js,
+ *   @modelcontextprotocol/sdk/client/streamableHttp.js, node:child_process, node:util
+ * [TO]: Consumed by packages/agent-core/src/index.ts
+ * [HERE]: packages/integrations/src/web.ts - web_search and web_fetch via Exa MCP, agent-reach, Jina, DuckDuckGo or direct fetch; blocks local and private hosts; 10 results, 24000 chars, 30 s
+ */
 import {Client} from '@modelcontextprotocol/sdk/client/index.js'
 import {StreamableHTTPClientTransport} from '@modelcontextprotocol/sdk/client/streamableHttp.js'
 import {execFile} from 'node:child_process'
