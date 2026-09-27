@@ -154,13 +154,38 @@ Not yet executed as a whole. Each item is a manual procedure in a test vault:
 ## 2026-09-28 DIP Bootstrap
 
 The repository now carries a verifiable documentation layer: a root `AGENTS.md`
-(P1), five module maps (P2), and P3 contract headers on all 32 in-scope source
-files, each enforced by a contract test. `npm test` runs 171 dependency-free
-assertions covering both the per-file contracts and repo-wide isomorphism between
-documentation and code.
+(P1), five module maps (P2), and P3 contract headers on all 33 in-scope source
+files, each enforced by a contract test. `npm test` covers both the per-file
+contracts and repo-wide isomorphism between documentation and code.
 
 Deliberately excluded from DIP: the 74 byte-verified vendored files under
-`packages/*/upstream/`, `scripts/build.mjs` (held back while the marketplace
-submission edits it concurrently), and `__tests__/` itself. See
-`docs/specs/2026-09-28-dip-bootstrap-design.md` for the approved design and its
-verification limits.
+`packages/*/upstream/`; `scripts/`, which the scope rule does not cover at all
+(`apps/*/src` and `packages/*/src` only), so `scripts/build.mjs` carries no header;
+and `__tests__/` itself. See `docs/specs/2026-09-28-dip-bootstrap-design.md` for the
+approved design and its verification limits.
+
+## 2026-09-28 Repository Governance
+
+Added once the repository became public, to make releases and versions enforceable
+rather than conventional:
+
+- **One version source.** `packages/agent-core/src/version.ts` holds
+  `PLUGIN_VERSION`; a governance test keeps it, `manifest.json`, both
+  `package.json` files and `versions.json` in agreement, and rejects any other
+  hardcoded version literal. Two files had drifted to `0.3.0` before this.
+- **`versions.json`**, which did not exist, so older Obsidian builds can resolve a
+  compatible older release.
+- **A usable `tsc` gate.** Raw `tsc` reports ~87 diagnostics that cannot be fixed
+  from this repository (84 from the vendored snapshot, which omits sibling modules;
+  3 from the external design system, which ships `.ts` rather than `.d.ts`).
+  `scripts/typecheck.mjs` runs the same program and fails only on owned code.
+  Narrowing tsconfig `exclude` was tried and made it worse (87 → 129).
+- **CI** on push, pull requests and demand: install, contracts and governance,
+  typecheck. The build job is gated on a `DESIGN_SYSTEM_REPO` variable because the
+  design system is not a git repository and cannot be checked out by a runner.
+- **Releases.** `scripts/release.mjs` (dry run by default) validates the gates, the
+  three required assets and the built version, then creates the GitHub Release;
+  `.github/workflows/release.yml` does the same on a runner once the design system
+  has a repository.
+- **`CONTRIBUTING.md`, `SECURITY.md`, `CHANGELOG.md`** and issue and pull request
+  templates, including the DIP obligations a contributor has to satisfy.

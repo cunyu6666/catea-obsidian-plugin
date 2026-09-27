@@ -99,8 +99,9 @@ packages/personas/           # Persona definitions and registry
 packages/personas/src/       # Persona prompt documents plus index.ts
 docs/                        # Design rationale and specs
 docs/specs/                  # Approved design specifications
-scripts/                     # Build tooling
-tests/                       # DIP harness: contract parser and verify gate
+.github/                     # CI, the release workflow, and issue and PR templates
+scripts/                     # Build tooling, the scoped typecheck gate, and the release script
+tests/                       # DIP harness: contract parser, verify gate, governance gate
 ```
 
 ---
@@ -256,6 +257,33 @@ P3 headers are machine-checked, so the fields have a fixed grammar:
 Narrative wording is tolerated (`Provides`, `Depends on`, `Consumed by`) but the
 list content is not. Renaming an export without updating `[WHO]` fails `npm test`.
 
+### Release and version governance
+
+The version has one runtime source: `packages/agent-core/src/version.ts`
+(`PLUGIN_VERSION`). `tests/governance.test.ts` asserts that it, `manifest.json`,
+both `package.json` files and `versions.json` all agree, that `versions.json` maps
+the released version to `minAppVersion`, and that no other in-scope file hardcodes a
+version literal — the drift that had left `0.3.0` in two files is now a test failure.
+
+Publishing an update requires a GitHub **Release** whose tag is the version with no
+`v` prefix, with `main.js`, `manifest.json` and `styles.css` attached. A tag alone
+never reaches users, and a version that was already published is ignored. Releases
+are cut with `node scripts/release.mjs` (dry run by default) or, once the design
+system has a repository, `.github/workflows/release.yml`.
+
+Two constraints are structural, not incidental:
+
+- `npm run build` needs the sibling `../catea-design-system` workspace, which is
+  **not a git repository** and therefore cannot be obtained by a CI runner. The CI
+  and release build jobs are gated on the `DESIGN_SYSTEM_REPO` repository variable
+  and stay inactive until it exists.
+- The build must be re-run before every release: the governance gate compares the
+  built `dist/catea-paper/manifest.json` against the repository version.
+
+`.github/workflows/ci.yml` runs `npm ci`, `npm test` and `npm run typecheck` on every
+push to `main` and every pull request. See [CONTRIBUTING.md](./CONTRIBUTING.md) for
+the contributor-facing procedure and [SECURITY.md](./SECURITY.md) for the threat model.
+
 ---
 
 ## DIP Navigation
@@ -290,6 +318,9 @@ Three deliberate exclusions:
 
 ### Related Documents
 
+- [Contributing, the gates and the release procedure](./CONTRIBUTING.md)
+- [Security model and how to report a vulnerability](./SECURITY.md)
+- [Changelog](./CHANGELOG.md)
 - [Architecture decisions and acceptance record](./docs/ARCHITECTURE.md)
 - [DIP bootstrap design spec](./docs/specs/2026-09-28-dip-bootstrap-design.md)
 - [Third-party notices](./THIRD_PARTY_NOTICES.md)

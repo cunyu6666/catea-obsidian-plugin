@@ -108,7 +108,7 @@ Consequences for this work:
 
 | File | Reason |
 |---|---|
-| `scripts/build.mjs` | **Deferred** — being edited concurrently for the marketplace submission (see §3) |
+| `scripts/build.mjs` | **Out of scope, not deferred** — the DIP scope rule in §5.4 covers `apps/*/src` and `packages/*/src` only, so `scripts/` was never in scope, regardless of the concurrent editing. The reason originally recorded in this row was wrong and is corrected here on 2026-09-28. |
 | `apps/obsidian/src/paper.cjs` | Generated bundle, 1.6 MB, embedded Tabler icon data |
 | `apps/obsidian/src/assets.d.ts` | `.d.ts` declaration file |
 | `apps/obsidian/src/skills/obsidian.md` | Markdown asset consumed as agent prompt |
