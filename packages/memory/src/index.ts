@@ -1,3 +1,11 @@
+/**
+ * [WHO]: Provides MemoryService
+ * [FROM]: Depends on ../../agent-core/src/providers, ../../agent-core/src/types,
+ *   ../../agent-core/upstream/ai/utils/validation, ../../integrations/src/storage,
+ *   ../upstream/engine, ../upstream/scoring, ./host, node:fs/promises, node:path
+ * [TO]: Consumed by packages/agent-core/src/index.ts
+ * [HERE]: packages/memory/src/index.ts - hosts per-persona mem-core engines, races recall injection against a 600 ms cache timeout, and drains the durable pending-turns queue with backoff
+ */
 import {validateToolArguments} from '../../agent-core/upstream/ai/utils/validation'
 import {MemoryHost} from './host'
 import {join} from 'node:path'

@@ -1,3 +1,9 @@
+/**
+ * [WHO]: Provides memoryReadOnly, memoryTools
+ * [FROM]: Depends on ../../agent-core/src/providers
+ * [TO]: Consumed by packages/agent-core/src/index.ts
+ * [HERE]: packages/memory/src/tools.ts - declares the memory_* tool schemas, each with a persona or global scope, and the memoryReadOnly allowlist that skips write approval
+ */
 import type {ToolDefinition} from '../../agent-core/src/providers'
 const string={type:'string'}
 export const memoryTools:ToolDefinition[]=[

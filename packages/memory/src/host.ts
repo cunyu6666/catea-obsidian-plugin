@@ -1,4 +1,11 @@
 // CatUI NanoMem extension lifecycle, hosted inside the vault with explicit engines.
+/**
+ * [WHO]: Provides MemoryHost
+ * [FROM]: Depends on ../../agent-core/src/types, ../upstream/engine, ../upstream/extension, node:fs/promises,
+ *   node:path
+ * [TO]: Consumed by packages/memory/src/index.ts
+ * [HERE]: packages/memory/src/host.ts - boots the vendored nanomem extension inside the vault and replays host tool events under normalized names; exposes injection() and run()
+ */
 import nanomem from '../upstream/extension'
 import {NanoMemEngine} from '../upstream/engine'
 import {join,basename} from 'node:path'
