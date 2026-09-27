@@ -1,3 +1,10 @@
+/**
+ * [WHO]: Provides CateaSettings
+ * [FROM]: Depends on ../../../packages/agent-core/src/byok, ../../../packages/agent-core/src/types,
+ *   ../../../packages/integrations/src/skills, ./main, obsidian
+ * [TO]: Consumed by apps/obsidian/src/main.tsx
+ * [HERE]: apps/obsidian/src/settings.ts - plugin settings tab for language, paper toggles, Agent toggles, BYOK models and MCP servers; ModelModal validates through normalizeModel
+ */
 import {App,PluginSettingTab,Setting,Notice,Modal} from 'obsidian'
 import type Catea from './main'
 import type {ModelConfig} from '../../../packages/agent-core/src/types'

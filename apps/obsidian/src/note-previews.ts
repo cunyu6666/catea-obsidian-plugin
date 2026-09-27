@@ -1,3 +1,9 @@
+/**
+ * [WHO]: Provides registerNotePreviews
+ * [FROM]: Depends on obsidian, ./main
+ * [TO]: Consumed by apps/obsidian/src/main.tsx
+ * [HERE]: apps/obsidian/src/note-previews.ts - registers html and svg code-block previews as sandboxed script-blocking CSP iframes with Preview, Source and Copy tabs
+ */
 import {MarkdownRenderChild} from 'obsidian'
 import type Catea from './main'
 

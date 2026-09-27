@@ -1,3 +1,9 @@
+/**
+ * [WHO]: Provides installNoteThumbnails
+ * [FROM]: Depends on obsidian, ./main
+ * [TO]: Consumed by apps/obsidian/src/main.tsx
+ * [HERE]: apps/obsidian/src/note-thumbnails.ts - paints 108x144 canvas file-tree thumbnails from title, excerpt and first local raster under 5 MB; 2 MB Markdown cap, 256-entry cache, concurrency 2
+ */
 import {TFile} from 'obsidian'
 import type Catea from './main'
 

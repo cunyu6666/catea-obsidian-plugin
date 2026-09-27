@@ -1,3 +1,9 @@
+/**
+ * [WHO]: Provides Language, contentLabel, translate
+ * [FROM]: Depends on (none)
+ * [TO]: Consumed by apps/obsidian/src/ChatMarkdown.tsx, apps/obsidian/src/main.tsx
+ * [HERE]: apps/obsidian/src/locale.ts - Chinese-keyed English string table with translate() and contentLabel() lookups; returns the key unchanged when unmapped
+ */
 export type Language="zh"|"en"
 const english:Record<string,string>={
   "等待你的回答":"Waiting for your answer",

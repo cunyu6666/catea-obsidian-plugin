@@ -1,3 +1,9 @@
+/**
+ * [WHO]: Provides StreamingChatResponse
+ * [FROM]: Depends on react, motion/react, catea-components
+ * [TO]: Consumed by apps/obsidian/src/panel.tsx
+ * [HERE]: apps/obsidian/src/StreamingChatResponse.tsx - rAF typewriter reveal for streamed text that never splits surrogate pairs; auto-follows scroll within 40 px in a card and 80 px in chat
+ */
 import { useEffect, useLayoutEffect, useRef, useState, type ComponentProps } from 'react'
 import { useReducedMotion } from 'motion/react'
 import { ResponseCard } from 'catea-components'

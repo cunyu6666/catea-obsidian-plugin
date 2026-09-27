@@ -1,3 +1,12 @@
+/**
+ * [WHO]: Provides Panel
+ * [FROM]: Depends on ../../../packages/agent-core/src, ../../../packages/agent-core/src/attachments,
+ *   ../../../packages/agent-core/src/byok, ../../../packages/agent-core/src/types,
+ *   ../../../packages/personas/src, ./ChatMarkdown, ./StreamingChatResponse, ./main,
+ *   catea-components, react
+ * [TO]: Consumed by apps/obsidian/src/main.tsx
+ * [HERE]: apps/obsidian/src/panel.tsx - React sidebar root composing header, history, message list and composer; maps persona and model pickers, approvals, quotes and attachments
+ */
 import {attachmentIsText,readDroppedAttachments,readPickedAttachments} from '../../../packages/agent-core/src/attachments'
 import type {ChatAttachment} from '../../../packages/agent-core/src/types'
 import {StreamingChatResponse} from './StreamingChatResponse'

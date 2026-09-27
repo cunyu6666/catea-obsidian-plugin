@@ -1,3 +1,9 @@
+/**
+ * [WHO]: Provides ChatMarkdown
+ * [FROM]: Depends on react-markdown, remark-gfm, catea-components, ./MermaidDiagram, ./locale
+ * [TO]: Consumed by apps/obsidian/src/panel.tsx
+ * [HERE]: apps/obsidian/src/ChatMarkdown.tsx - renders assistant Markdown and converts [[wikilinks]] into internal-link clicks; code fences delegate to MermaidDiagram
+ */
 import {Children,isValidElement,memo,useMemo,type ReactNode} from 'react'
 import ReactMarkdown,{type Components} from 'react-markdown'
 import remarkGfm from 'remark-gfm'

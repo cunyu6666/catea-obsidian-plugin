@@ -1,3 +1,10 @@
+/**
+ * [WHO]: Provides ObsidianTools, obsidianTools
+ * [FROM]: Depends on ../../../packages/agent-core/src/providers, ../../../packages/integrations/src/tools,
+ *   ./main, obsidian
+ * [TO]: Consumed by apps/obsidian/src/main.tsx
+ * [HERE]: apps/obsidian/src/obsidian-tools.ts - seven obsidian_* tools over the Obsidian API with hidden-path guards; search 50 hits, read 300 lines x 2000 chars, note cap 2 MB, write cap 100 KB
+ */
 import {TFile,MarkdownView,getAllTags} from 'obsidian'
 import type Catea from './main'
 import type {ToolDefinition} from '../../../packages/agent-core/src/providers'

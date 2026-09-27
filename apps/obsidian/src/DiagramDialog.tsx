@@ -1,3 +1,9 @@
+/**
+ * [WHO]: Provides DiagramDialog
+ * [FROM]: Depends on react, react-dom
+ * [TO]: Consumed by apps/obsidian/src/MermaidDiagram.tsx
+ * [HERE]: apps/obsidian/src/DiagramDialog.tsx - portal wrapper around a native dialog element providing Escape handling, focus trap and focus restore for diagram zoom
+ */
 import {useEffect,useRef,type ReactNode} from 'react'
 import {createPortal} from 'react-dom'
 

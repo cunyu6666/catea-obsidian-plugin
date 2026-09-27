@@ -1,3 +1,9 @@
+/**
+ * [WHO]: Provides MermaidDiagram
+ * [FROM]: Depends on beautiful-mermaid, obsidian, catea-components, react, ./DiagramDialog
+ * [TO]: Consumed by apps/obsidian/src/ChatMarkdown.tsx
+ * [HERE]: apps/obsidian/src/MermaidDiagram.tsx - renders Mermaid through beautiful-mermaid with an Obsidian loadMermaid fallback after a 180 ms debounce; zoom clamped to 0.25-4x
+ */
 import {loadMermaid} from 'obsidian'
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { renderMermaidSVG } from 'beautiful-mermaid'

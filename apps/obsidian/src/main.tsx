@@ -1,3 +1,12 @@
+/**
+ * [WHO]: Provides Catea, default
+ * [FROM]: Depends on ../../../packages/agent-core/src, ../../../packages/integrations/src/storage, ./panel,
+ *   ./obsidian-tools, ./settings, obsidian, node:fs/promises
+ * [TO]: Consumed by apps/obsidian/src/note-previews.ts, apps/obsidian/src/note-thumbnails.ts,
+ *   apps/obsidian/src/obsidian-tools.ts, apps/obsidian/src/panel.tsx,
+ *   apps/obsidian/src/selection.ts, apps/obsidian/src/settings.ts
+ * [HERE]: apps/obsidian/src/main.tsx - plugin entry: class Catea extends Paper, wiring config, secure secrets, ObsidianTools, Agent, settings tab and the sidebar view; 60 s memory interval
+ */
 import {installNoteThumbnails} from './note-thumbnails'
 import {registerNotePreviews} from './note-previews'
 import {translate} from './locale'

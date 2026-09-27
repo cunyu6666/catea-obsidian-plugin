@@ -1,3 +1,9 @@
+/**
+ * [WHO]: Provides installSelectionAction
+ * [FROM]: Depends on obsidian, ./main
+ * [TO]: Consumed by apps/obsidian/src/main.tsx
+ * [HERE]: apps/obsidian/src/selection.ts - adds an editor-menu entry and a floating add-to-Catea popup positioned via CodeMirror coordsAtPos, rebinding listeners on layout change
+ */
 import {MarkdownView,setIcon} from 'obsidian'
 import type Catea from './main'
 
