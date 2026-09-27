@@ -1,0 +1,66 @@
+name: Bug report
+description: Something does not work as documented
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Do not paste real vault contents or API keys. If the problem looks like a
+        security vulnerability, use Security → Report a vulnerability instead.
+  - type: input
+    id: version
+    attributes:
+      label: Plugin version
+      description: From Settings → Community plugins, or the release you installed.
+      placeholder: '0.3.1'
+    validations:
+      required: true
+  - type: input
+    id: obsidian
+    attributes:
+      label: Obsidian version and platform
+      placeholder: '1.8.7 on macOS 15'
+    validations:
+      required: true
+  - type: input
+    id: model
+    attributes:
+      label: Model and protocol
+      description: Which provider and whether it is OpenAI- or Anthropic-compatible.
+      placeholder: 'MiniMax M3, OpenAI-compatible'
+    validations:
+      required: false
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Enough that someone else can follow them.
+      placeholder: |
+        1.
+        2.
+        3.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: What happened instead
+      description: Include the exact error text if there is one.
+    validations:
+      required: true
+  - type: textarea
+    id: gates
+    attributes:
+      label: Output of the local gates, if you can run them
+      description: |
+        `npm test` and `npm run typecheck` are dependency-free and take about a
+        second. Skip this if you cannot build the project.
+      render: text
+    validations:
+      required: false

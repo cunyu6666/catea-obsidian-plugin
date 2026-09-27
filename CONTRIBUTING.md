@@ -1,0 +1,122 @@
+# Contributing
+
+Thanks for looking. This document is short on purpose: it says what the gates
+enforce, so a change can be checked before it is proposed.
+
+## Prerequisites
+
+- **Node 24 or newer.** `npm test` runs on Node's built-in test runner and relies
+  on native TypeScript type stripping. Verified on v24.21.0.
+- **The design system, for building only.** `npm run build` imports its Tailwind
+  compiler and aliases `catea-components` to its source, from a sibling directory:
+
+  ```
+  <parent>/
+    catea/                    # this repository
+    catea-design-system/      # tokens, components, Tailwind compiler
+  ```
+
+  Without that sibling, `npm install`, `npm test` and `npm run typecheck` all still
+  work — `catea-components` and `catea-tokens` are published to npm — but
+  `npm run build` cannot run.
+
+## Commands
+
+| Command | What it does | Needs the design system |
+|---|---|---|
+| `npm install` | workspace install | no |
+| `npm test` | the contract, isomorphism and version-consistency gates | no |
+| `npm run typecheck` | `tsc`, scoped to owned code | no |
+| `npm run build` | bundle to `dist/catea-paper/` | **yes** |
+
+## Documentation is enforced, not suggested
+
+This repository uses the DIP protocol: a root charter (`AGENTS.md`, P1), a member
+list per module (`*/src/AGENTS.md`, P2), and a contract header at the top of every
+source file (P3). `npm test` fails when documentation and code disagree, so:
+
+- **Adding, renaming or deleting an export** requires updating that file's `[WHO]`
+  in the same change.
+- **Adding or removing an import** changes `[FROM]` when it is a key dependency.
+- **Adding a consumer** of a file requires that file's `[TO]` to list it. `[TO]`
+  entries are resolved by reading real imports, not by trusting the header.
+- **Adding or deleting a file** in an in-scope directory requires updating that
+  module's P2 member list; the gate compares it against the filesystem in both
+  directions.
+- **Adding a new directory containing source** requires a P2 map for it and a link
+  from P1.
+
+The P3 grammar is fixed because it is machine-checked:
+
+| Field | Value |
+|---|---|
+| `[WHO]` | comma-separated exported symbol names, exactly as declared |
+| `[FROM]` | comma-separated import specifiers exactly as written, or `(none)` |
+| `[TO]` | comma-separated repo-relative consumer paths, or `(entry)` |
+| `[HERE]` | `repo-relative/path.ext - role` |
+
+Out of scope, deliberately: `packages/*/upstream/**` (byte-verified against
+`SOURCE_HASHES.json`, so a header would invalidate the verification), `scripts/`
+(the scope rule covers `apps/*/src` and `packages/*/src`), and `__tests__/`
+(a contract test for a contract test is circular).
+
+Run `npm test` before every commit. It takes about a second and needs no
+dependencies, which is exactly why it is the gate.
+
+## Commits
+
+```
+<type>(<scope>): <summary>
+```
+
+`feat`, `fix`, `docs`, `test`, `chore`, `refactor`. English, imperative, focused on
+why the change is needed rather than restating the diff.
+
+## Language
+
+- **Documentation and code comments: English.** Includes P1/P2/P3 and `docs/`.
+- **The product UI is bilingual by design.** User-facing strings resolve through
+  `apps/obsidian/src/locale.ts` and `packages/agent-core/src/i18n.ts`; Chinese is a
+  supported UI language. `README_CN.md` is the intentional Chinese README.
+- **The persona documents are not translated.** `packages/personas/src/*.md` are
+  agent-facing prompt content; translating them changes runtime behaviour.
+
+## Versioning and releases
+
+The version has one runtime source, `packages/agent-core/src/version.ts`
+(`PLUGIN_VERSION`), and `tests/governance.test.ts` asserts that it, `manifest.json`,
+both `package.json` files and `versions.json` all agree. Nothing else may hardcode
+a version literal — that is what drifted to `0.3.0` in two files before.
+
+To cut a release:
+
+1. Bump the version in `manifest.json`, both `package.json` files and
+   `version.ts`, and add an entry to `versions.json` mapping the new version to
+   `minAppVersion`. `versions.json` is what lets older Obsidian builds resolve a
+   compatible older release.
+2. `npm run build`
+3. `node scripts/release.mjs` — dry run. It runs the gates, checks the three
+   release assets and the built version, and reports every policy problem at once.
+4. `node scripts/release.mjs --publish` with `GH_TOKEN` set to create the release.
+
+Obsidian's updater needs a **GitHub Release** whose tag is the version with **no
+`v` prefix**, with `main.js`, `manifest.json` and `styles.css` attached. A tag
+alone is not enough, and a version that was already published is ignored — cut a
+new version instead of re-releasing.
+
+`.github/workflows/release.yml` does the same on a runner, but it is inactive until
+the design system has a repository to check out (see the `DESIGN_SYSTEM_REPO`
+repository variable). Until then, releases come from a machine that has the
+sibling workspace.
+
+## Known limitations
+
+- **Vendored upstream cannot be typechecked.** `packages/*/upstream/**` is a
+  snapshot that omits sibling modules such as `@catui/agent-core`, so `tsc` reports
+  ~84 diagnostics there. `npm run typecheck` therefore reports vendored and external
+  counts and fails only on owned code.
+- **Narrowing tsconfig `exclude` does not work.** Specifying `exclude` replaces the
+  built-in `node_modules` exclusion and pulls more external sources into the
+  program (measured: 87 → 129 diagnostics). It was tried; do not retry it.
+- **The design system is not a git repository**, so it cannot be pinned, reviewed
+  or fetched by CI. `npm run build` is only reproducible on a machine that has it.

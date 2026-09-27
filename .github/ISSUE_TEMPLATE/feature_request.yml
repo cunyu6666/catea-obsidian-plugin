@@ -1,0 +1,36 @@
+name: Feature request
+description: Suggest a capability or a change in behaviour
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem are you trying to solve?
+      description: Describe the situation, not the implementation. The most useful requests start from a workflow that is awkward today.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What would you like to happen?
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: What have you tried instead?
+      description: Workarounds, other plugins, manual steps.
+    validations:
+      required: false
+  - type: checkboxes
+    id: constraints
+    attributes:
+      label: Constraints this project holds to
+      description: These are not negotiable, so a request that requires breaking one will be declined rather than debated.
+      options:
+        - label: This works with bring-your-own-key and adds no Catea backend, account or telemetry.
+          required: false
+        - label: This does not send vault contents to a third party beyond the model endpoint the user configured.
+          required: false
+        - label: This does not silently widen tool permissions or bypass a confirmation.
+          required: false

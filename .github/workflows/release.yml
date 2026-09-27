@@ -1,0 +1,107 @@
+name: Release
+
+# Obsidian's updater matches a GitHub Release whose tag equals the version in
+# manifest.json, exactly, with no `v` prefix, and with main.js, manifest.json and
+# styles.css attached. A tag alone, or a release missing one of those assets,
+# never reaches users.
+#
+# This workflow is manual on purpose: a release is a publishing decision, not a
+# side effect of a push. It cannot run until the design system has a repository —
+# see the first step, which fails with instructions if DESIGN_SYSTEM_REPO is unset.
+# Until then, cut releases from a machine that has ../catea-design-system:
+#     npm run build && node scripts/release.mjs --publish
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release, matching manifest.json exactly (no v prefix)'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Build and publish
+    runs-on: ubuntu-latest
+    steps:
+      # Both repositories are checked out as siblings so that scripts/build.mjs
+      # resolves its `../catea-design-system` reference correctly.
+      - uses: actions/checkout@v4
+        with:
+          path: catea
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: catea/package-lock.json
+
+      - name: Require the design system to be reachable
+        run: |
+          set -eu
+          if [ -z "${{ vars.DESIGN_SYSTEM_REPO }}" ]; then
+            echo "::error::DESIGN_SYSTEM_REPO is not set, so this workflow cannot build the plugin."
+            echo "The design system is a separate workspace that is not a git repository, so a runner cannot obtain it."
+            echo "Set the repository variable DESIGN_SYSTEM_REPO, or cut the release locally:"
+            echo "  npm run build && node scripts/release.mjs --publish"
+            exit 1
+          fi
+
+      - uses: actions/checkout@v4
+        with:
+          repository: ${{ vars.DESIGN_SYSTEM_REPO }}
+          path: catea-design-system
+
+      - name: The requested version must match manifest.json
+        working-directory: catea
+        run: |
+          set -eu
+          manifest=$(node -p "require('./manifest.json').version")
+          requested="${{ inputs.version }}"
+          if [ "$manifest" != "$requested" ]; then
+            echo "::error::manifest.json says $manifest but the requested version is $requested"
+            exit 1
+          fi
+
+      - name: Install the design system
+        working-directory: catea-design-system
+        run: npm ci
+
+      - name: Install this plugin
+        working-directory: catea
+        run: npm ci
+
+      - name: Contracts, governance and typecheck
+        working-directory: catea
+        run: |
+          npm test
+          npm run typecheck
+
+      - name: Build
+        working-directory: catea
+        run: npm run build
+
+      - name: Assert the three release assets exist
+        working-directory: catea
+        run: |
+          set -eu
+          for asset in main.js manifest.json styles.css; do
+            test -f "dist/catea-paper/$asset" || { echo "::error::missing release asset: $asset"; exit 1; }
+          done
+
+      - name: Publish the release
+        working-directory: catea
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -eu
+          version="${{ inputs.version }}"
+          gh release create "$version" \
+            dist/catea-paper/main.js \
+            dist/catea-paper/manifest.json \
+            dist/catea-paper/styles.css \
+            --title "$version" \
+            --generate-notes
