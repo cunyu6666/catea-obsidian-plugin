@@ -115,9 +115,10 @@ tests/                       # DIP harness: contract parser and verify gate
 #
 # Then, from this repository root:
 
-npm install     # workspace install; also needs the sibling design system present
-npm run build   # esbuild bundle -> dist/catea-paper/
-npm test        # node --test; requires no dependencies at all
+npm install        # workspace install; also needs the sibling design system present
+npm run build      # esbuild bundle -> dist/catea-paper/
+npm test           # node --test; requires no dependencies at all
+npm run typecheck  # scoped tsc over owned code only
 ```
 
 `npm run build` writes `dist/catea-paper/`, an installable Obsidian plugin
@@ -134,7 +135,7 @@ installed, and this repository's `node_modules` was installed.
 |---------|--------|
 | `npm run build` | **exit 0** — wrote `dist/catea-paper/`: `main.js` (17.8 MB), `styles.css` (124 KB), `manifest.json` (version 0.3.1), `LICENSE`, `THIRD_PARTY_NOTICES.md`, `TABLER-LICENSE.txt` and the two design-system licence files |
 | `npm test` | **exit 0** — 183 assertions, 183 passing |
-| `npx tsc --noEmit` | **exit 2** — 88 errors, all pre-existing and none from the harness: 84 in vendored `packages/*/upstream/**` (the snapshot omits sibling modules such as `@catui/agent-core`, so it cannot typecheck standalone), 3 in the external `catea-design-system` components, and **1 in this repository's own source** — `packages/integrations/src/web.ts:43` reaches `input.url` after narrowing `input` to `never` |
+| `npm run typecheck` | **exit 0** — a scoped gate over `apps/*/src`, `packages/*/src` and `tests/`. Raw `tsc` still reports 87 diagnostics that cannot be fixed from this repository: 84 in vendored `packages/*/upstream/**` (the snapshot omits sibling modules such as `@catui/agent-core`) and 3 in the external `catea-design-system` components, so `scripts/typecheck.mjs` reports those as counts and fails only on owned code. Narrowing tsconfig `exclude` does **not** work: it replaces the built-in `node_modules` exclusion and made the count worse (measured 87 → 129) |
 
 Loading the built plugin inside Obsidian has **not** been verified here; that
 needs a running Obsidian instance and a test vault.

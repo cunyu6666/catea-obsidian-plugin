@@ -41,7 +41,7 @@ function capabilities(){return cli??= (async()=>{
 })()}
 async function exaSearch(query:string,limit:number,signal:AbortSignal){
  const client=new Client({name:'catea-web',version:PLUGIN_VERSION})
- const transport=new StreamableHTTPClientTransport(new URL('https://mcp.exa.ai/mcp'),{fetch:async(input,init)=>serviceFetch(typeof input==='string'?input:input instanceof URL?input.toString():input.url,{...init,body:typeof init?.body==='string'?init.body:undefined})})
+ const transport=new StreamableHTTPClientTransport(new URL('https://mcp.exa.ai/mcp'),{fetch:async(input,init)=>serviceFetch(typeof input==='string'?input:input.toString(),{...init,body:typeof init?.body==='string'?init.body:undefined})})
  const abort=()=>{void transport.close()};signal.addEventListener('abort',abort,{once:true})
  try{
   signal.throwIfAborted();await client.connect(transport);signal.throwIfAborted()
