@@ -29,9 +29,10 @@ export function registerNotePreviews(plugin:Catea){
     const policy=document.createElement('meta');policy.httpEquiv='Content-Security-Policy'
     policy.content="default-src 'none'; script-src 'none'; style-src 'unsafe-inline'; img-src data:; font-src data:; base-uri 'none'; form-action 'none'"
     document.head.prepend(policy)
-    const baseStyle=document.createElement('style');baseStyle.textContent=':root{color-scheme:light}body{margin:16px;font:14px/1.5 system-ui;color:#253c31;background:white}img,svg{max-width:100%;height:auto}*{box-sizing:border-box}'
-    document.head.insertBefore(baseStyle,policy.nextSibling)
-    frame.srcdoc='<!doctype html>'+document.documentElement.outerHTML
+    // The iframe's own stylesheet is part of the srcdoc string, never a <style>
+    // element attached to the Obsidian document.
+    const baseStyle=':root{color-scheme:light}body{margin:16px;font:14px/1.5 system-ui;color:#253c31;background:white}img,svg{max-width:100%;height:auto}*{box-sizing:border-box}'
+    frame.srcdoc=`<!doctype html>${document.documentElement.outerHTML.replace('<head>','<head><style>'+baseStyle+'</style>')}`
     const pre=card.createEl('pre',{cls:'catea-note-preview__source'});pre.createEl('code',{text:source});pre.hidden=true
     const choose=(preview:boolean)=>{viewport.hidden=!preview;pre.hidden=preview;previewButton.setAttribute('aria-pressed',String(preview));sourceButton.setAttribute('aria-pressed',String(!preview))}
     child.registerDomEvent(previewButton,'click',()=>choose(true))

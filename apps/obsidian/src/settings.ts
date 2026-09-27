@@ -13,18 +13,18 @@ import {listSkills} from '../../../packages/integrations/src/skills'
 export class CateaSettings extends PluginSettingTab {
   constructor(app:App,private owner:Catea){super(app,owner)}
   display(){
-    const p=this.owner,tr=p.t,c=p.agentSettings,el=this.containerEl;el.empty();el.createEl('h2',{text:'Catea Paper'})
+    const p=this.owner,tr=p.t,c=p.agentSettings,el=this.containerEl;el.empty();new Setting(el).setName('Catea Paper').setHeading()
     new Setting(el).setName(tr('语言 / Language')).addDropdown(d=>d.addOption('zh',tr('简体中文')).addOption('en','English').setValue(c.language||'zh').onChange(async value=>{c.language=value as 'zh'|'en';await p.saveAgentSettings();p.refreshPaperLanguage();this.display()}))
     const shell=p as any
     for(const [key,name] of [['enabled',tr('启用纸张界面')],['toolbar',tr('格式工具栏')],['tablerIcons',tr('Tabler 图标')],['hideProperties',tr('隐藏正文属性')],['hideRibbon',tr('隐藏导航栏')],['hideStatus',tr('隐藏状态栏')]])new Setting(el).setName(tr(name)).addToggle(t=>t.setValue(shell.settings[key]).onChange(async v=>{shell.settings[key]=v;await p.saveData(shell.settings);shell.apply()}))
     new Setting(el).setName(tr('笔记缩略图')).setDesc(tr('文件树显示真实标题、正文和首张本地图片的缩略预览。')).addToggle(t=>t.setValue(c.noteThumbnails!==false).onChange(async value=>{c.noteThumbnails=value;await p.saveAgentSettings();p.refreshThumbnails()}))
-    el.createEl('h3',{text:'Agent'})
+    new Setting(el).setName('Agent').setHeading()
     new Setting(el).setName(tr('启用 Agent')).addToggle(t=>t.setValue(c.enabled).onChange(async v=>{c.enabled=v;if(!v)p.agent.stop();p.agent.memory.setEnabled(v&&c.memory);await p.saveAgentSettings()}))
     new Setting(el).setName(tr('网络搜索与网页读取')).setDesc(tr('复用 CatUI 联网工具：Exa / agent-reach（支持时）/ Jina / DuckDuckGo；无需模型 Key 之外的搜索 Key。搜索词和目标 URL 会发送到联网服务。')).addToggle(t=>t.setValue(c.web).onChange(async v=>{c.web=v;p.agent.stop();await p.saveAgentSettings()}))
     new Setting(el).setName(tr('长期记忆')).setDesc(tr('自动提取、召回和巩固；保存在当前知识库 .catea/memory。')).addToggle(t=>t.setValue(c.memory).onChange(async v=>{c.memory=v;if(!v)p.agent.stop();p.agent.memory.setEnabled(v&&c.enabled);await p.saveAgentSettings()}))
     new Setting(el).setName('Bash').setDesc(tr('默认开启，命令执行遵循下方权限模式。')).addToggle(t=>t.setValue(c.shell).onChange(async v=>{c.shell=v;p.agent.stop();await p.saveAgentSettings()}))
     new Setting(el).setName(tr('权限模式')).setDesc(tr('帮我批准：自动放行 pwd、ls 等简单目录查看，其余操作请求确认。完全访问：跳过 Bash、文件修改、MCP 和记忆更新的审批，命令可访问知识库之外。')).addDropdown(d=>d.addOption('assist',tr('帮我批准')).addOption('full',tr('完全访问')).setValue(c.permissionMode||'assist').onChange(async value=>{p.agent.stop();c.permissionMode=value==='full'?'full':'assist';await p.saveAgentSettings()}))
-    el.createEl('h3',{text:tr('BYOK 模型')})
+    new Setting(el).setName(tr('BYOK 模型')).setHeading()
     el.createEl('p',{text:tr('使用自己的 API Key，直接连接 OpenAI / Anthropic 兼容服务。仅显示你配置的模型。')})
     for(const model of c.models){
       new Setting(el).setName(model.name).setDesc(`${model.protocol==='openai'?tr('OpenAI 兼容'):tr('Anthropic 兼容')} · ${model.model} · ${model.baseUrl}${model.apiKey?'':tr(' · 请补充 API Key')}`)
@@ -37,9 +37,9 @@ export class CateaSettings extends PluginSettingTab {
         }))
     }
     new Setting(el).addButton(b=>b.setButtonText(tr('添加模型')).onClick(()=>new ModelModal(p,{id:crypto.randomUUID(),name:'',protocol:'openai',baseUrl:defaultBaseUrl('openai'),apiKey:'',model:''},()=>this.display()).open()))
-    el.createEl('h3',{text:'Skills'});new Setting(el).setName(tr('Obsidian 操作 · 内置')).setDesc(tr('随 Agent 启用：当前笔记、搜索、内部打开、阅读与编辑；写入和设置变更需确认。'));el.createEl('p',{text:tr('将 Skill 文件夹放到 .catea/skills/<名称>/SKILL.md，再启用。')})
+    new Setting(el).setName('Skills').setHeading();new Setting(el).setName(tr('Obsidian 操作 · 内置')).setDesc(tr('随 Agent 启用：当前笔记、搜索、内部打开、阅读与编辑；写入和设置变更需确认。'));el.createEl('p',{text:tr('将 Skill 文件夹放到 .catea/skills/<名称>/SKILL.md，再启用。')})
     const skillBox=el.createDiv();void listSkills(p.vaultPath).then(skills=>{if(!skillBox.isConnected)return;for(const id of skills)new Setting(skillBox).setName(id).addToggle(t=>t.setValue(c.skills.includes(id)).onChange(async v=>{c.skills=v?[...new Set([...c.skills,id])]:c.skills.filter(s=>s!==id);await p.saveAgentSettings()}))}).catch(e=>new Notice(e.message))
-    el.createEl('h3',{text:'MCP'})
+    new Setting(el).setName('MCP').setHeading()
     for(const server of c.mcp){
       new Setting(el).setName(server.id).addToggle(t=>t.setValue(server.enabled).onChange(async v=>{server.enabled=v;await p.saveAgentSettings()}))
       new Setting(el).setName(tr('连接方式')).addDropdown(d=>d.addOption('http','HTTP').addOption('stdio',tr('本地 stdio')).setValue(server.transport).onChange(async v=>{server.transport=v as any;await p.saveAgentSettings();this.display()}))

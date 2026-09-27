@@ -133,12 +133,12 @@ export default class Catea extends Base {
     })
   }
 
-  onunload(){for(const dialog of this.dialogs)dialog.close();void this.agent?.close();this.app.workspace.detachLeavesOfType(VIEW);super.onunload()}
+  onunload(){for(const dialog of this.dialogs)dialog.close();void this.agent?.close();super.onunload()}
 }
 class AgentView extends ItemView {
   private root?:Root
   constructor(leaf:WorkspaceLeaf,private plugin:Catea){super(leaf)}
   getViewType(){return VIEW}getDisplayText(){return 'Catea'}getIcon(){return 'messages-square'}
-  async onOpen(){this.contentEl.style.padding='0';this.root=createRoot(this.contentEl);this.root.render(<Panel plugin={this.plugin} agent={this.plugin.agent}/>)}
+  async onOpen(){this.root=createRoot(this.contentEl);this.root.render(<Panel plugin={this.plugin} agent={this.plugin.agent}/>)}
   async onClose(){this.root?.unmount()}
 }

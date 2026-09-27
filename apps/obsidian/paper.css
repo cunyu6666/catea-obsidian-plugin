@@ -289,6 +289,9 @@ body.gp-enabled .sidebar-toggle-button .clickable-icon {
 }
 body.gp-enabled .sidebar-toggle-button svg {width:16px;height:16px;}
 
+/* The agent view owns its own spacing, so the leaf contributes none. */
+.workspace-leaf-content[data-type="catea-agent"]>.view-content {padding:0;}
+
 /* Native note HTML/SVG previews, independent of the agent panel. */
 .catea-note-preview { border:1px solid var(--background-modifier-border); border-radius:10px; overflow:hidden; margin:12px 0; background:var(--background-primary); }
 .catea-note-preview__header { display:flex; align-items:center; justify-content:space-between; gap:8px; padding:6px 10px; border-bottom:1px solid var(--background-modifier-border); }

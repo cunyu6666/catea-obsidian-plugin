@@ -128,18 +128,24 @@ directory: `main.js`, `styles.css`, `manifest.json`, `LICENSE`,
 files. It does not install the plugin; copying it into
 `<vault>/.obsidian/plugins/catea-paper/` is a separate, manual step.
 
-**Verification status — measured on 2026-09-28 in a complete workspace.** The
+**Verification status — measured on 2026-09-28 in a complete workspace, on the 0.3.2 build.** The
 sibling `../catea-design-system` workspace was present with its own dependencies
 installed, and this repository's `node_modules` was installed.
 
 | Command | Result |
 |---------|--------|
-| `npm run build` | **exit 0** — wrote `dist/catea-paper/`: `main.js` (17.8 MB), `styles.css` (124 KB), `manifest.json` (version 0.3.1), `LICENSE`, `THIRD_PARTY_NOTICES.md`, `TABLER-LICENSE.txt` and the two design-system licence files |
+| `npm run build` | **exit 0** — wrote `dist/catea-paper/`: `main.js` (6.5 MB, minified), `styles.css` (125 KB), `manifest.json` (version 0.3.2), `LICENSE`, `THIRD_PARTY_NOTICES.md`, `TABLER-LICENSE.txt` and the two design-system licence files |
 | `npm test` | **exit 0** — 183 assertions, 183 passing |
 | `npm run typecheck` | **exit 0** — a scoped gate over `apps/*/src`, `packages/*/src` and `tests/`. Raw `tsc` still reports 87 diagnostics that cannot be fixed from this repository: 84 in vendored `packages/*/upstream/**` (the snapshot omits sibling modules such as `@catui/agent-core`) and 3 in the external `catea-design-system` components, so `scripts/typecheck.mjs` reports those as counts and fails only on owned code. Narrowing tsconfig `exclude` does **not** work: it replaces the built-in `node_modules` exclusion and made the count worse (measured 87 → 129) |
 
 Loading the built plugin inside Obsidian has **not** been verified here; that
 needs a running Obsidian instance and a test vault.
+
+The bundle size is a joint property of this repository and the design system:
+`../catea-design-system/packages/components/src/CodeBlock.tsx` loads a curated
+Shiki grammar set through `shiki/core`. Reverting that to `import { bundledLanguages }
+from 'shiki'` adds roughly 10 MB back and pushes the release past Obsidian's 5 MB
+sync threshold.
 
 **Runtime requirement.** `npm test` runs on Node's built-in test runner and relies
 on native TypeScript type stripping, so Node 24 or newer is expected (verified on

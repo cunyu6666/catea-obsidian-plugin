@@ -3,7 +3,7 @@
 Notable changes per release. The version is the one in `manifest.json`; the GitHub
 release tag is that same number with no `v` prefix.
 
-## Unreleased
+## 0.3.2
 
 ### Added
 
@@ -27,12 +27,49 @@ release tag is that same number with no `v` prefix.
 - `docs/ARCHITECTURE.md` rewritten in English, with the verification boundary stated
   explicitly rather than left implied.
 
+- `npm run build` minifies the bundle and drops license comments, and the design
+  system's `CodeBlock` now loads a curated set of 23 Shiki grammars through
+  `shiki/core` with the JavaScript regex engine instead of the full registry plus
+  an inlined Oniguruma WASM. `main.js` went from 17.8 MB to 6.5 MB.
+- `framer-motion`, `motion-dom` and `motion-utils` are aliased to this repository's
+  copy during the build, so the design system and the host share one instance.
+
 ### Fixed
 
 - `packages/integrations/src/mcp.ts` and `packages/integrations/src/web.ts` reported
   version `0.3.0` while everything else said `0.3.1`.
 - `packages/integrations/src/web.ts` no longer reaches `input.url` after narrowing
   `input` to `never`.
+
+## 0.3.2
+
+- The four blocking findings from Obsidian's automated release review of `0.3.1`
+  (commit `bf69fa2`):
+  - `apps/obsidian/src/main.tsx` no longer calls `detachLeavesOfType` in
+    `onunload`, which reset the agent sidebar to its default dock even after the
+    user moved it.
+  - The agent view's padding now comes from a `styles.css` rule scoped to
+    `.workspace-leaf-content[data-type="catea-agent"]` instead of an assignment to
+    `contentEl.style`.
+  - `apps/obsidian/src/note-previews.ts` no longer creates a `<style>` element; the
+    sandboxed preview's base stylesheet is part of its `srcdoc` string, so nothing
+    is injected into the Obsidian document.
+  - `apps/obsidian/src/settings.ts` uses `new Setting(...).setHeading()` for its
+    section titles instead of raw `h2`/`h3` elements.
+- `apps/obsidian/package.json` now lists the packages its sources import (`react`,
+  `react-dom`, `react-markdown`, `remark-gfm`, `beautiful-mermaid`).
+
+### Known
+
+- `main.js` is still above the 5 MB Obsidian Sync Standard threshold, so those users
+  cannot sync the plugin file. The remaining weight is `elkjs` and
+  `beautiful-mermaid` (Mermaid rendering) and the vendored `paper.cjs` icon bundle;
+  going under 5 MB would mean removing a feature rather than trimming dead weight.
+- The release review also reported `fs` and `child_process` use. That is the
+  documented design of a bring-your-own-key agent that reads and edits the vault and
+  runs Bash, gated by the approval modes in `SECURITY.md`; it is not incidental.
+- `apps/obsidian/src/paper.cjs` still contains a raw `h2` heading. It is a vendored
+  generated bundle and is not hand-edited here.
 
 ## 0.3.1
 
