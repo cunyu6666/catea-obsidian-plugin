@@ -1,0 +1,291 @@
+# DIP Bootstrap — Design
+
+Status: Awaiting user approval
+Date: 2026-09-28
+Method: `oh-my-dev` (DIP protocol — documentation drives tests)
+Target: `catea-obsidian-plugin` (Catea Paper Agent, v0.3.1)
+
+---
+
+## 1. Goal
+
+Bring the repository under the DIP protocol so that documentation and code are
+structurally consistent and mechanically verifiable, and make the documentation
+layer English-only for a global open-source audience.
+
+Three outcomes:
+
+1. **P1/P2/P3 documentation** — a root charter, per-module maps, and per-file
+   contract headers, all in English.
+2. **A runnable harness** — zero-dependency contract tests that fail when the
+   documentation drifts from the code, so `/verify` is automated rather than manual.
+3. **Release hygiene** — the minimum a public repository needs to be credible.
+
+## 2. Non-Goals
+
+Explicitly out of scope, to keep the change reviewable:
+
+| Not doing | Why |
+|---|---|
+| Translating Chinese strings inside source code | User scoped English to the documentation layer only |
+| Translating `packages/personas/*.md` persona prompts | Changes runtime product behavior (persona voice) |
+| Translating `apps/obsidian/src/skills/obsidian.md` | Same — it is agent-facing prompt content |
+| Refactoring `Agent.send()`, `panel.tsx`, or the `as any` seams | User selected the documentation-only scope, not the refactor scope |
+| Behavior/integration tests (providers, MCP, memory engine) | No runtime dependencies are installable in this environment; see §7 |
+| Touching `packages/*/upstream/**` | Byte-verified vendored snapshots; see §4.3 |
+| Adding a `LICENSE` header comment to every source file | Not required by DIP; keeps the diff focused |
+
+## 3. Current State (verified)
+
+| Item | State |
+|---|---|
+| Commits | 2 (`Import catea-source v0.3.1`, bilingual README) |
+| Remote | `github.com/O-Pencil/catea-obsidian-plugin`, `main` in sync |
+| Own source files | 40 (excluding `upstream/`) |
+| Vendored upstream files | 74 across `packages/agent-core/upstream`, `packages/memory/upstream` |
+| DIP documents | none — no `AGENTS.md` anywhere |
+| Tests | none — no runner, no config |
+| Source comments | already English |
+| Chinese in own files | 643 occurrences across 27 files; concentrated in `locale.ts` (114), personas (89+89+11), `docs/ARCHITECTURE.md` (44), `settings.ts` (31), `obsidian-tools.ts` (24), and scattered error strings |
+| `LICENSE` | absent |
+| `.gitignore` | absent — `node_modules`, `dist/`, `.catea/` are not ignored |
+| `node_modules` | not installed |
+| `../catea-design-system` | **missing** — build input is unresolvable |
+
+## 4. Scope of DIP Coverage
+
+### 4.1 Files receiving a P3 header (33)
+
+`apps/obsidian/src/` (12)
+`ChatMarkdown.tsx`, `DiagramDialog.tsx`, `MermaidDiagram.tsx`, `StreamingChatResponse.tsx`,
+`locale.ts`, `main.tsx`, `note-previews.ts`, `note-thumbnails.ts`, `obsidian-tools.ts`,
+`panel.tsx`, `selection.ts`, `settings.ts`
+
+`packages/agent-core/src/` (10)
+`ask-user-question.ts`, `attachments.ts`, `byok.ts`, `context.ts`, `i18n.ts`, `index.ts`,
+`providers.ts`, `transport.ts`, `types.ts`, `upstream-stream.ts`
+
+`packages/integrations/src/` (6)
+`index.ts`, `mcp.ts`, `skills.ts`, `storage.ts`, `tools.ts`, `web.ts`
+
+`packages/memory/src/` (3)
+`host.ts`, `index.ts`, `tools.ts`
+
+`packages/personas/src/` (1)
+`index.ts`
+
+`scripts/` (1)
+`build.mjs`
+
+### 4.2 Files deliberately skipped
+
+| File | Reason |
+|---|---|
+| `apps/obsidian/src/paper.cjs` | Generated bundle, 1.6 MB, embedded Tabler icon data |
+| `apps/obsidian/src/assets.d.ts` | `.d.ts` declaration file |
+| `apps/obsidian/src/skills/obsidian.md` | Markdown asset consumed as agent prompt |
+| `packages/personas/src/{aria,vex,pencil}.md` | Markdown prompt content |
+| `packages/agent-core/UPSTREAM.md`, `packages/memory/UPSTREAM.md` | Provenance documents, not source |
+| `package.json`, `tsconfig.json`, `apps/obsidian/package.json`, `packages/*/package.json` | Pure configuration, no logic (DIP rule: skip config) |
+| `apps/obsidian/paper.css` | Stylesheet, no logic |
+
+### 4.3 Vendored upstream — excluded (user decision)
+
+`packages/*/upstream/**` (74 files) are byte-verified snapshots recorded in
+`packages/agent-core/upstream/SOURCE_HASHES.json`. Inserting a P3 header would
+change the bytes and invalidate that verification.
+
+Handling: each P2 document marks the directory as `vendored — excluded from DIP,
+verified by SOURCE_HASHES.json`, so the exclusion is documented and reversible.
+
+## 5. Deliverables
+
+### 5.1 P1 — `AGENTS.md` (root, English)
+
+Sections: Identity, Project Overview, Architecture Topology (ASCII), Directory
+Structure, Build & Run Commands, Key Abstractions, Configuration Paths, Code
+Standards (language policy = English docs / English code comments; Conventional
+Commits), DIP Navigation (links to the 5 P2 files), Covenant footer.
+
+The Build & Run section must state the `../catea-design-system` prerequisite
+explicitly and mark the build command as **not verifiable in this environment**.
+
+### 5.2 P2 — five module maps (English)
+
+| File | Covers |
+|---|---|
+| `apps/obsidian/src/AGENTS.md` | 12 source files + 2 skipped assets |
+| `packages/agent-core/src/AGENTS.md` | 10 source files |
+| `packages/integrations/src/AGENTS.md` | 6 source files |
+| `packages/memory/src/AGENTS.md` | 3 source files |
+| `packages/personas/src/AGENTS.md` | 1 source file + 3 persona documents |
+
+Each member line follows `{file}: {responsibility}, {technical points}, {key parameters}`.
+Each carries a parent link back to the root `AGENTS.md` and the covenant footer.
+Directories with 1–2 files (`scripts/`) get no P2; their contents are listed in P1.
+
+### 5.3 P3 headers (33, English)
+
+Four fields per the `oh-my-dev` P3 template, placed after any existing file-level
+comment, followed by one blank line:
+
+```typescript
+/**
+ * [WHO]: Provides {actual top-level exports}
+ * [FROM]: Depends on {key module dependencies}
+ * [TO]: Consumed by {actual consumers}
+ * [HERE]: {path} - {role and relationship to neighbors}
+ */
+```
+
+### 5.4 Harness — 34 zero-dependency tests
+
+Runner: Node's built-in `node:test` + `node:assert/strict`. No new dependencies,
+no `node_modules`, no network. Why this over Vitest: the module graph imports
+`obsidian`, `electron`, and `catea-components`, and the design-system workspace is
+absent — runtime imports cannot resolve. See §7.
+
+Runner behavior verified on the local runtime (node v24.21.0) before writing this
+spec:
+
+- `node --test` discovers and runs `*.test.ts` files natively (type stripping), no flag needed;
+- a `.test.ts` file can import a sibling `.ts` helper **if the import uses an explicit
+  `.ts` extension** (`import {parseP3} from './p3-contract.ts'`), which is required because
+  these are ESM modules;
+- non-`*.test.*` helper files in `__tests__/` are not collected as tests.
+
+Sharing the P3/export/import parser across all 34 tests is therefore done with one
+helper per scope rather than duplicating parsing logic 34 times:
+
+```
+tests/dip-contract.ts        shared parser: P3 block extraction, export/import extraction,
+                             repo file index, consumer resolution
+apps/obsidian/src/__tests__/...        import {contractTest} from '../../../../tests/dip-contract.ts'
+packages/*/src/__tests__/...           same helper, relative depth per module
+```
+
+Each generated test is then a few lines: the target path plus the helper call.
+
+Layout (colocated per DIP convention):
+
+```
+apps/obsidian/src/__tests__/*.test.ts          12
+packages/agent-core/src/__tests__/*.test.ts    10
+packages/integrations/src/__tests__/*.test.ts   6
+packages/memory/src/__tests__/*.test.ts         3
+packages/personas/src/__tests__/index.test.ts   1
+scripts/__tests__/build.test.mjs                1
+tests/dip-verify.test.mjs                       1  repo-wide isomorphism gate
+tests/dip-contract.ts                             shared helper (not a test)
+```
+
+**Contract-check algorithm (per file).** The test must derive facts from the code,
+never from the header it is checking, otherwise it is tautological:
+
+1. Read the source file; extract the P3 block and parse the `WHO`, `FROM`, `TO` claims.
+2. Extract **actual** exports from the source text: `export (async )?(function|const|class|let|var|interface|type|enum) NAME`, `export {…}`, `export default`, `export * from`.
+3. Extract **actual** import specifiers from `from '<spec>'` occurrences.
+4. Assert:
+   - every `WHO` name appears in the actual export set;
+   - every `FROM` dependency matches at least one actual import specifier;
+   - every `TO` consumer resolves to an existing repository file whose source
+     contains an import specifier resolving to this file.
+5. Failures report the claimed vs. actual values.
+
+**Repo-wide gate (`tests/dip-verify.test.mjs`)** — the automated `/verify`:
+
+- every in-scope source file contains a `[WHO]:` block;
+- every P2 member line names an existing file, and every existing file in that
+  directory appears in the member list (both directions);
+- every P2 parent link resolves;
+- the P1 directory tree lists exactly the real top-level directories.
+
+### 5.5 Release hygiene
+
+| File | Content |
+|---|---|
+| `.gitignore` | `node_modules/`, `dist/`, `.catea/`, `*.tmp`, `.worktrees/`, OS/editor noise |
+| `LICENSE` | GPL-3.0 full text (user decision; required because GPL-3.0 `mem-core` is linked into the plugin artifact) |
+| `package.json` | `"test": "node --test"` script; document the Node PATH caveat |
+
+### 5.6 `docs/ARCHITECTURE.md` — English rewrite
+
+Same substance: the three ADRs (in-process loop, retained mem-core with replaced
+host adapter, standalone design-system monorepo), the `.catea/` runtime layout, the
+pre-release acceptance checklist, and the 2026-09-27 hands-on acceptance record.
+Rewrite in English; keep it as the design rationale that P1 links to.
+
+## 6. Execution Order
+
+Decisions taken at approval time (2026-09-28):
+
+- **Commit target: `main` directly.** No `dip-bootstrap` branch, no PR. The user
+  accepted the stated trade-off (a large multi-file change without an isolated
+  review branch).
+- **Commit granularity: staged commits**, one per phase below, Conventional
+  Commits messages in English.
+
+Order:
+
+1. `docs: add DIP bootstrap design spec`
+2. `chore: add .gitignore, GPL-3.0 LICENSE, and test script`
+3. `test(dip): add shared contract helper and repo-wide verify gate`
+4. `docs(dip): add root P1 AGENTS.md`
+5. `docs(dip): add P2 module maps`
+6. `docs(dip): add P3 headers and contract tests for agent-core`
+7. `docs(dip): add P3 headers and contract tests for integrations`
+8. `docs(dip): add P3 headers and contract tests for memory`
+9. `docs(dip): add P3 headers and contract tests for personas and scripts`
+10. `docs(dip): add P3 headers and contract tests for the Obsidian host`
+11. `docs: rewrite ARCHITECTURE.md in English`
+12. Run the full suite as the completion gate; report the raw output.
+
+Note on ordering: the repo-wide verify gate (`tests/dip-verify.test.mjs`) is
+written early but is expected to fail until step 10 completes, since it asserts
+that every in-scope file has a P3 header. It is committed with step 3 and its
+passing state is demonstrated at step 12.
+
+Rationale for not using a git worktree: `scripts/build.mjs` resolves its
+design-system input as `../catea-design-system` relative to the repo root, so an
+isolated worktree path would silently point at the wrong directory. This is
+independent of the branch decision above.
+
+## 7. Verification Limits (disclosed, not hidden)
+
+The following cannot be verified in this environment, and no claim will be made
+that they are:
+
+| Claim | Blocked by |
+|---|---|
+| `npm run build` succeeds | `../catea-design-system` missing; `node_modules` absent |
+| `tsc` type-checks | same |
+| Plugin loads in Obsidian | requires an Obsidian instance and a test vault |
+| Harness catches real drift | asserted only via deliberate red-green check, see below |
+
+What **will** be demonstrated with fresh evidence:
+
+- the full test command, its exit code, and the pass/fail counts;
+- a red-green proof for at least one harness test: temporarily remove a claimed
+  export, show the test fail, restore, show it pass;
+- `git status` showing the tracked file set contains no `node_modules`, `dist/`,
+  or `.catea` content.
+
+## 8. Risks
+
+| Risk | Mitigation |
+|---|---|
+| P3 headers become wrong as the code changes | The harness fails on drift; `/verify` is now one command |
+| 33 new test files add noise | They are contract checks only; a module-level grouping was considered but rejected for conformance with the DIP per-file rule |
+| Static contract tests prove little about runtime behavior | Stated plainly in §7; behavior tests are blocked by the missing dependency graph and are a separate, later effort |
+| Adding `LICENSE` GPL-3.0 changes distribution terms | User explicitly selected GPL-3.0; `THIRD_PARTY_NOTICES.md` and the vendored `LICENSE` are retained |
+| Committing 1.6 MB `paper.cjs` in a public repo | Out of scope; flagged as an observation only |
+
+## 9. Approval
+
+Approved by the user on 2026-09-28. Decisions recorded:
+
+1. **Spec: approved** — full scope as written in §4 and §5.
+2. **Commit granularity: staged commits** — one per phase in §6.
+3. **Finishing: commit directly to `main`** — no branch, no pull request.
+4. **Commits authorized** for this work; nothing is pushed to `origin` without a
+   separate request.
