@@ -126,15 +126,22 @@ directory: `main.js`, `styles.css`, `manifest.json`, `LICENSE`,
 files. It does not install the plugin; copying it into
 `<vault>/.obsidian/plugins/catea-paper/` is a separate, manual step.
 
-**Verification status — read this before trusting the build command.** In the
-current checkout `../catea-design-system` is absent and `node_modules` is not
-installed, so `npm run build` has **not** been executed and is not verified. Only
-`npm test` is verified, because the harness deliberately has zero dependencies.
-Nothing in this repository should claim that build, typecheck, or in-Obsidian
-loading succeed until those commands are actually run in a complete workspace.
+**Verification status — measured on 2026-09-28 in a complete workspace.** The
+sibling `../catea-design-system` workspace was present with its own dependencies
+installed, and this repository's `node_modules` was installed.
+
+| Command | Result |
+|---------|--------|
+| `npm run build` | **exit 0** — wrote `dist/catea-paper/`: `main.js` (17.8 MB), `styles.css` (124 KB), `manifest.json` (version 0.3.1), `LICENSE`, `THIRD_PARTY_NOTICES.md`, `TABLER-LICENSE.txt` and the two design-system licence files |
+| `npm test` | **exit 0** — 171 assertions, 171 passing |
+| `npx tsc --noEmit` | **exit 2** — 88 errors, all pre-existing and none from the harness: 84 in vendored `packages/*/upstream/**` (the snapshot omits sibling modules such as `@catui/agent-core`, so it cannot typecheck standalone), 3 in the external `catea-design-system` components, and **1 in this repository's own source** — `packages/integrations/src/web.ts:43` reaches `input.url` after narrowing `input` to `never` |
+
+Loading the built plugin inside Obsidian has **not** been verified here; that
+needs a running Obsidian instance and a test vault.
 
 **Runtime requirement.** `npm test` runs on Node's built-in test runner and relies
-on native TypeScript type stripping, so Node 24 or newer is expected.
+on native TypeScript type stripping, so Node 24 or newer is expected (verified on
+v24.21.0).
 
 ---
 

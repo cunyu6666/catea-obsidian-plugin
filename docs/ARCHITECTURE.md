@@ -2,14 +2,18 @@
 
 Status as of 2026-09-28 (version 0.3.1).
 
-**Verified**: the DIP documentation layer and its harness (`npm test`, 171 tests,
-all passing). The 2026-09-27 hands-on acceptance record below was observed in a
+**Verified on 2026-09-28 in a complete workspace**: `npm run build` completed with
+exit 0 and produced `dist/catea-paper/` (main.js, styles.css, manifest.json at
+0.3.1, and the licence files); `npm test` completed with exit 0 and 171 passing
+assertions; the 2026-09-27 hands-on acceptance record below was observed in a
 running Obsidian instance.
 
-**Not verified in the current checkout**: `npm run build` and `tsc`. The design
-system lives in the sibling `../catea-design-system` workspace, which is absent
-here, and `node_modules` is not installed. No claim in this document depends on
-those commands having been run.
+**Not verified**: `npx tsc --noEmit` exits 2 with 88 pre-existing errors — 84 in the
+vendored `packages/*/upstream/**` snapshot, which omits sibling modules and so
+cannot typecheck standalone; 3 in the external `catea-design-system` components;
+and 1 in this repository's own source, `packages/integrations/src/web.ts:43`.
+Loading the built plugin inside Obsidian is also unverified here, because that
+needs a live Obsidian instance and a test vault.
 
 ---
 
