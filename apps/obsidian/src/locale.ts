@@ -1,0 +1,130 @@
+export type Language="zh"|"en"
+const english:Record<string,string>={
+  "等待你的回答":"Waiting for your answer",
+  "模型": "Model",
+  "未配置模型": "No models configured",
+  "先在设置中配置模型": "Configure a model in Settings",
+  "补充要求，会在安全边界接入…": "Add instructions for the next step…",
+  "想一起做点什么？": "What shall we work on?",
+  "继续对话…": "Continue the conversation…",
+  "消息": "Message",
+  "发送": "Send",
+  "移除引用": "Remove quote",
+  "当前笔记已开启：发送时附带笔记内容，点击关闭": "Current note on: include its content when sending. Click to turn off.",
+  "当前笔记已关闭：点击附带笔记内容": "Current note off: click to include its content when sending.",
+  "停止生成": "Stop response",
+  "配置 BYOK 模型 →": "Configure BYOK models →",
+  "返回对话": "Back to conversation",
+  "历史对话": "History",
+  "新对话": "New conversation",
+  "正在生成": "Generating",
+  "设置": "Settings",
+  "最近对话": "Recent conversations",
+  "请先停止当前回复": "Stop the current response first",
+  "对话会保存在当前知识库中。": "Conversations are saved in this vault.",
+  "读笔记、找线索，把想法慢慢展开。": "Read notes, connect ideas, and explore together.",
+  "网络搜索": "Search the web",
+  "读取网页": "Read webpage",
+  "当前笔记": "Current note",
+  "搜索笔记": "Search notes",
+  "打开笔记": "Open note",
+  "阅读笔记": "Read note",
+  "修改笔记": "Edit note",
+  "管理笔记": "Manage notes",
+  "Catea 设置": "Catea settings",
+  "正在思考": "Thinking",
+  "查看操作": "View actions",
+  "工具详情": "Tool details",
+  "填写其他回答": "Enter another answer",
+  "提交回答": "Submit answers",
+  "下一题": "Next",
+  "上一题": "Previous",
+  "取消回答": "Dismiss",
+  "预览": "Preview",
+  "回复": "Response",
+  "复制": "Copy",
+  "已复制": "Copied",
+  "展开": "Expand",
+  "正在回复": "Responding",
+  "来源": "Sources",
+  "启用纸张界面": "Enable paper appearance",
+  "格式工具栏": "Formatting toolbar",
+  "Tabler 图标": "Tabler icons",
+  "隐藏正文属性": "Hide note properties",
+  "隐藏导航栏": "Hide ribbon",
+  "隐藏状态栏": "Hide status bar",
+  "启用 Agent": "Enable Agent",
+  "网络搜索与网页读取": "Web search and fetch",
+  "复用 CatUI 联网工具：Exa / agent-reach（支持时）/ Jina / DuckDuckGo；无需模型 Key 之外的搜索 Key。搜索词和目标 URL 会发送到联网服务。": "Uses CatUI web tools: Exa / agent-reach (when available) / Jina / DuckDuckGo. No extra search key required. Queries and URLs are sent to search services.",
+  "长期记忆": "Long-term memory",
+  "自动提取、召回和巩固；保存在当前知识库 .catea/memory。": "Automatically extract, recall, and consolidate memories in this vault's .catea/memory directory.",
+  "终端工具": "Terminal tools",
+  "默认关闭；开启后每条命令仍需确认。": "Off by default. Each command requires confirmation when enabled.",
+  "BYOK 模型": "BYOK models",
+  "使用自己的 API Key，直接连接 OpenAI / Anthropic 兼容服务。仅显示你配置的模型。": "Use your own API key with OpenAI / Anthropic compatible services. Only configured models appear.",
+  "OpenAI 兼容": "OpenAI compatible",
+  "Anthropic 兼容": "Anthropic compatible",
+  " · 请补充 API Key": " · API key required",
+  "编辑": "Edit",
+  "移除": "Remove",
+  "模型移除失败，请重试": "Could not remove model. Try again.",
+  "添加模型": "Add model",
+  "Obsidian 操作 · 内置": "Obsidian tools · Built in",
+  "随 Agent 启用：当前笔记、搜索、内部打开、阅读与编辑；写入和设置变更需确认。": "Available with Agent: current note, search, open inside Obsidian, read, and edit. Writes and setting changes require confirmation.",
+  "将 Skill 文件夹放到 .catea/skills/<名称>/SKILL.md，再启用。": "Place skills at .catea/skills/<name>/SKILL.md, then enable them here.",
+  "连接方式": "Transport",
+  "本地 stdio": "Local stdio",
+  "服务器地址": "Server URL",
+  "可执行程序": "Executable",
+  "参数（JSON 数组）": "Arguments (JSON array)",
+  "移除 MCP": "Remove MCP",
+  "添加 MCP": "Add MCP",
+  "编辑 BYOK 模型": "Edit BYOK model",
+  "添加 BYOK 模型": "Add BYOK model",
+  "显示名称": "Display name",
+  "协议": "Protocol",
+  "API 地址": "API URL",
+  "模型 ID": "Model ID",
+  "上下文窗口（tokens）": "Context window (tokens)",
+  "按模型实际上限填写；用于自动提示交接，默认 128000。": "Enter the model's actual limit for context handoff. Default: 128000.",
+  "优先保存到 Obsidian 安全存储；不可用时仅本次运行有效，不写入 .catea。": "Saved in Obsidian secure storage when available; otherwise kept for this session only. Never written to .catea.",
+  "取消": "Cancel",
+  "保存模型": "Save model",
+  "请检查配置": "Check your configuration",
+  "保存失败，请重试": "Could not save. Try again.",
+  "添加到 Catea": "Add to Catea",
+  "拒绝": "Decline",
+  "确认这一次": "Allow once",
+  "打开 Agent": "Open Agent",
+  "查看记忆概览": "View memory insights",
+  "记忆概览": "Memory insights",
+  "Catea Agent 需要桌面文件系统": "Catea Agent requires the desktop filesystem",
+  "当前版本无安全密钥存储；密钥仅保留到本次退出": "Secure key storage is unavailable. Keys are kept for this session only.",
+  "密钥无法持久保存，仅在当前运行期间使用": "Could not save the key securely. It will be used for this session only.",
+  "请回答所有问题": "Please answer every question",
+  "用户取消回答；不要假定答案或重复询问": "The user dismissed the question. Do not assume an answer or ask again."
+}
+Object.assign(english,{"更多文件操作": "More file actions", "纸张格式工具栏": "Formatting toolbar", "撤销": "Undo", "重做": "Redo", "段落样式": "Paragraph style", "正文": "Text", "正文 ▾": "Text ▾", "标题 1": "Heading 1", "标题 2": "Heading 2", "标题 3": "Heading 3", "加粗": "Bold", "斜体": "Italic", "删除线": "Strikethrough", "高亮": "Highlight", "无序列表": "Bulleted list", "有序列表": "Numbered list", "任务列表": "Task list", "引用": "Quote", "内部链接": "Internal link", "行内代码": "Inline code", "更多格式": "More formatting", "代码块": "Code block", "显示 / 隐藏笔记属性": "Show / hide note properties", "请填写显示名称、模型 ID 和 API Key": "Enter a display name, model ID, and API key", "请选择支持的协议": "Select a supported protocol", "上下文窗口需为 4096 至 2000000 的整数": "Context window must be an integer from 4096 to 2000000", "请输入有效的 API 地址": "Enter a valid API URL", "API 地址应为 HTTP(S) 基础地址，不包含账号、查询参数或片段": "Use an HTTP(S) base URL without credentials, query parameters, or fragments"})
+export function translate(language:Language,text:string){return language==="en"?(english[text]||text):text}
+
+const contentLabels:Record<string,[string,string]>={"copyCode": ["复制代码", "Copy code"], "copiedResponse": ["已复制", "Copied"], "plainText": ["纯文本", "Plain text"], "writingCode": ["正在编写", "Writing"], "viewDiagramFullscreen": ["全屏查看图表", "View diagram fullscreen"], "closeDialog": ["关闭", "Close"], "mermaidDiagram": ["Mermaid 图表", "Mermaid diagram"], "zoomOut": ["缩小", "Zoom out"], "zoomIn": ["放大", "Zoom in"], "zoomPresets": ["缩放比例", "Zoom presets"], "zoomToFit": ["适应窗口", "Fit to window"], "resetZoom": ["重置视图", "Reset view"], "copyDiagramSource": ["复制图表源码", "Copy diagram source"]}
+export function contentLabel(language:Language,key:string){return contentLabels[key]?.[language==="en"?1:0]||key}
+
+Object.assign(english,{
+ '默认开启，命令执行遵循下方权限模式。':'Enabled by default. Commands follow the permission mode below.',
+ '权限模式':'Permissions','帮我批准':'Help me approve','完全访问':'Full access',
+ '帮我批准：自动放行 pwd、ls 等简单目录查看，其余操作请求确认。完全访问：跳过 Bash、文件修改、MCP 和记忆更新的审批，命令可访问知识库之外。':'Help me approve: automatically allow simple directory inspection (pwd and ls); ask for other actions. Full access: skip approvals for Bash, file changes, MCP, and memory updates. Commands can access files outside the vault.'
+})
+
+Object.assign(english,{'删除':'Delete','删除会话':'Delete conversation'})
+
+Object.assign(english,{
+ '添加附件或粘贴图片':'Attach files or paste an image','添加文件夹':'Attach folder','放下以添加文件或文件夹':'Drop files or folders here','移除附件':'Remove attachment','正在读取附件…':'Reading attachments…','请查看这些附件':'Please review these attachments',
+ '个附件未导入：隐藏文件、读取失败或超过限制（单个 10 MB、合计 32 MB、64 个文件）。':'attachments skipped: hidden files, read failures, or limits exceeded (10 MB each, 32 MB total, 64 files).'
+})
+
+Object.assign(english,{'附件已保留：当前 M2 模型不支持图片或二进制文档，请切换支持该附件的模型。':'Attachments kept: this M2 model cannot read images or binary documents. Choose a model supporting these attachments.'})
+
+Object.assign(english,{'添加附件':'Add attachment','添加文件':'Add files','选区操作':'Selection actions'})
+
+Object.assign(english,{'笔记缩略图':'Note thumbnails','文件树显示真实标题、正文和首张本地图片的缩略预览。':'Preview note titles, content, and the first local image in the file tree.'})

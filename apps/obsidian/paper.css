@@ -1,0 +1,387 @@
+/* All overrides are reversible and scoped to the plugin's master switch. */
+body.gp-enabled {
+  --gp-shell-background:#edf0ed;
+  --font-interface-theme: -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif;
+  --font-text-theme: -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif;
+  --background-primary:#fff; --background-primary-alt:#fafafa;
+  --background-secondary:#eef0ef; --background-secondary-alt:#e8ebe9;
+  --background-modifier-border:rgba(39,48,44,.10);
+  --background-modifier-hover:rgba(36,48,42,.055);
+  --background-modifier-form-field:#fff; --background-modifier-cover:rgba(32,40,36,.25);
+  --text-normal:#292d2b; --text-muted:#767d78; --text-faint:#909790;
+  --text-accent:#49695b; --interactive-accent:#547363; --interactive-accent-hover:#41614f;
+  --text-on-accent:#fff; --text-selection:rgba(122,165,143,.22);
+  --nav-item-color:#555d57; --nav-item-color-active:#242b26;
+  --nav-item-background-active:rgba(255,255,255,.72);
+  --tab-text-color-active:#252b27; --tab-background-active:rgba(255,255,255,.65);
+  --titlebar-background:transparent; --titlebar-background-focused:transparent;
+  --ribbon-background:var(--gp-shell-background);
+  --ribbon-background-collapsed:var(--gp-shell-background); --divider-color:transparent;
+  --header-height:56px;
+  --file-line-width:760px; --file-margins:48px clamp(32px,6vw,96px);
+  --font-text-size:16px; --line-height-normal:1.8;
+  --h1-size:1.9em; --h2-size:1.45em; --h3-size:1.2em;
+  --h1-color:#222824; --h2-color:#222824; --h3-color:#222824;
+  --h1-font:var(--font-text-theme); --h2-font:var(--font-text-theme); --h3-font:var(--font-text-theme);
+  --bold-color:inherit; --italic-color:inherit;
+  --code-background:#f3f5f3; --code-normal:#46534a;
+  --blockquote-border-color:#8d9c92; --blockquote-background-color:transparent;
+  --radius-s:6px; --radius-m:10px; --radius-l:12px;
+}
+body.gp-enabled .app-container {
+  background:var(--gp-shell-background);
+}
+body.gp-enabled :is(.workspace,.horizontal-main-container,.workspace-split,.workspace-tabs,.workspace-tab-container,.titlebar) {background:transparent;}
+body.gp-enabled :is(.mod-left-split,.mod-right-split) {background:var(--gp-shell-background);backdrop-filter:none;}
+body.gp-enabled :is(.mod-left-split,.mod-right-split) :is(.workspace-leaf,.workspace-leaf-content,.view-content,.view-header) {background:transparent;}
+body.gp-enabled .workspace-tab-header-container {background:transparent;border-bottom:0;}
+body.gp-enabled .workspace-tab-header.is-active {box-shadow:none;border-radius:7px;}
+body.gp-enabled .workspace-tab-header::before,body.gp-enabled .workspace-tab-header::after {display:none;}
+body.gp-enabled .mod-root .workspace-leaf {background:transparent;padding:0 9px 12px;}
+body.gp-enabled .mod-root .workspace-leaf-content {
+  background:#fff;border:1px solid rgba(60,72,64,.12);border-radius:12px;
+  box-shadow:0 2px 4px rgba(30,42,34,.04),0 12px 30px rgba(30,42,34,.065);overflow:hidden;
+}
+body.gp-enabled .mod-root :is(.view-header,.view-content,.markdown-source-view,.markdown-preview-view,.cm-editor,.cm-scroller) {background:#fff;}
+body.gp-enabled .mod-root .view-header {height:40px;border-bottom:1px solid #f1f3f1;}
+body.gp-enabled .view-header-title-container {font-size:11px;color:var(--text-muted);}
+body.gp-enabled .inline-title {font-family:var(--font-text-theme);font-size:1.85em;font-weight:700;letter-spacing:-.035em;line-height:1.35;margin-bottom:28px;}
+body.gp-enabled .nav-file-title,body.gp-enabled .nav-folder-title {border-radius:6px;margin-block:1px;padding:var(--nav-item-padding);font-size:12px;position:relative;}
+body.gp-enabled .nav-file-title.is-active {box-shadow:0 1px 3px #26362d09;}
+body.gp-enabled .nav-header {padding:8px;}
+body.gp-enabled .workspace-ribbon {background:var(--gp-shell-background);border:0;}
+body.gp-enabled :is(.mod-left-split,.mod-right-split) {border-inline:0;}
+body.gp-enabled.gp-hide-ribbon .workspace-ribbon.mod-left {display:none;}
+body.gp-enabled.gp-hide-status .status-bar {display:none;}
+body.gp-enabled.gp-hide-properties .mod-root .metadata-container {display:none!important;}
+body.gp-enabled.gp-toolbar-on :is(#editingToolbarModalBar,#editingToolbarPopoverBar) {display:none!important;}
+body.gp-enabled .workspace-leaf-content[data-type="markdown"]>.view-content {display:flex;flex-direction:column;padding:0;}
+body.gp-enabled .workspace-leaf-content[data-type="markdown"]>.view-content>:is(.markdown-source-view,.markdown-preview-view) {flex:1;min-height:0;}
+body.gp-enabled .gp-toolbar {display:flex;align-items:center;justify-content:center;gap:4px;min-height:46px;padding:7px 16px;border-bottom:1px solid #eff1ef;background:#fff;flex-shrink:0;overflow-x:auto;}
+body.gp-enabled .gp-toolbar[hidden] {display:none;}
+body.gp-enabled .gp-toolbar .gp-tool {background:transparent;border:0;box-shadow:none;color:#616961;border-radius:5px;min-width:30px;height:30px;padding:6px 7px;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;font-size:12px;cursor:pointer;}
+body.gp-enabled .gp-toolbar .gp-tool:hover {background:#edf1ed;color:#222b24;}
+body.gp-enabled .gp-toolbar .gp-tool:focus-visible {outline:2px solid #60846f;outline-offset:1px;}
+body.gp-enabled .gp-toolbar svg {width:16px;height:16px;stroke-width:1.7;}
+body.gp-enabled .gp-divider {height:13px;width:1px;background:#e6eae6;margin:0 7px;flex-shrink:0;}
+@media(max-width:900px){body.gp-enabled .gp-toolbar{justify-content:flex-start;}body.gp-enabled{--file-margins:24px;}}
+@media(prefers-reduced-transparency:reduce){body.gp-enabled :is(.mod-left-split,.mod-right-split){background:#edf0ed;backdrop-filter:none;}}
+
+/* A single shell surface for navigation, explorer and extension panels. */
+body.gp-enabled :is(.workspace-sidedock-vault-profile,.workspace-ribbon.mod-left:before) {background:var(--gp-shell-background);}
+body.gp-enabled .mod-right-split .catui-acp-view {--catui-background:var(--gp-shell-background);background:var(--gp-shell-background);}
+/* Keep the native virtual tree geometry: label inset 24 - icon offset 20
+   + half icon width 8 = guide inset 12. */
+body.gp-enabled {
+  --nav-item-padding:6px 8px 6px 24px;
+  --nav-item-parent-padding:var(--nav-item-padding);
+  --nav-item-children-margin-start:12px;
+  --nav-item-children-padding-start:4px;
+}
+
+/* Craft desktop reference: a separate, airy tab strip above the paper.
+   Scope to ordinary center panes; sidebar tabs and stacked tabs stay native. */
+body.gp-enabled .mod-root .workspace-tabs:not(.mod-stacked) > .workspace-tab-header-container {
+  height:56px;min-height:56px;padding:12px 10px;
+  align-items:center;gap:6px;border:0;background:var(--gp-shell-background);
+  --tab-width:304px;--tab-max-width:304px;--tab-font-size:12px;
+  --tab-background-active:rgba(35,43,38,.10);--tab-outline-width:0px;
+}
+body.gp-enabled .mod-root .workspace-tabs:not(.mod-stacked) > .workspace-tab-header-container .workspace-tab-header-container-inner {
+  margin:0 0 0 auto;padding:0;gap:4px;align-items:center;min-width:0;
+  flex:0 1 auto;height:30px;
+}
+body.gp-enabled .mod-root .workspace-tabs:not(.mod-stacked) > .workspace-tab-header-container .workspace-tab-header {
+  height:30px;margin:0;padding:0;border-radius:7px;
+  flex:0 1 304px;min-width:76px;max-width:304px;box-shadow:none;
+}
+body.gp-enabled .mod-root .workspace-tabs:not(.mod-stacked) > .workspace-tab-header-container .workspace-tab-header.is-active {
+  background:rgba(35,43,38,.10);box-shadow:none;
+}
+body.gp-enabled .mod-root .workspace-tabs:not(.mod-stacked) > .workspace-tab-header-container .workspace-tab-header-inner {
+  padding:0 10px;gap:8px;border-radius:7px;
+}
+body.gp-enabled .mod-root .workspace-tabs:not(.mod-stacked) > .workspace-tab-header-container .workspace-tab-header-inner-title {
+  font-size:12px;font-weight:500;line-height:18px;color:#4b514d;
+}
+body.gp-enabled .mod-root .workspace-tabs:not(.mod-stacked) > .workspace-tab-header-container .workspace-tab-header.is-active .workspace-tab-header-inner-title {
+  font-weight:600;color:#303632;
+}
+body.gp-enabled .mod-root .workspace-tabs:not(.mod-stacked) > .workspace-tab-header-container .workspace-tab-header-inner-close-button {
+  order:-1;flex:0 0 16px;width:16px;height:16px;padding:2px;
+  border-radius:4px;--icon-size:12px;color:#8a908b;
+}
+body.gp-enabled .mod-root .workspace-tabs:not(.mod-stacked) > .workspace-tab-header-container :is(.workspace-tab-header-new-tab,.workspace-tab-header-tab-list) {
+  padding:0;margin:0;height:30px;flex:0 0 28px;
+}
+body.gp-enabled .mod-root .workspace-tabs:not(.mod-stacked) > .workspace-tab-header-container :is(.workspace-tab-header-new-tab,.workspace-tab-header-tab-list) .clickable-icon {
+  width:28px;height:28px;padding:6px;border-radius:6px;--icon-size:16px;
+}
+body.gp-enabled .mod-root .workspace-tabs:not(.mod-stacked) > .workspace-tab-header-container .workspace-tab-header-spacer {
+  flex:0 1 auto;width:0;min-width:0;margin-inline-end:auto;
+}
+
+/* Craft-style explorer: consistent rows, quiet hierarchy, no connector rails. */
+body.gp-enabled .nav-files-container {
+  --nav-item-padding:6px 10px 6px 24px;
+  --nav-item-parent-padding:var(--nav-item-padding);
+  --nav-item-children-padding-start:4px;
+  --nav-item-children-margin-start:12px;
+  --nav-indentation-guide-color:transparent;
+  --nav-item-weight:400;--nav-item-weight-hover:400;--nav-item-weight-active:500;
+  padding:6px 12px 24px;
+}
+body.gp-enabled .nav-files-container :is(.nav-folder-title,.nav-file-title) {
+  min-height:34px;line-height:20px;font-size:14px;margin-block:1px;
+  border-radius:6px;font-weight:400;letter-spacing:0;color:#4b534d;
+}
+body.gp-enabled .nav-files-container .nav-folder-title {font-weight:500;color:#535e55;}
+body.gp-enabled .nav-files-container .nav-file-title.is-active {
+  background:rgba(61,76,65,.07);box-shadow:none;color:#242d27;font-weight:500;
+}
+body.gp-enabled .nav-files-container .tree-item-children {border-inline-start-color:transparent;}
+body.gp-enabled .nav-files-container .collapse-icon {color:#909a92;opacity:.8;}
+body.gp-enabled .nav-files-container .collapse-icon svg {width:12px;height:12px;stroke-width:1.7;}
+body.gp-enabled.gp-tabler-on .nav-files-container :is(.nav-folder-title-content,.nav-file-title-content)::before {
+  content:"";display:inline-block;width:16px;height:16px;margin-inline-end:8px;
+  vertical-align:-3px;background:currentColor;opacity:.72;
+  mask:var(--gp-document-icon) center/contain no-repeat;
+  -webkit-mask:var(--gp-document-icon) center/contain no-repeat;
+}
+body.gp-enabled.gp-tabler-on .nav-files-container .nav-folder-title-content::before {
+  mask-image:var(--gp-folder-icon);-webkit-mask-image:var(--gp-folder-icon);color:#7b897e;
+}
+body.gp-enabled .gp-tabler-icon {stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;}
+body.gp-enabled .nav-header .clickable-icon {width:28px;height:28px;padding:6px;border-radius:6px;--icon-size:16px;}
+body.gp-enabled {--gp-folder-icon:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22black%22%20stroke-width%3D%221.65%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20stroke%3D%22none%22%20d%3D%22M0%200h24v24H0z%22%20fill%3D%22none%22%20%2F%3E%0A%20%20%3Cpath%20d%3D%22M5%204h4l3%203h7a2%202%200%200%201%202%202v8a2%202%200%200%201%20-2%202h-14a2%202%200%200%201%20-2%20-2v-11a2%202%200%200%201%202%20-2%22%20%2F%3E%3C%2Fsvg%3E");--gp-document-icon:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22black%22%20stroke-width%3D%221.65%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20stroke%3D%22none%22%20d%3D%22M0%200h24v24H0z%22%20fill%3D%22none%22%20%2F%3E%0A%20%20%3Cpath%20d%3D%22M14%203v4a1%201%200%200%200%201%201h4%22%20%2F%3E%0A%20%20%3Cpath%20d%3D%22M17%2021h-10a2%202%200%200%201%20-2%20-2v-14a2%202%200%200%201%202%20-2h7l5%205v11a2%202%200%200%201%20-2%202%22%20%2F%3E%0A%20%20%3Cpath%20d%3D%22M9%209l1%200%22%20%2F%3E%0A%20%20%3Cpath%20d%3D%22M9%2013l6%200%22%20%2F%3E%0A%20%20%3Cpath%20d%3D%22M9%2017l6%200%22%20%2F%3E%3C%2Fsvg%3E");}
+
+/* Forest palette: single accent source, including inherited theme aliases. */
+body.gp-enabled {
+  --gp-accent:#164b38;--gp-accent-hover:#103b2c;--gp-accent-soft:rgba(22,75,56,.10);
+  --gp-accent-softer:rgba(22,75,56,.055);--gp-accent-selection:rgba(22,75,56,.20);
+  --gp-accent-rgb:22,75,56;
+  --accent-h:158.5!important;--accent-s:54.6%!important;--accent-l:19%!important;
+  --color-accent:var(--gp-accent)!important;--color-accent-1:#1e6048!important;
+  --color-accent-2:#28745a!important;--color-accent-hsl:158.5,54.6%,19%!important;
+  --interactive-accent-hsl:158.5,54.6%,19%;
+  --interactive-accent:var(--gp-accent);--interactive-accent-hover:var(--gp-accent-hover);
+  --interactive-normal:#fff;--interactive-hover:#f2f6f3;
+  --text-accent:var(--gp-accent);--text-accent-hover:var(--gp-accent-hover);
+  --text-on-accent:#fff;--text-on-accent-inverted:#fff;
+  --text-selection:var(--gp-accent-selection);--text-highlight-bg:rgba(82,143,105,.20);
+  --text-highlight-bg-active:rgba(82,143,105,.30);--caret-color:var(--gp-accent);
+  --background-modifier-active-hover:var(--gp-accent-soft);
+  --background-modifier-border-focus:var(--gp-accent);
+  --background-modifier-border-hover:rgba(22,75,56,.28);
+  --background-modifier-form-field-highlighted:#f5f8f5;
+  --background-modifier-message:var(--gp-accent);
+  --icon-color-active:var(--gp-accent);--icon-color-focused:var(--gp-accent);
+  --nav-item-color-active:var(--gp-accent);--nav-item-color-selected:var(--gp-accent);
+  --nav-item-color-highlighted:var(--gp-accent);
+  --nav-item-background-active:var(--gp-accent-soft);--nav-item-background-selected:var(--gp-accent-soft);
+  --nav-item-background-hover:var(--gp-accent-softer);
+  --tab-text-color-active:var(--gp-accent);--tab-text-color-focused-active:var(--gp-accent);
+  --tab-text-color-focused-active-current:var(--gp-accent);
+  --tab-background-active:var(--gp-accent-soft);
+  --tab-switcher-preview-shadow-active:0 0 0 2px var(--gp-accent);
+  --link-color:var(--gp-accent);--link-color-hover:var(--gp-accent-hover);
+  --link-external-color:var(--gp-accent);--link-external-color-hover:var(--gp-accent-hover);
+  --link-unresolved-color:var(--gp-accent);--link-unresolved-decoration-color:rgba(22,75,56,.3);
+  --tag-color:var(--gp-accent);--tag-color-hover:var(--gp-accent-hover);
+  --tag-background:var(--gp-accent-soft);--tag-background-hover:rgba(22,75,56,.16);
+  --tag-border-color:rgba(22,75,56,.15);--tag-border-color-hover:rgba(22,75,56,.24);
+  --pill-color:var(--gp-accent);--pill-color-hover:var(--gp-accent-hover);
+  --pill-background:var(--gp-accent-soft);--pill-background-hover:rgba(22,75,56,.16);
+  --checkbox-color:var(--gp-accent);--checkbox-color-hover:var(--gp-accent-hover);
+  --checkbox-marker-color:#fff;--checkbox-border-color-hover:var(--gp-accent);
+  --toggle-thumb-color:#fff;--slider-fill-background:var(--gp-accent);
+  --slider-thumb-shadow-focus:0 0 0 2px var(--gp-accent-selection);
+  --divider-color-hover:var(--gp-accent);
+  --table-selection:var(--gp-accent-soft);--table-selection-border-color:var(--gp-accent);
+  --table-drag-handle-color-active:#fff;--table-drag-handle-background-active:var(--gp-accent);
+  --bases-table-cell-shadow-focus:0 0 0 2px var(--gp-accent);
+  --embed-border-start:2px solid var(--gp-accent);--blockquote-border-color:var(--gp-accent);
+  --graph-node-focused:var(--gp-accent);--graph-node-tag:#397c58;--graph-line-highlight:var(--gp-accent);
+  --graph-node:#78998a;--graph-node-unresolved:#9aac9f;--graph-text:#294a3b;
+  --indentation-guide-color-active:rgba(22,75,56,.30);
+  --nav-collapse-icon-color-collapsed:var(--text-faint);
+  --scrollbar-active-thumb-bg:rgba(22,75,56,.28);
+  --claude-paper-accent-rgb:var(--gp-accent-rgb);
+  --claude-paper-accent:var(--gp-accent);--claude-paper-accent-hover:var(--gp-accent-hover);
+  --claude-paper-accent-text:var(--gp-accent);--claude-paper-accent-soft:var(--gp-accent-soft);
+  --claude-paper-accent-softer:var(--gp-accent-softer);
+  --claude-paper-selection:var(--gp-accent-selection);--claude-paper-highlight:var(--text-highlight-bg);
+  --claude-paper-surface:#fff;--claude-paper-surface-alt:#f5f8f5;
+  --claude-paper-surface-secondary:var(--gp-shell-background);--claude-paper-surface-tertiary:var(--gp-shell-background);
+  --claude-paper-surface-raised:#fff;--claude-paper-surface-code:#f3f6f3;
+  --claude-paper-ink:#292d2b;--claude-paper-ink-secondary:#536057;--claude-paper-ink-tertiary:#7d8980;
+  --claude-paper-border:rgba(22,75,56,.12);--claude-paper-border-strong:rgba(22,75,56,.26);
+}
+body.gp-enabled .nav-files-container .nav-file-title.is-active {
+  color:var(--gp-accent);background:var(--gp-accent-soft);
+}
+body.gp-enabled .mod-root .workspace-tabs:not(.mod-stacked) > .workspace-tab-header-container {
+  --tab-background-active:var(--gp-accent-soft);
+}
+body.gp-enabled .mod-root .workspace-tabs:not(.mod-stacked) > .workspace-tab-header-container .workspace-tab-header.is-active {
+  background:var(--gp-accent-soft);
+}
+body.gp-enabled .mod-root .workspace-tabs:not(.mod-stacked) > .workspace-tab-header-container .workspace-tab-header.is-active .workspace-tab-header-inner-title {
+  color:var(--gp-accent);
+}
+body.gp-enabled .gp-toolbar .gp-tool:hover {background:var(--gp-accent-soft);color:var(--gp-accent);}
+body.gp-enabled .gp-toolbar .gp-tool:focus-visible {outline-color:var(--gp-accent);}
+body.gp-enabled :is(.clickable-icon.is-active,.vertical-tab-nav-item.is-active) {color:var(--gp-accent);}
+body.gp-enabled :is(button.mod-cta,.checkbox-container.is-enabled) {background:var(--gp-accent);color:#fff;}
+body.gp-enabled button.mod-cta:hover {background:var(--gp-accent-hover);}
+body.gp-enabled .suggestion-item.is-selected,body.gp-enabled .menu-item.selected:not(.is-warning) {
+  background:var(--gp-accent-soft);color:var(--gp-accent);
+}
+/* Third-party ACP view owns a separate token set; override it at its root. */
+body.gp-enabled .catui-acp-view {
+  --catui-accent:var(--gp-accent);--catui-background:var(--gp-shell-background);
+  --catui-foreground:#273d31;--catui-foreground-rgb:39,61,49;
+  --catui-success:#286247;
+  --color-accent:var(--gp-accent);--color-accent-hover:var(--gp-accent-hover);--color-on-accent:#fff;
+  --catui-shadow-focused:0 0 0 2px var(--gp-accent-selection);
+  --catui-user-message-bubble:rgba(22,75,56,.08);
+}
+body.gp-enabled .catui-acp-view .catui-composer:focus-within {
+  box-shadow:var(--catui-shadow-middle),0 0 0 1px var(--gp-accent);
+}
+body.gp-enabled .catui-acp-view .catui-send-button:not(:disabled) {background:var(--gp-accent);color:#fff;}
+body.gp-enabled .catui-acp-view .catui-send-button:not(:disabled):hover {background:var(--gp-accent-hover);}
+
+/* Collapsing the explorer activates a more specific native ribbon background.
+   Pin both states (and the titlebar cap) to the same opaque shell surface. */
+body.gp-enabled .workspace-ribbon.mod-left,
+body.gp-enabled .workspace-ribbon.mod-left.is-collapsed,
+body.gp-enabled .workspace-ribbon.mod-left::before {
+  background:var(--gp-shell-background)!important;
+  border-inline-end:0;box-shadow:none;transition:none;
+}
+
+/* Match the center strip's breathing room in both side docks. */
+body.gp-enabled :is(.mod-left-split,.mod-right-split) .workspace-tab-header-container {
+  align-items:center;
+}
+body.gp-enabled :is(.mod-left-split,.mod-right-split) .workspace-tab-header-container-inner {
+  height:32px;margin-block:0;padding-block:0;align-items:center;
+}
+body.gp-enabled .nav-header {padding:8px 12px;}
+body.gp-enabled .nav-buttons-container {gap:4px;}
+
+/* Keep tooltips as quiet rounded labels, without directional arrows. */
+body.gp-enabled .tooltip .tooltip-arrow {display:none!important;}
+
+/* A shorter lead-in to the document; preserve generous horizontal margins. */
+body.gp-enabled .gp-explorer-overflow {display:none!important;}
+body.gp-enabled .gp-explorer-more {background:transparent;border:0;box-shadow:none;}
+body.gp-enabled .nav-buttons-container {justify-content:flex-start;}
+
+/* Keep side-dock switches on the same 16px icon / 32px target grid. */
+body.gp-enabled {--traffic-lights-offset-y:var(--header-height);}
+body.gp-enabled .sidebar-toggle-button {
+  height:var(--header-height);align-items:center;padding-block:0;--icon-size:16px;
+}
+body.gp-enabled .sidebar-toggle-button .clickable-icon {
+  width:32px;height:32px;padding:8px;--icon-size:16px;
+}
+body.gp-enabled .sidebar-toggle-button svg {width:16px;height:16px;}
+
+/* Native note HTML/SVG previews, independent of the agent panel. */
+.catea-note-preview { border:1px solid var(--background-modifier-border); border-radius:10px; overflow:hidden; margin:12px 0; background:var(--background-primary); }
+.catea-note-preview__header { display:flex; align-items:center; justify-content:space-between; gap:8px; padding:6px 10px; border-bottom:1px solid var(--background-modifier-border); }
+.catea-note-preview__label { font-size:11px; color:var(--text-muted); font-weight:600; }
+.catea-note-preview__tabs { display:flex; gap:4px; }
+.catea-note-preview__tabs button { font:12px/20px var(--font-interface); height:26px; padding:2px 8px; border:0; box-shadow:none; background:transparent; color:var(--text-muted); }
+.catea-note-preview__tabs button[aria-pressed=true] { background:rgba(32,88,67,.09); color:#205843; }
+.catea-note-preview__viewport { height:320px; min-height:120px; max-height:80vh; resize:vertical; overflow:auto; background:white; }
+.catea-note-preview__viewport iframe { display:block; width:100%; height:100%; border:0; background:white; }
+.catea-note-preview__source { margin:0!important; padding:14px!important; max-height:480px; overflow:auto; white-space:pre; }
+.catea-note-preview [hidden] { display:none!important; }
+
+.catea-note-thumbnail { display:none; }
+body.gp-enabled .nav-file-title.catea-has-thumbnail .nav-file-title-content::before { display:none!important; }
+body.gp-enabled .nav-file-title .catea-note-thumbnail { display:block; width:18px; height:24px; flex:0 0 18px; object-fit:cover; margin-inline-end:8px; border:1px solid #b9c0bb; border-radius:3px; background:white; box-shadow:0 1px 2px #20382a14; pointer-events:none; }
+body.gp-enabled .nav-file-title.catea-has-thumbnail { display:flex; align-items:center; min-height:30px; }
+
+/* Preserve Obsidian's native traffic-light reservation when the left dock closes.
+   mod-top-left-space follows the actual top-left tab group, including split panes. */
+body.gp-enabled.mod-macos.is-hidden-frameless:not(.is-fullscreen) .mod-root .workspace-tabs.mod-top-left-space:not(.mod-stacked) > .workspace-tab-header-container {
+  padding-left: max(100px, calc(var(--size-4-2, 8px) + var(--frame-left-space, 80px)));
+}
+
+/* Vertical native ribbon dock: keep the original actions and their handlers.
+   Neighbour magnification follows the React Bits Dock reference along the Y axis. */
+body.gp-enabled .workspace-ribbon.mod-left {
+  --ribbon-width: 48px;
+  width: 48px;
+  flex-basis: 48px;
+  align-items: center;
+  padding: 12px 3px;
+}
+body.gp-enabled .workspace-ribbon.mod-left .side-dock-actions {
+  position: fixed;
+  top: 50%;
+  left: 3px;
+  transform: translateY(-50%);
+  max-height: calc(100vh - 128px);
+  min-height: 0;
+  width: 42px;
+  margin-block: 0;
+  padding: 6px 2px;
+  gap: 3px;
+  align-items: center;
+  justify-content: flex-start;
+  overflow-y: auto;
+  scrollbar-width: none;
+  border: 1px solid rgba(74, 96, 83, .1);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, .32);
+  box-shadow: 0 2px 8px rgba(31, 57, 43, .04);
+}
+body.gp-enabled .workspace-ribbon.mod-left .side-dock-actions::-webkit-scrollbar { display: none; }
+body.gp-enabled .side-dock-actions .side-dock-ribbon-action {
+  --dock-size: 30px;
+  --dock-icon: 18px;
+  flex: 0 0 var(--dock-size);
+  width: var(--dock-size);
+  height: var(--dock-size);
+  padding: 5px;
+  border-radius: 10px;
+  transition: width 180ms ease-out, height 180ms ease-out, flex-basis 180ms ease-out, background-color 160ms, color 160ms;
+}
+body.gp-enabled .side-dock-actions .side-dock-ribbon-action .svg-icon {
+  width: var(--dock-icon);
+  height: var(--dock-icon);
+  transition: width 180ms ease-out, height 180ms ease-out;
+}
+@media (hover: hover) and (prefers-reduced-motion: no-preference) {
+  body.gp-enabled .side-dock-actions .side-dock-ribbon-action:has(+ .side-dock-ribbon-action + .side-dock-ribbon-action:hover),
+  body.gp-enabled .side-dock-actions .side-dock-ribbon-action:hover + .side-dock-ribbon-action + .side-dock-ribbon-action {
+    --dock-size: 32px; --dock-icon: 19px;
+  }
+  body.gp-enabled .side-dock-actions .side-dock-ribbon-action:has(+ .side-dock-ribbon-action:hover),
+  body.gp-enabled .side-dock-actions .side-dock-ribbon-action:hover + .side-dock-ribbon-action {
+    --dock-size: 34px; --dock-icon: 21px;
+  }
+  body.gp-enabled .side-dock-actions .side-dock-ribbon-action:hover {
+    --dock-size: 36px; --dock-icon: 24px;
+  }
+}
+body.gp-enabled .side-dock-actions .side-dock-ribbon-action:is(:hover, :focus-visible) {
+  background: rgba(32, 88, 67, .1);
+  color: #205843;
+}
+body.gp-enabled .side-dock-actions .side-dock-ribbon-action:focus-visible {
+  outline: 2px solid #205843;
+  outline-offset: -2px;
+}
+@media (prefers-reduced-motion: reduce) {
+  body.gp-enabled .side-dock-actions .side-dock-ribbon-action,
+  body.gp-enabled .side-dock-actions .side-dock-ribbon-action .svg-icon { transition: none; }
+}
+
+/* Suppress only a matching leading H1; the Markdown content stays untouched. */
+body.gp-enabled .gp-duplicate-inline-title .inline-title { display: none !important; }

@@ -1,0 +1,29 @@
+{
+  "commit": "d6d110aa645cd5e2305dde42e04040bddafb5e6a",
+  "files": {
+    "loop/tool-policy.ts": "c4aeec78438df9a71d6d4d054100498ad4e3abce6119bf71a1c0c30a896719bd",
+    "loop/loop-progress.ts": "efc2b0fb47c100022a222fdb6a5a125a9c436155e2fd33c8b83a70e3cbf42939",
+    "loop/errors.ts": "2bcee66a028731f3bd587c07106837e4af328155d0966f088f58e31eb6120bbf",
+    "loop/run-trace-context.ts": "21aa5a842a5883c818f57fef0bbea8b6a822c194b7382a703c3fcf55d1f9ba9a",
+    "loop/run-trace-recorder.ts": "4399f544be3e1d808a21586d02fe8400adf983ebe033caf5322ba1268f16cad8",
+    "loop/agent-loop-stream-events.ts": "d4f9069d70349ac4559554ee956c30bac985f8efb3cbc1b26b767f17a803696d",
+    "loop/agent-run-result.ts": "95cabc59048f2e979750224e4624c04dde9fe94ab554fa1325127a0149cea0f6",
+    "loop/types.ts": "12d9d096be03f1f68e9a09ea87f0cfc19ff6c4deb8695d73c4aada3ae3931f4e",
+    "loop/run-trace.ts": "2379cabea6d4b82fa3055c7ca2fdda7f3a109edac79e3c6d490a74cb7318ebb0",
+    "loop/agent-loop-tool-results.ts": "8c5485023e87152c051274dbbe0a05951a342447a5fbc5c52e9e2cccbfd9f490",
+    "loop/run-checkpoint.ts": "5e7aaeb9f0d986ea3fe3f80e5401381cdee9437da9232c1074bed1b6fa832fc9",
+    "loop/agent-loop-continuations.ts": "d5effee88b2132f2c223f8f6e4649c60f5bc7a5a5f7b254992d2d0a7d7d74278",
+    "loop/agent-loop.ts": "726a7058cf133edc0159979021a22b1e8afccbdbeba46942426fdb0497abece8",
+    "loop/agent-loop-tool-summaries.ts": "48b4628efb128b960dc8abfb71017269bca85e340aa5156bc2b2ebfe98bcf06f",
+    "loop/structured-adaptive-tool-orchestration.ts": "b258a47255e868d726c0eec94c0fac486d94148f6157d87b97e6ddb081865384",
+    "ai/schema.ts": "3ef6c8614d6a98e34690c55aaabd16f69775ad10cec31bdacaa0a3163518d22d",
+    "ai/types.ts": "196755724fd4c9aea83e455002befbd9e4afd9b08b36193f04d8c3e51f8c7e52",
+    "ai/overflow.ts": "58ece62af0801533249a927d94232ec708a4a96e4ae504f889c88f8d21f0d088",
+    "ai/events.ts": "56289204324fbd7f236c427d645d9cdd4ea7633529775f3c786bd5a877a21c30",
+    "ai/utils/validation.ts": "f0577b7c5cc9f6a4a6b1b1c38db4042308a5fe820f992ee20e629632bfd808df",
+    "ai/utils/typebox-helpers.ts": "78450ccf08cbb5732fa0f04a4f6b09be7ac69be9d4679e89f60137ae6833a3df",
+    "ai/utils/event-stream.ts": "6cf83ba40b930dd4255e12fbab580900cb03f8084f423c94c2ac64ff833a4c56",
+    "ai/utils/overflow.ts": "7d529c4e2ef78058959be59645ea395fa9fb8033d8fcee22ba8873298bdb196c",
+    "ai/utils/event-stream-types.ts": "fd17df32a5697991c9f80132e4dc65684a0d74f8e0fe3b43c5d41f0b2d607f1b"
+  }
+}
