@@ -1,7 +1,7 @@
 {
   "id": "catea-paper",
   "name": "Catea",
-  "version": "0.3.8",
+  "version": "0.3.9",
   "minAppVersion": "1.8.0",
   "description": "Paper workspace with a native Catea Agent.",
   "author": "Cunyu",

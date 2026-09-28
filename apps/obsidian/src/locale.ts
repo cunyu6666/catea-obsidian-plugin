@@ -400,3 +400,5 @@ export function pendingReplyText(messageId:string,language:Language="zh"):string
   for(let i=0;i<messageId.length;i++)hash=Math.imul(hash^messageId.charCodeAt(i),16777619)
   return translate(language,replyAcknowledgements[(hash>>>0)%replyAcknowledgements.length][0])
 }
+
+Object.assign(english,{"切换会话":"Switch conversation","关闭当前会话":"Close current conversation"})

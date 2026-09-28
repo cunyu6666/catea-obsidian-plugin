@@ -1,14 +1,13 @@
 /**
  * [WHO]: Provides Panel
- * [FROM]: Depends on ../../../packages/agent-core/src/attachments, ../../../packages/agent-core/src/types, ./StreamingChatResponse, react, motion/react, ./ChatMarkdown, catea-components, obsidian, ../../../packages/agent-core/src, ../../../packages/agent-core/src/byok, ../../../packages/agent-core/src/model-capabilities, ./session-drafts, ./locale, ./tool-presenters, ../cat-welcome.png, ./main
+ * [FROM]: Depends on ../../../packages/agent-core/src/attachments, ../../../packages/agent-core/src/types, ./StreamingChatResponse, react, ./ChatMarkdown, catea-components, obsidian, ../../../packages/agent-core/src, ../../../packages/agent-core/src/byok, ../../../packages/agent-core/src/model-capabilities, ./session-drafts, ./locale, ./tool-presenters, ../cat-welcome.png, ./main
  * [TO]: Consumed by apps/obsidian/src/main.tsx
- * [HERE]: apps/obsidian/src/panel.tsx - React sidebar root composing header tabs, history, message list and composer; maps model picker, approvals, quotes and attachments
+ * [HERE]: apps/obsidian/src/panel.tsx - React sidebar root composing a header session dropdown, history, message list and composer; maps model picker, approvals, quotes and attachments
  */
 import {readDroppedAttachments,readPickedAttachments} from '../../../packages/agent-core/src/attachments'
 import type {ChatAttachment,ToolEvent} from '../../../packages/agent-core/src/types'
 import {StreamingChatResponse} from './StreamingChatResponse'
 import {useCallback,useEffect,useRef,useState} from 'react'
-import {motion,useReducedMotion} from 'motion/react'
 import {ChatMarkdown} from './ChatMarkdown'
 import {useScrollFade,Composer,AttachmentCards,type AttachmentCardItem,ApprovalCard,AgentActivities,ActionMenu,DitherLoader,Icon,IconButton,SidebarItem,Select,SelectTrigger,SelectValue,SelectContent,SelectItem} from 'catea-components'
 import {FuzzySuggestModal,TFolder} from 'obsidian'
@@ -47,7 +46,6 @@ function chooseVaultFolder(plugin:Catea,label:string):Promise<string|null>{
 }
 
 export function Panel({plugin}:{plugin:Catea}){
-  const reduceMotion=useReducedMotion()
   const agent:Agent=plugin.agent
   const panelRef=useRef<HTMLDivElement>(null)
   useScrollFade(panelRef,12)
@@ -80,17 +78,10 @@ export function Panel({plugin}:{plugin:Catea}){
   const [annotation,setAnnotation]=useState<{messageId:string;quote:string;comment:string}|null>(null)
   const selectedReply=useRef<{messageId:string;quote:string}|null>(null)
   const [history,setHistory]=useState<Array<{id:string;title:string}>>([])
-  const scroll=useRef<HTMLDivElement>(null),tabRail=useRef<HTMLElement>(null),follow=useRef(true),lastScrollTop=useRef(0)
+  const scroll=useRef<HTMLDivElement>(null),follow=useRef(true),lastScrollTop=useRef(0)
   useEffect(()=>plugin.subscribe(()=>update(n=>n+1)),[plugin])
   const selectionId=plugin.selections.at(-1)?.id
   const config=plugin.agentSettings,models=configuredModels(config.models),model=selectedModel(config.models,config.modelId),empty=!agent.session.messages.length
-  useEffect(()=>{
-    const rail=tabRail.current,active=rail?.querySelector<HTMLElement>('.catea-session-tab.is-active')
-    if(!rail||!active)return
-    const railRect=rail.getBoundingClientRect(),tabRect=active.getBoundingClientRect(),left=tabRect.left-railRect.left+rail.scrollLeft,right=left+tabRect.width,pad=8
-    if(left<rail.scrollLeft+pad)rail.scrollLeft=Math.max(0,left-pad)
-    else if(right>rail.scrollLeft+rail.clientWidth-pad)rail.scrollLeft=right-rail.clientWidth+pad
-  },[sessionId,agent.session.title,plugin.tabs.length])
   useEffect(()=>{setAnnotation(null);selectedReply.current=null},[sessionId])
   useEffect(()=>{if(selectionId)setShowHistory(false)},[selectionId])
   useEffect(()=>{
@@ -140,8 +131,12 @@ export function Panel({plugin}:{plugin:Catea}){
     trailing={modelPicker}/>
     {error&&<div className="chat-notice" role="alert">{error}</div>}{agent.compaction&&<div className={`chat-notice${agent.compaction.type==='start'?' catea-loading-notice':''}`} role="status">{agent.compaction.type==='start'&&<DitherLoader label={config.language==='en'?'Compacting context':'正在压缩上下文'}/>}{config.language==='en'?({start:'Compacting context…',complete:'Context compacted',failure:`Context compaction failed: ${agent.compaction.error||''}`})[agent.compaction.type]:({start:'正在压缩上下文…',complete:'上下文压缩完成',failure:`上下文压缩失败：${agent.compaction.error||''}`})[agent.compaction.type]}</div>}{!model&&<div className="chat-notice"><button onClick={()=>plugin.openAgentSettings()}>{t("配置 BYOK 模型 →")}</button></div>}</>
   return <div ref={panelRef} className="catea-ui catea-panel"><main className={empty&&!showHistory?'ai-start-page':'chat-main'}>
-    <header className="chat-header"><div className="header-leading"><IconButton label={showHistory?t('返回对话'):t('历史对话')} aria-pressed={showHistory} onClick={()=>setShowHistory(v=>!v)}><Icon name={showHistory?'arrow-left':'history'} size={17}/></IconButton><div className="chat-header-title"><span>{showHistory?t('历史对话'):empty?t('新对话'):agent.session.title}</span></div></div><div className="chat-header-actions"><IconButton label={t("新对话")} onClick={()=>{plugin.newTab();setShowHistory(false);setError('');follow.current=true}}><Icon name="add" size={17}/></IconButton><IconButton label={t("设置")} onClick={()=>plugin.openAgentSettings()}><Icon name="settings" size={17}/></IconButton></div></header>
-    <nav ref={tabRail} className="catea-session-tabs anno-auto-scrollbar" aria-label={t('会话标签')} role="tablist" onWheel={event=>{const rail=event.currentTarget;if(Math.abs(event.deltaY)>Math.abs(event.deltaX)&&rail.scrollWidth>rail.clientWidth)rail.scrollLeft+=event.deltaY}}>{plugin.tabs.map(tab=><div className={`catea-session-tab${tab===agent?' is-active':''}`} key={tab.session.id}>{tab===agent&&<motion.span className="catea-session-tab-surface" layoutId="catea-active-tab" transition={reduceMotion?{duration:0}:{type:'spring',stiffness:460,damping:40}} aria-hidden="true"/>}<button type="button" role="tab" aria-selected={tab===agent} title={tab.session.title} onClick={()=>{plugin.agent=tab;plugin.agentSettings.personaId=tab.session.personaId;plugin.emit();setShowHistory(false);setError('');follow.current=true}}>{tab.running&&<DitherLoader label={t('正在生成')}/>}<span className="catea-session-tab-label">{tab.session.title==='新对话'?t('新对话'):tab.session.title}</span>{plugin.hasQuestion(tab.session.id)&&<span className="catea-session-question" aria-label={t('等待你的回答')}>?</span>}</button><button type="button" className="catea-session-close" aria-label={`${t('关闭标签')}：${tab.session.title}`} title={t('关闭标签')} onClick={()=>{void plugin.closeTab(tab.session.id).catch((e:unknown)=>setError(e instanceof Error?e.message:String(e)))}}><Icon name="close" size={12}/></button></div>)}</nav>
+    <header className="chat-header"><div className="header-leading"><ActionMenu label={t('切换会话')} icon={<Icon name="history" size={17}/>} className="catea-session-trigger" menuClassName="catea-session-menu" placement="bottom" items={[
+      ...plugin.tabs.map(tab=>({id:tab.session.id,label:tab.session.title==='新对话'?t('新对话'):tab.session.title,checked:tab===agent,icon:tab.running?<DitherLoader label={t('正在生成')}/>:<Icon name="chat" size={15}/>,detail:plugin.hasQuestion(tab.session.id)?t('等待你的回答'):tab.running?t('正在生成'):undefined,onSelect:()=>{plugin.agent=tab;plugin.agentSettings.personaId=tab.session.personaId;plugin.emit();setShowHistory(false);setError('');follow.current=true}})),
+      {id:'new',label:t('新对话'),icon:<Icon name="add" size={15}/>,separatorBefore:true,onSelect:()=>{plugin.newTab();setShowHistory(false);setError('');follow.current=true}},
+      {id:'history',label:t('历史对话'),icon:<Icon name="history" size={15}/>,onSelect:()=>setShowHistory(true)},
+      {id:'close',label:t('关闭当前会话'),icon:<Icon name="close" size={15}/>,onSelect:()=>{void plugin.closeTab(sessionId).then(()=>{setShowHistory(false);setError('');follow.current=true}).catch((e:unknown)=>setError(e instanceof Error?e.message:String(e)))}}
+    ]}/><div className="chat-header-title"><span>{showHistory?t('历史对话'):empty?t('新对话'):agent.session.title}</span></div></div><div className="chat-header-actions"><IconButton label={t("新对话")} onClick={()=>{plugin.newTab();setShowHistory(false);setError('');follow.current=true}}><Icon name="add" size={17}/></IconButton><IconButton label={t("设置")} onClick={()=>plugin.openAgentSettings()}><Icon name="settings" size={17}/></IconButton></div></header>
     {showHistory?<div className="catea-history anno-auto-scrollbar"><h2>{t("最近对话")}</h2>{history.map(s=><SidebarItem key={s.id} icon={<Icon name="chat" size={15}/>} title={s.title} active={s.id===agent.session.id} trailingOpen={deleteId===s.id} trailing={deleteId===s.id?<span className="catea-history-confirm"><button type="button" disabled={plugin.tabs.some(tab=>tab.session.id===s.id&&tab.running)} onClick={()=>{void plugin.deleteSession(s.id).then(()=>agent.list()).then(rows=>{setHistory(rows);setDeleteId(null)}).catch((e:unknown)=>setError(t(e instanceof Error?e.message:String(e))))}}>{t('删除')}</button><IconButton label={t('取消')} onClick={()=>setDeleteId(null)}><Icon name="close" size={14}/></IconButton></span>:<IconButton className="catea-history-delete" label={t('删除会话')} disabled={plugin.tabs.some(tab=>tab.session.id===s.id&&tab.running)} onClick={()=>setDeleteId(s.id)}><Icon name="trash" size={14}/></IconButton>} onClick={()=>{void plugin.openTab(s.id).then(()=>{setShowHistory(false);setError('');follow.current=true}).catch((e:unknown)=>setError(e instanceof Error?e.message:String(e)))}}/>)}{!history.length&&<p className="sidebar-empty">{t("对话会保存在当前知识库中。")}</p>}{error&&<div className="chat-notice" role="alert">{error}</div>}</div>:
     empty?<><div className="catea-welcome-art" aria-hidden="true"><img src={catWelcome} alt=""/></div><div className="chat-composer-wrap catea-welcome-composer">{composer}</div></>:<>
     <div ref={scroll} className="chat-scroll anno-auto-scrollbar" onWheel={e=>{if(e.deltaY<0)follow.current=false}} onScroll={e=>{const el=e.currentTarget,nearBottom=el.scrollHeight-el.scrollTop-el.clientHeight<24,movedUp=el.scrollTop<lastScrollTop.current-1,movedDown=el.scrollTop>lastScrollTop.current+1;if(movedUp)follow.current=false;else if(movedDown&&nearBottom)follow.current=true;setShowJump(!nearBottom);lastScrollTop.current=el.scrollTop}}><div className="chat-messages" onMouseUp={captureReplySelection} onKeyUp={captureReplySelection}>

@@ -5,6 +5,14 @@ release tag is that same number with no `v` prefix.
 
 ## Unreleased
 
+## 0.3.9
+
+### Changed
+
+- Replace the horizontal conversation tab strip with a dropdown on the top-left history icon.
+- Show the active conversation, generation and question states in the menu, with new conversation, history and close-current actions.
+- Preserve parallel conversations and drafts while supporting keyboard navigation, Escape dismissal and focus restoration.
+
 ## 0.3.8
 
 ### Fixed
