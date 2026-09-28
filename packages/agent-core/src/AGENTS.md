@@ -10,7 +10,7 @@ This is the only package the Obsidian host imports directly.
 
 ask-user-question.ts: Declares, validates and formats the AskUserQuestion tool; 1-4 questions, 2-4 unique option labels, headers clipped to 12 chars.
 attachments.ts: Converts dropped or picked files into base64 ChatAttachment data URLs with MIME inference; rejects dot and node_modules paths; 10 MB each, 32 MB total, 64 files, depth 16.
-byok.ts: Validates ModelConfig and resolves configured and selected models; requires name, model and key; contextWindow integer 4096-2000000; credential-free HTTP(S) URL.
+byok.ts: Validates ModelConfig and resolves configured and selected models; provides the fixed OpenRouter endpoint and Free model template; requires name, model and key; contextWindow integer 4096-2000000; credential-free HTTP(S) URL.
 context.ts: WorkingContext keeps the full journal while presenting a checkpoint-windowed message view; estimates prompt tokens as `(system + tools) / 3`.
 compaction.ts: Chooses complete-turn cuts, checks the current model budget and coordinates threshold or overflow compaction through narrow ports.
 compaction-summary.ts: Calls the injected BYOK model client to generate iterative context checkpoint summaries.
@@ -18,6 +18,8 @@ contracts.ts: Host-neutral session data and conversation/memory ports used for d
 i18n.ts: Flat error-label map, `t()` interpolation and `textValue()` for safe formatting of unknown values.
 index.ts: `class Agent` owns one session, saves through `ConversationStore`, repairs interrupted tool calls, assembles tools, drives `agentLoop` and enqueues memory.
 model-client.ts: Adapts direct BYOK model requests into an abortable event stream behind `ModelClient`.
+model-capabilities.ts: Resolves configured and known model capabilities and validates binary attachment support for UI and provider requests.
+permission-policy.ts: Evaluates read, write and execution requests under assist or full mode and gates approvals through one host-neutral function.
 providers.ts: `streamModel` maps transcripts to OpenAI or Anthropic requests and parses SSE or buffered JSON; retries once without usage on 400/422; error bodies truncated to 2000 chars.
 transport.ts: `serviceFetch` streams over Node http/https with a 120 s timeout and rejects redirects; falls back to Electron net only on X.509 chain errors, then to buffered requestUrl.
 types.ts: Shared type declarations for models, transcripts, attachments, tools and search configuration; type-only, emits no runtime code, and holds several currently unreferenced interfaces.

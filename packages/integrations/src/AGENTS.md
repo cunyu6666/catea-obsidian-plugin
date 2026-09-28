@@ -14,7 +14,7 @@ mcp.ts: `McpPool` connects enabled stdio and HTTP MCP servers, paginates tool di
 skills.ts: Loads enabled `.catea/skills/<id>/SKILL.md` packages, lists skill directories, and reads path-guarded resources; content capped at 48000 chars, traversal rejected.
 storage.ts: Vault confinement through `within()` with realpath checks and explicit symlink rejection, atomic temp+rename JSON writes, and the `Serial` promise queue.
 tools.ts: Filesystem tool surface (time/read/ls/find/grep/write/edit/bash) with approval gates; 1 MB text cap, 10000-file walk, 300-line read, 80 grep hits, 100 KB write, 60 s bash.
-web.ts: `web_search` and `web_fetch` via Exa MCP, agent-reach, Jina, DuckDuckGo or direct fetch; blocks local and private hosts; 10 results, 24000 chars, 30 s native timeout.
+web.ts: `web_search` and `web_fetch` via Exa MCP, Jina, DuckDuckGo or direct fetch; `link_world_admin` diagnoses Agent Reach and `link_world_exec` runs approved CLI arguments; blocks local and private hosts for page requests.
 
 ## Notes
 

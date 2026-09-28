@@ -1,4 +1,5 @@
 export {Composer} from './Composer'
+export {AttachmentCards,type AttachmentCardItem} from './AttachmentCards'
 export {ResponseCard} from './ResponseCard'
 export {AgentActivities} from './AgentActivities'
 export {Icon} from './Icon'

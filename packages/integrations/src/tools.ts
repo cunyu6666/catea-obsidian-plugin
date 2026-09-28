@@ -1,11 +1,12 @@
 /**
  * [WHO]: Provides Approve, VaultTools, fileTools
- * [FROM]: Depends on ../../agent-core/src/i18n, node:fs/promises, node:path, node:child_process, ./storage, ../../agent-core/src/providers
+ * [FROM]: Depends on ../../agent-core/src/i18n, ../../agent-core/src/permission-policy, node:fs/promises, node:path, node:child_process, ./storage, ../../agent-core/src/providers
  * [TO]: Consumed by apps/obsidian/src/obsidian-tools.ts, packages/agent-core/src/index.ts,
  *   packages/integrations/src/index.ts
  * [HERE]: packages/integrations/src/tools.ts - filesystem tool surface (time/read/ls/find/grep/write/edit/bash); 1 MB text cap, 10000-file walk, 300-line read, 80 grep hits, 100 KB write, 60 s bash
  */
 import {textValue} from '../../agent-core/src/i18n'
+import {requirePermission} from '../../agent-core/src/permission-policy'
 import {readFile,readdir,stat,mkdir,writeFile} from 'node:fs/promises'
 import {dirname} from 'node:path'
 import {spawn} from 'node:child_process'
@@ -76,7 +77,7 @@ export class VaultTools {
       }
       if(after.length>100000)throw new Error('单次写入上限 100 KB')
       if(path==='wiki/log.md'&&before!==null&&!after.startsWith(before))throw new Error('wiki/log.md 只能追加')
-      if(!await this.approve(`修改 ${path}`,JSON.stringify({path,before,after},null,2),signal))throw new Error('用户拒绝修改')
+      await requirePermission({mode:this.permissionMode(),capability:'vault',operation:'write',resource:path},this.approve,`修改 ${path}`,JSON.stringify({path,before,after},null,2),signal)
       signal.throwIfAborted();await within(this.vault,path)
       let current:string|null=null;try{current=await this.text(path)}catch(e:unknown){if((e as NodeJS.ErrnoException).code!=='ENOENT')throw e}
       if(current!==before)throw new Error('文件在确认期间发生变化，请重新读取')
@@ -87,7 +88,7 @@ export class VaultTools {
       // Only exact, non-composable directory inspection is automatically approved.
       // Execute these through absolute binaries without a shell (no PATH aliases).
       const readOnly=process.platform==='win32'?undefined:command.trim()==='pwd'?{file:'/bin/pwd',args:[]}:/^ls(?: -[alh]+)*$/.test(command.trim())?{file:'/bin/ls',args:command.trim().split(/ +/).slice(1)}:undefined
-      if(this.permissionMode()!=='full'&&!readOnly&&!await this.approve('运行终端命令',`工作目录：${this.vault}\n该命令可访问知识库之外的文件。\n\n${command}`,signal))throw new Error('用户拒绝命令')
+      await requirePermission({mode:this.permissionMode(),capability:'shell',operation:readOnly?'inspect':'execute',resource:command},this.approve,'运行终端命令',`工作目录：${this.vault}\n该命令可访问知识库之外的文件。\n\n${command}`,signal)
       signal.throwIfAborted()
       return new Promise((resolve,reject)=>{
         const child=readOnly&&process.platform!=='win32'?spawn(readOnly.file,readOnly.args,{cwd:this.vault,detached:true,stdio:['ignore','pipe','pipe']}):spawn(command,{cwd:this.vault,shell:true,detached:process.platform!=='win32',stdio:['ignore','pipe','pipe']});let output=''

@@ -8,6 +8,9 @@
 .chat-header-title>span {overflow:hidden;text-overflow:ellipsis}
 .chat-messages {width:100%;padding:16px 16px 40px}
 .chat-composer-wrap {width:100%;padding:0 12px 12px}
+.catea-panel .catea-welcome-art {flex:1;min-height:0;display:flex;align-items:center;justify-content:center;overflow:hidden}
+.catea-panel .catea-welcome-art img {display:block;width:min(160px,50%);height:auto;opacity:.4;pointer-events:none}
+.catea-panel .catea-welcome-composer {flex:none;margin:0;width:100%}
 .ai-start-center {width:calc(100% - 28px);transform:none}
 .ai-start-center h1 {font-size:24px}
 .ai-start-center>p {line-height:1.6;margin-bottom:24px}
@@ -59,8 +62,11 @@ button:not(.mod-cta):not(.mod-cta) {box-shadow:none}
 .catea-panel .anno-approval-card__option label { min-height: 32px; gap: 8px; padding: 6px 8px; font-size: 13px; line-height: 20px; }
 .catea-panel .anno-approval-card__option label[data-selected="true"] { background: color-mix(in srgb, var(--accent) 9%, transparent); }
 .catea-panel .anno-approval-card__option label > span { white-space: normal; overflow-wrap: anywhere; }
-.catea-panel .anno-approval-card__option input { width: 16px; height: 16px; border-width: 1.5px; align-self: flex-start; margin-top: 2px; }
-.catea-panel .anno-approval-card__option input:checked { background: var(--accent); border-color: var(--accent); box-shadow: inset 0 0 0 3px var(--surface); }
+.catea-panel .anno-approval-card__option input { width: 18px; height: 18px; border: 1.5px solid color-mix(in srgb, var(--foreground) 35%, transparent); align-self: flex-start; margin-top: 1px; background: var(--surface); box-shadow: none; transition: border-color .15s, background .15s; }
+.catea-panel .anno-approval-card__option label:hover input { border-color: var(--accent); }
+.catea-panel .anno-approval-card__option input[type=radio]:checked { border-color: var(--accent); background: radial-gradient(circle, var(--accent) 0 4px, transparent 4.5px); box-shadow: none; }
+.catea-panel .anno-approval-card__option input[type=checkbox]:checked { border-color: var(--accent); background: var(--accent); box-shadow: inset 0 0 0 3px var(--surface); }
+.catea-panel .anno-approval-card__option input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .catea-panel .anno-approval-card__option input[type=checkbox] { border-radius: 4px; }
 .catea-panel .anno-approval-card__custom { height: 32px; padding: 0 9px; border: 1px solid var(--border); border-radius: 7px; background: var(--background); font-family: inherit; font-size: 12px; }
 .catea-panel .anno-approval-card__footer { margin-top: 10px; gap: 8px; }
@@ -110,7 +116,7 @@ button:not(.mod-cta):not(.mod-cta) {box-shadow:none}
 .catea-panel .anno-sidebar-item:hover .catea-history-delete,
 .catea-panel .anno-sidebar-item:focus-within .catea-history-delete { opacity: 1; }
 @media (hover: none) { .catea-panel .catea-history-delete { opacity: 1; } }
-.catea-panel .chat-header { height: 44px; min-height: 44px; padding: 0 10px; }
+.catea-panel .chat-header { height: 44px; min-height: 44px; padding: 0 10px; border-bottom: 0; }
 .catea-panel .chat-header .header-leading { display: flex; align-items: center; gap: 6px; min-width: 0; }
 .catea-panel .chat-header .chat-header-actions { display: flex; gap: 2px; }
 .catea-panel .chat-header button { width: 26px; min-width: 26px; height: 26px; padding: 0; border-radius: 6px; }
@@ -127,16 +133,6 @@ button:not(.mod-cta):not(.mod-cta) {box-shadow:none}
     transparent 100%);
   mask-repeat: no-repeat;
 }
-.catea-panel .catea-attachments { display: flex; flex-wrap: wrap; gap: 6px; padding: 8px; max-height: 180px; overflow: auto; }
-.catea-panel .catea-attachments:empty { display: none; }
-.catea-panel .catea-attachment { display: flex; align-items: center; gap: 7px; padding: 6px 8px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface-muted); min-width: 0; max-width: 100%; }
-.catea-panel .catea-attachment img { width: 40px; height: 40px; object-fit: cover; border-radius: 4px; }
-.catea-panel .catea-attachment > span { min-width: 0; }
-.catea-panel .catea-attachment strong { display: block; max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; font-weight: 500; }
-.catea-panel .catea-attachment small { font-size: 10px; color: var(--foreground-soft); }
-.catea-panel .catea-attachment button { width: 22px; height: 22px; padding: 0; }
-
-
 /* Shared menu surface for attachments and contextual selection actions. */
 .catea-action-menu {
   position: fixed; z-index: 10000; min-width: 180px; padding: 4px;

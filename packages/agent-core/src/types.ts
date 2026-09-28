@@ -1,17 +1,27 @@
 /**
  * [WHO]: Provides AgentEvent, AppSettings, AskUserQuestion, AskUserQuestionAnswer, ChatAttachment,
- *   ChatMessage, ChatSession, McpServerConfig, McpToolInfo, ModelConfig, ModelProtocol,
+ *   ChatMessage, ChatSession, McpServerConfig, McpToolInfo, ModelCapabilities, ModelConfig, ModelProtocol,
  *   SearchEngine, SearchProvider, SearchServiceConfig, SkillRecord, Source, TokenUsage,
  *   ToolCall, ToolEvent, TranscriptItem
  * [FROM]: Depends on (none)
  * [TO]: Consumed by apps/obsidian/src/main.tsx, apps/obsidian/src/panel.tsx, apps/obsidian/src/settings.ts,
  *   packages/agent-core/src/ask-user-question.ts, packages/agent-core/src/attachments.ts,
  *   packages/agent-core/src/byok.ts, packages/agent-core/src/index.ts,
+ *   packages/agent-core/src/model-capabilities.ts,
  *   packages/agent-core/src/providers.ts, packages/agent-core/src/upstream-stream.ts,
  *   packages/memory/src/host.ts, packages/memory/src/index.ts
  * [HERE]: packages/agent-core/src/types.ts - shared type declarations for models, transcripts, attachments, tools and search configuration; type-only, emits no runtime code
  */
 export type ModelProtocol = 'openai' | 'anthropic'
+
+export interface ModelCapabilities {
+  vision:boolean
+  documents:boolean
+  tools:boolean
+  streaming:boolean
+  parallelTools:boolean
+  structuredOutput:boolean
+}
 
 export interface ModelConfig {
   id: string
@@ -21,6 +31,7 @@ export interface ModelConfig {
   apiKey: string
   model: string
   contextWindow?: number
+  capabilities?:Partial<ModelCapabilities>
 }
 
 export type SearchEngine = 'default' | 'google' | 'bing' | 'baidu'
@@ -108,6 +119,8 @@ export interface ChatMessage {
 
 export interface ChatAttachment {
   id: string
+  /** Missing on legacy sessions, where the attachment is always a file. */
+  kind?: 'file' | 'folder'
   path: string
   size: number
   mimeType?: string

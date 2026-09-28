@@ -12,6 +12,7 @@ const english:Record<string,string>={
   "先在设置中配置模型": "Configure a model in Settings",
   "补充要求，会在安全边界接入…": "Add instructions for the next step…",
   "想一起做点什么？": "What shall we work on?",
+  "搜索或向 AI 提问…": "Search or ask AI…",
   "继续对话…": "Continue the conversation…",
   "消息": "Message",
   "发送": "Send",
@@ -31,11 +32,14 @@ const english:Record<string,string>={
   "读笔记、找线索，把想法慢慢展开。": "Read notes, connect ideas, and explore together.",
   "网络搜索": "Search the web",
   "读取网页": "Read webpage",
+  "联网诊断": "Network diagnostics",
+  "Agent Reach 命令": "Agent Reach command",
   "当前笔记": "Current note",
   "搜索笔记": "Search notes",
   "打开笔记": "Open note",
   "阅读笔记": "Read note",
   "修改笔记": "Edit note",
+  "笔记属性": "Note properties",
   "管理笔记": "Manage notes",
   "Catea 设置": "Catea settings",
   "正在思考": "Thinking",
@@ -52,6 +56,10 @@ const english:Record<string,string>={
   "已复制": "Copied",
   "展开": "Expand",
   "正在回复": "Responding",
+  "正在踩奶…": "Making biscuits…",
+  "正在舔爪…": "Grooming paws…",
+  "正在甩尾巴…": "Swishing tail…",
+  "正在扒拉键盘…": "Pawing at keys…",
   "来源": "Sources",
   "启用纸张界面": "Enable paper appearance",
   "格式工具栏": "Formatting toolbar",
@@ -61,7 +69,7 @@ const english:Record<string,string>={
   "隐藏状态栏": "Hide status bar",
   "启用 Agent": "Enable Agent",
   "网络搜索与网页读取": "Web search and fetch",
-  "复用 CatUI 联网工具：Exa / agent-reach（支持时）/ Jina / DuckDuckGo；无需模型 Key 之外的搜索 Key。搜索词和目标 URL 会发送到联网服务。": "Uses CatUI web tools: Exa / agent-reach (when available) / Jina / DuckDuckGo. No extra search key required. Queries and URLs are sent to search services.",
+  "网页搜索使用 Exa / Jina / DuckDuckGo；可诊断并经确认调用已安装的 Agent Reach。搜索词和目标 URL 会发送到联网服务。": "Web search uses Exa / Jina / DuckDuckGo. An installed Agent Reach can be diagnosed and called with confirmation. Queries and URLs are sent to network services.",
   "长期记忆": "Long-term memory",
   "自动提取、召回和巩固；保存在当前知识库 .catea/memory。": "Automatically extract, recall, and consolidate memories in this vault's .catea/memory directory.",
   "终端工具": "Terminal tools",
@@ -76,7 +84,7 @@ const english:Record<string,string>={
   "模型移除失败，请重试": "Could not remove model. Try again.",
   "添加模型": "Add model",
   "Obsidian 操作 · 内置": "Obsidian tools · Built in",
-  "随 Agent 启用：当前笔记、搜索、内部打开、阅读与编辑；写入和设置变更需确认。": "Available with Agent: current note, search, open inside Obsidian, read, and edit. Writes and setting changes require confirmation.",
+  "随 Agent 启用：当前笔记、搜索、内部打开、阅读、编辑与属性管理；写入和设置变更需确认。": "Available with Agent: current note, search, open inside Obsidian, read, edit, and manage properties. Writes and setting changes require confirmation.",
   "将 Skill 文件夹放到 .catea/skills/<名称>/SKILL.md，再启用。": "Place skills at .catea/skills/<name>/SKILL.md, then enable them here.",
   "连接方式": "Transport",
   "本地 stdio": "Local stdio",
@@ -125,14 +133,31 @@ Object.assign(english,{
 Object.assign(english,{'删除':'Delete','删除会话':'Delete conversation'})
 
 Object.assign(english,{
- '添加附件或粘贴图片':'Attach files or paste an image','添加文件夹':'Attach folder','放下以添加文件或文件夹':'Drop files or folders here','移除附件':'Remove attachment','正在读取附件…':'Reading attachments…','请查看这些附件':'Please review these attachments',
+ '添加附件或粘贴图片':'Attach files or paste an image','添加文件夹':'Attach vault folder','选择知识库文件夹':'Choose a vault folder','文件夹':'Folder','文件':'File','放下以添加文件':'Drop files to attach','放下以添加文件或文件夹':'Drop files or folders here','文件夹不会批量上传，请通过添加菜单选择知识库文件夹。':'Folders are referenced instead of uploaded. Choose a vault folder from the attachment menu.','移除附件':'Remove attachment','正在读取附件…':'Reading attachments…','请查看这些附件':'Please review these attachments',
  '个附件未导入：隐藏文件、读取失败或超过限制（单个 10 MB、合计 32 MB、64 个文件）。':'attachments skipped: hidden files, read failures, or limits exceeded (10 MB each, 32 MB total, 64 files).'
 })
 
 Object.assign(english,{'附件已保留：当前 M2 模型不支持图片或二进制文档，请切换支持该附件的模型。':'Attachments kept: this M2 model cannot read images or binary documents. Choose a model supporting these attachments.'})
+Object.assign(english,{'附件已保留：当前模型不支持此类图片或二进制文档，请切换支持该附件的模型。':'Attachments kept: the selected model cannot read this image or binary document. Choose a model that supports it.'})
 
 Object.assign(english,{'添加附件':'Add attachment','添加文件':'Add files','选区操作':'Selection actions'})
 
 Object.assign(english,{'笔记缩略图':'Note thumbnails','文件树显示真实标题、正文和首张本地图片的缩略预览。':'Preview note titles, content, and the first local image in the file tree.'})
 Object.assign(english,{'人格':'Persona','选择 Agent 的对话风格；从下一条消息开始使用。':'Choose the Agent’s conversation style. Applies from the next message.'})
 Object.assign(english,{'附带当前笔记':'Include current note','发送消息时将当前笔记内容加入上下文。默认开启。':'Include the current note in messages sent to the model. On by default.'})
+Object.assign(english,{
+  '添加 OpenRouter':'Add OpenRouter',
+  '添加其他模型':'Add another model',
+  '只需 API Key；选择 Free 自动路由，或填写模型 ID。':'Enter an API key, then choose Free routing or a model ID.',
+  '配置 OpenRouter':'Configure OpenRouter',
+  '创建 OpenRouter API Key ↗':'Create an OpenRouter API key ↗',
+  '模型选择':'Model choice',
+  'Free 自动路由':'Free automatic routing',
+  '指定模型 ID':'Specific model ID',
+  '例如 openai/gpt-oss-120b:free；从 OpenRouter 模型页复制完整 ID。':'For example, openai/gpt-oss-120b:free. Copy the full ID from OpenRouter’s model page.',
+  '在 OpenRouter 创建 Key；优先保存到 Obsidian 安全存储，不写入知识库配置。':'Create a key at OpenRouter. Catea prefers Obsidian secure storage and never writes it to the vault config.',
+  'Free 会自动选择可用的免费模型；可用性、工具支持和请求限额由 OpenRouter 决定。笔记内容会发送给 OpenRouter 及其选定的模型提供方。':'Free automatically chooses an available free model. OpenRouter controls availability, tool support, and limits. Note content is sent to OpenRouter and its selected model provider.',
+  '保存并使用':'Save and use',
+  '请填写 OpenRouter 模型 ID，或选择 Free':'Enter an OpenRouter model ID or choose Free.',
+  'OpenRouter 模型 ID 应为 provider/model 格式':'Use a provider/model OpenRouter model ID.'
+})

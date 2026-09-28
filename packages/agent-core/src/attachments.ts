@@ -2,7 +2,7 @@
  * [WHO]: Provides attachmentIsText, attachmentText, readDroppedAttachments, readPickedAttachments
  * [FROM]: Depends on ./types
  * [TO]: Consumed by apps/obsidian/src/panel.tsx, packages/agent-core/src/providers.ts
- * [HERE]: packages/agent-core/src/attachments.ts - converts dropped or picked files into base64 ChatAttachment data URLs; rejects dot and node_modules paths; 10 MB each, 32 MB total, 64 files, depth 16
+ * [HERE]: packages/agent-core/src/attachments.ts - converts dropped or picked files into base64 ChatAttachment data URLs; rejects folders, hidden paths and node_modules; 10 MB each, 32 MB total, 64 files
  */
 import type { ChatAttachment } from './types'
 
@@ -11,43 +11,12 @@ interface DroppedEntry {
   readonly isFile: boolean
   readonly isDirectory: boolean
   file?: (success: (file: File) => void, error?: (error: DOMException) => void) => void
-  createReader?: () => { readEntries: (success: (entries: DroppedEntry[]) => void, error?: (error: DOMException) => void) => void }
 }
 
 interface FileCandidate { file: File; path: string }
 
 function readEntryFile(entry: DroppedEntry): Promise<File> {
   return new Promise((resolve, reject) => entry.file?.(resolve, reject))
-}
-
-function readEntries(entry: DroppedEntry): Promise<DroppedEntry[]> {
-  const reader = entry.createReader?.()
-  if (!reader) return Promise.resolve([])
-  return new Promise((resolve, reject) => {
-    const entries: DroppedEntry[] = []
-    const next = () => reader.readEntries(batch => {
-      if (!batch.length) resolve(entries)
-      else { entries.push(...batch); next() }
-    }, reject)
-    next()
-  })
-}
-
-async function collectEntry(entry: DroppedEntry, parent: string, output: FileCandidate[]): Promise<number> {
-  if(entry.name.startsWith('.')||['node_modules','.git'].includes(entry.name)||output.length>=64||parent.split('/').length>16)return 1
-  const path = parent ? `${parent}/${entry.name}` : entry.name
-  if (entry.isFile && entry.file) {
-    try { output.push({ file: await readEntryFile(entry), path }); return 0 }
-    catch { return 1 }
-  }
-  else if (entry.isDirectory) {
-    try {
-      let skipped = 0
-      for (const child of await readEntries(entry)) skipped += await collectEntry(child, path, output)
-      return skipped
-    } catch { return 1 }
-  }
-  return 1
 }
 
 function mimeTypeFor(file: File, path: string): string {
@@ -77,25 +46,29 @@ function readDataUrl(file: File, mimeType: string): Promise<string> {
   })
 }
 
-export async function readDroppedAttachments(dataTransfer: DataTransfer, existing: readonly ChatAttachment[] = []): Promise<{ attachments: ChatAttachment[]; skipped: number }> {
+export async function readDroppedAttachments(dataTransfer: DataTransfer, existing: readonly ChatAttachment[] = []): Promise<{ attachments: ChatAttachment[]; skipped: number; folders: number }> {
   const candidates: FileCandidate[] = []
   const items = [...dataTransfer.items].filter(item => item.kind === 'file')
   // Capture entries before awaiting: browsers may clear DataTransfer after the drop event.
   const roots = items.map(item => ({
-    entry: (item as DataTransferItem & { webkitGetAsEntry?: () => DroppedEntry | null }).webkitGetAsEntry?.(),
+    entry: item.webkitGetAsEntry?.(),
     file: item.getAsFile(),
   }))
-  let skipped = 0
+  let skipped = 0,folders=0
   if (items.length) {
     for (const { entry, file } of roots) {
-      if (entry) skipped += await collectEntry(entry, '', candidates)
+      if (entry?.isDirectory) folders++
+      else if (entry?.isFile) {
+        try { candidates.push({file:await readEntryFile(entry),path:entry.name}) }
+        catch { skipped++ }
+      }
       else if (file) candidates.push({ file, path: file.webkitRelativePath || file.name })
       else skipped++
     }
   } else candidates.push(...[...dataTransfer.files].map(file => ({ file, path: file.webkitRelativePath || file.name })))
 
   const result=await readPickedAttachments(candidates,existing)
-  return {attachments:result.attachments,skipped:skipped+result.skipped}
+  return {attachments:result.attachments,skipped:skipped+result.skipped,folders}
 }
 
 export async function readPickedAttachments(input:Iterable<File|FileCandidate>,existing:readonly ChatAttachment[]=[]):Promise<{attachments:ChatAttachment[];skipped:number}>{
@@ -107,7 +80,7 @@ export async function readPickedAttachments(input:Iterable<File|FileCandidate>,e
     if(path.split('/').some(part=>part.startsWith('.')||part==='node_modules')||file.size>10*1024*1024||total+file.size>32*1024*1024||existing.length+attachments.length>=64){skipped++;continue}
     try{
       const mimeType=mimeTypeFor(file,path)
-      attachments.push({id:crypto.randomUUID(),path,size:file.size,mimeType,dataUrl:await readDataUrl(file,mimeType)})
+      attachments.push({id:crypto.randomUUID(),kind:'file',path,size:file.size,mimeType,dataUrl:await readDataUrl(file,mimeType)})
       total+=file.size
     }catch{skipped++}
   }

@@ -6,6 +6,9 @@ import {build} from 'esbuild'
 import {runInNewContext} from 'node:vm'
 import {createRequire} from 'node:module'
 import {resolve} from 'node:path'
+import {mkdtemp,readFile,rm} from 'node:fs/promises'
+import {tmpdir} from 'node:os'
+import {join} from 'node:path'
 
 async function load(entry,mocks={},globals={}) {
   const result=await build({entryPoints:[entry],bundle:true,platform:'node',format:'cjs',write:false,loader:{'.md':'text'},
@@ -20,6 +23,108 @@ async function load(entry,mocks={},globals={}) {
   return module.exports
 }
 const model={id:'fixture',name:'Fixture',model:'fixture',apiKey:'test-key',baseUrl:'https://example.invalid/v1',protocol:'openai'}
+
+test('Drafts stay with their session and failed sends restore only their own content',async()=>{
+  const {SessionDraftStore}=await load('apps/obsidian/src/session-drafts.ts')
+  const drafts=new SessionDraftStore()
+  const attachment={id:'file-a',path:'a.png',size:10,mimeType:'image/png'}
+  drafts.update('a',current=>({...current,text:'First',attachments:[attachment],quotes:[{id:'q',path:'note.md',text:'quoted'}]}))
+  const sent=drafts.get('a');drafts.clear('a')
+  drafts.update('b',current=>({...current,text:'Second'}))
+  drafts.restore('a',sent)
+  assert.equal(drafts.get('a').text,'First')
+  assert.equal(drafts.get('a').attachments[0].id,'file-a')
+  assert.equal(drafts.get('a').quotes[0].text,'quoted')
+  assert.equal(drafts.get('b').text,'Second')
+})
+
+test('Model capabilities centralize known exceptions and explicit overrides',async()=>{
+  const {modelCapabilities,unsupportedAttachment}=await load('packages/agent-core/src/model-capabilities.ts')
+  const image={id:'image',path:'photo.png',mimeType:'image/png',size:10}
+  const m2={...model,model:'MiniMax-M2.7'}
+  assert.equal(modelCapabilities(m2).vision,false)
+  assert.equal(unsupportedAttachment(m2,[image]).id,'image')
+  assert.equal(unsupportedAttachment({...m2,capabilities:{vision:true}},[image]),undefined)
+})
+
+test('Provider rejects unsupported attachments before network and honors tool declarations',async()=>{
+  let calls=0,body
+  const {streamModel}=await load('packages/agent-core/src/providers.ts',{'./transport':'export const serviceFetch=globalThis.testFetch'},{testFetch:async(_url,options)=>{calls++;body=JSON.parse(options.body);return Response.json({choices:[{message:{content:'ok'}}]})}})
+  const image={id:'image',path:'photo.png',mimeType:'image/png',size:10,dataUrl:'data:image/png;base64,YQ=='}
+  const transcript=[{role:'user',content:'inspect',attachmentIds:['image']}]
+  const signal=new AbortController().signal
+  await assert.rejects(()=>streamModel({...model,model:'MiniMax-M2.7'},transcript,'',[],new Map([['image',image]]),()=>{},signal),/cannot read attachment/)
+  assert.equal(calls,0)
+  await streamModel({...model,capabilities:{tools:false,streaming:false}},[{role:'user',content:'hello'}],'system',[{name:'read',description:'read',parameters:{type:'object'}}],new Map(),()=>{},signal)
+  assert.equal(body.stream,false)
+  assert.equal(body.tools,undefined)
+  assert.equal(body.stream_options,undefined)
+})
+
+test('Permission policy makes assist, full and disabled decisions consistently',async()=>{
+  const {PermissionPolicy,requirePermission}=await load('packages/agent-core/src/permission-policy.ts')
+  const request={mode:'assist',capability:'vault',operation:'write'}
+  assert.equal(PermissionPolicy.evaluate(request),'ask')
+  assert.equal(PermissionPolicy.evaluate({...request,mode:'full'}),'allow')
+  assert.equal(PermissionPolicy.evaluate({...request,operation:'read'}),'allow')
+  assert.equal(PermissionPolicy.evaluate({...request,disabled:true}),'deny')
+  let asked=0
+  const approve=async()=>{asked++;return true}
+  const signal=new AbortController().signal
+  await requirePermission({...request,mode:'full'},approve,'write','detail',signal)
+  assert.equal(asked,0)
+  await requirePermission(request,approve,'write','detail',signal)
+  assert.equal(asked,1)
+  await assert.rejects(()=>requirePermission({...request,disabled:true},approve,'write','detail',signal),/disabled/)
+})
+
+test('Vault writes obey the shared permission policy without losing path checks',async()=>{
+  const {VaultTools}=await load('packages/integrations/src/tools.ts')
+  const root=await mkdtemp(join(tmpdir(),'catea-policy-'))
+  try{
+    let approvals=0
+    const approve=async()=>{approvals++;return false}
+    const signal=new AbortController().signal
+    const assist=new VaultTools(root,approve,async()=>'',()=>'assist')
+    await assert.rejects(()=>assist.run('write',{path:'note.md',content:'text'},signal),/Permission denied/)
+    assert.equal(approvals,1)
+    const full=new VaultTools(root,approve,async()=>'',()=>'full')
+    await full.run('write',{path:'note.md',content:'text'},signal)
+    assert.equal(await readFile(join(root,'note.md'),'utf8'),'text')
+    assert.equal(approvals,1)
+    await assert.rejects(()=>full.run('write',{path:'raw/source.md',content:'no'},signal),/raw/)
+  }finally{await rm(root,{recursive:true,force:true})}
+})
+
+test('Tool presenters keep known labels and safely show unknown tools',async()=>{
+  const {createToolPresenters}=await load('apps/obsidian/src/tool-presenters.ts')
+  const registry=createToolPresenters()
+  const translate=text=>`translated:${text}`
+  assert.equal(registry.title({id:'a',name:'web_search',args:{}},translate),'translated:网络搜索')
+  const unknown={id:'b',name:'custom_tool',args:{},result:'completed'}
+  assert.equal(registry.title(unknown,translate),'custom_tool')
+  assert.equal(registry.summary(unknown),'completed')
+  assert.match(registry.details(unknown),/custom_tool/)
+})
+
+test('OpenRouter quick configuration selects Free or a model slug and uses the compatible endpoint',async()=>{
+  const {createOpenRouterModel,isOpenRouterModel}=await load('packages/agent-core/src/byok.ts')
+  const free=createOpenRouterModel('free-id',' test-key ','openrouter/free')
+  assert.equal(free.model,'openrouter/free')
+  assert.equal(free.baseUrl,'https://openrouter.ai/api/v1')
+  assert.equal(free.apiKey,'test-key')
+  assert.equal(isOpenRouterModel(free),true)
+  const custom=createOpenRouterModel('custom-id','test-key','anthropic/claude-sonnet-4')
+  assert.equal(custom.model,'anthropic/claude-sonnet-4')
+  assert.throws(()=>createOpenRouterModel('bad','test-key','free'),/provider\/model/)
+  let requested
+  const {streamModel}=await load('packages/agent-core/src/providers.ts',{'./transport':'export const serviceFetch=globalThis.testFetch'},{testFetch:async(url,options)=>{requested={url,options};return Response.json({choices:[{message:{content:'ready'}}]})}})
+  const reply=await streamModel(free,[{role:'user',content:'hello'}],'',[],new Map(),()=>{},new AbortController().signal)
+  assert.equal(reply.text,'ready')
+  assert.equal(requested.url,'https://openrouter.ai/api/v1/chat/completions')
+  assert.equal(requested.options.headers.Authorization,'Bearer test-key')
+  assert.equal(JSON.parse(requested.options.body).model,'openrouter/free')
+})
 const stream=frames=>new Response(frames.map(frame=>`data: ${typeof frame==='string'?frame:JSON.stringify(frame)}\n\n`).join(''),{headers:{'content-type':'text/event-stream'}})
 const parse=async(protocol,response)=>{
   const {streamModel}=await load('packages/agent-core/src/providers.ts',{'./transport':'export const serviceFetch=globalThis.testFetch'},{testFetch:async()=>response})
@@ -106,6 +211,12 @@ test('Settings definitions expose searchable names and persist toggles',async()=
   row.render({addToggle(fn){fn({setValue(){return this},onChange(fn){change=fn;return this}});return this}})
   await change(false)
   assert.equal(plugin.agentSettings.web,false);assert.equal(stats().saves,1);assert.equal(stats().stops,1)
+})
+test('Settings offer a dedicated OpenRouter quick entry alongside advanced models',async()=>{
+  const {tab}=await settingsFixture()
+  const names=rows(tab).map(item=>item.name)
+  assert.ok(names.includes('添加 OpenRouter'))
+  assert.ok(names.includes('添加其他模型'))
 })
 test('Settings refresh uses the modern API when present and keeps a legacy fallback',async()=>{
   const fixture=await settingsFixture();fixture.enableModern()

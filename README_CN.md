@@ -55,7 +55,7 @@ Catea 不是又一个挂在 Obsidian 旁边的聊天框。它是一个**搭载�
 | **记忆** | 换个会话就遗忘 | NanoMem——召回、剧集、巩固与强化 |
 | **长任务** | 一问一答 | CatUI Agent 循环：256 轮 / 512 次工具调用，带检查点与上下文交接 |
 | **模型** | 绑定单一供应商 | BYOK——任意 OpenAI / Anthropic 兼容端点 |
-| **联网** | 没有 | 分层回退搜索：Exa MCP → agent-reach → Jina → DuckDuckGo |
+| **联网** | 没有 | 分层回退搜索：Exa MCP → Jina → DuckDuckGo；可选 Agent Reach 诊断与确认后调用 |
 | **安全** | 盲目改笔记 | `raw/` 禁止写入，`wiki/log.md` 仅追加，每次写入先确认 |
 
 ## ✨ 功能特性
@@ -113,7 +113,7 @@ cp -R dist/catea-paper "<你的仓库>/.obsidian/plugins/catea-paper"
 
 ### 首次使用
 
-在 **Catea 设置**中添加模型——协议、基础地址、模型 ID 和 API Key——然后点击侧栏的 **Catea Agent** 图标。不需要 CatUI 账号或服务。
+在 **Catea 设置 → BYOK 模型 → 添加 OpenRouter** 中填写 API Key，再选 **Free 自动路由**，或填入 `provider/model` 格式的模型 ID，保存后即可使用。Free 使用 `openrouter/free`，具体模型和可用性可能随请求变化。也可以通过“添加其他模型”自行配置兼容协议与地址。无需 CatUI 账号或服务。发送给 OpenRouter 的笔记和对话可能由其选定的模型提供方处理。
 
 ## 📐 架构
 

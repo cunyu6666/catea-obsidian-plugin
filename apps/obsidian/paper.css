@@ -19,8 +19,9 @@ body.gp-enabled {
   --ribbon-background-collapsed:var(--gp-shell-background); --divider-color:transparent;
   --header-height:56px;
   --file-line-width:760px; --file-margins:48px clamp(32px,6vw,96px);
-  --font-text-size:16px; --line-height-normal:1.8;
-  --h1-size:1.9em; --h2-size:1.45em; --h3-size:1.2em;
+  --font-text-size:15px; --line-height-normal:1.625;
+  --p-spacing:8px; --heading-spacing:16px; --list-spacing:2px;
+  --h1-size:1.4em; --h2-size:1.2em; --h3-size:1.067em;
   --h1-color:#222824; --h2-color:#222824; --h3-color:#222824;
   --h1-font:var(--font-text-theme); --h2-font:var(--font-text-theme); --h3-font:var(--font-text-theme);
   --bold-color:inherit; --italic-color:inherit;
@@ -47,11 +48,79 @@ body.gp-enabled .mod-root :is(.view-header,.view-content,.markdown-source-view,.
 body.gp-enabled .mod-root .view-header {height:40px;border-bottom:1px solid #f1f3f1;}
 body.gp-enabled .view-header-title-container {font-size:11px;color:var(--text-muted);}
 body.gp-enabled .inline-title {font-family:var(--font-text-theme);font-size:1.85em;font-weight:700;letter-spacing:-.035em;line-height:1.35;margin-bottom:28px;}
+/* Match the compact Craft Agent markdown rhythm in Reading and Live Preview. */
+body.gp-enabled .workspace-leaf-content[data-type="markdown"] {
+  --blockquote-border-color:rgba(41,45,43,.22);
+  --blockquote-color:var(--text-muted);
+}
+body.gp-enabled .markdown-rendered {font-size:15px;line-height:1.625;}
+body.gp-enabled .markdown-rendered p {margin:8px 0;line-height:1.625;}
+body.gp-enabled .markdown-rendered :is(ul,ol) {margin:8px 0;padding-inline-start:24px;}
+body.gp-enabled .markdown-rendered li {margin:4px 0;}
+body.gp-enabled .markdown-rendered li > p {margin:0;}
+body.gp-enabled .markdown-rendered :is(h1,h2,h3,h4) {
+  font-family:var(--font-text-theme);line-height:1.4;letter-spacing:-.015em;
+}
+body.gp-enabled .markdown-rendered h1 {margin:20px 0 12px;font-size:1.4em;font-weight:700;}
+body.gp-enabled .markdown-rendered h2 {margin:18px 0 10px;font-size:1.2em;font-weight:650;}
+body.gp-enabled .markdown-rendered h3 {margin:16px 0 8px;font-size:1.067em;font-weight:600;}
+body.gp-enabled .markdown-rendered h4 {margin:14px 0 8px;font-size:1em;font-weight:600;}
+body.gp-enabled .markdown-rendered strong {font-weight:600;}
+body.gp-enabled .markdown-rendered blockquote {
+  margin:8px 0;padding:2px 0 2px 12px;border-inline-start:2px solid var(--blockquote-border-color);
+  color:var(--text-muted);font-style:italic;
+}
+body.gp-enabled .markdown-rendered hr {height:0;margin:16px 0;border:0;border-top:1px solid var(--background-modifier-border);}
+body.gp-enabled .markdown-rendered :not(pre) > code {
+  padding:.12em .32em;border-radius:4px;background:var(--code-background);font-size:.9em;
+}
+body.gp-enabled .markdown-rendered pre {
+  margin:12px 0;padding:14px 16px;border:1px solid var(--background-modifier-border);
+  border-radius:8px;background:var(--code-background);line-height:1.55;
+}
+body.gp-enabled .markdown-rendered table {
+  width:100%;margin:12px 0;border:1px solid var(--background-modifier-border);
+  border-radius:12px;border-collapse:separate;border-spacing:0;overflow:hidden;
+  font-size:13px;line-height:20px;
+}
+body.gp-enabled .markdown-rendered :is(th,td) {
+  min-width:90px;padding:10px 16px;border:0;border-bottom:1px solid var(--background-modifier-border);
+  text-align:start;vertical-align:top;
+}
+body.gp-enabled .markdown-rendered :is(th,td):not(:last-child) {border-inline-end:1px solid var(--background-modifier-border);}
+body.gp-enabled .markdown-rendered th {padding-block:8px;background:var(--background-secondary);color:var(--text-muted);font-size:12px;font-weight:500;}
+body.gp-enabled .markdown-rendered td {background:var(--background-primary);}
+body.gp-enabled .markdown-rendered tr:last-child td {border-bottom:0;}
+body.gp-enabled .markdown-rendered img {border-radius:8px;}
+body.gp-enabled .markdown-source-view.mod-cm6 .cm-content {font-size:15px;line-height:1.625;}
+body.gp-enabled .markdown-source-view.mod-cm6 .cm-line.HyperMD-header {line-height:1.4;letter-spacing:-.015em;}
 body.gp-enabled .nav-file-title,body.gp-enabled .nav-folder-title {border-radius:6px;margin-block:1px;padding:var(--nav-item-padding);font-size:12px;position:relative;}
 body.gp-enabled .nav-file-title.is-active {box-shadow:0 1px 3px #26362d09;}
 body.gp-enabled .nav-header {padding:8px;}
 body.gp-enabled .workspace-ribbon {background:var(--gp-shell-background);border:0;}
 body.gp-enabled :is(.mod-left-split,.mod-right-split) {border-inline:0;}
+/* Keep the native resize hit area, but draw only a quiet one-pixel guide. */
+body.gp-enabled .workspace-leaf-resize-handle,
+body.gp-enabled .workspace-leaf-resize-handle:is(:hover,.is-active,.mobile-tap) {
+  background-color:transparent;border-color:transparent;
+}
+body.gp-enabled .workspace-leaf-resize-handle::after {
+  content:"";position:absolute;pointer-events:none;opacity:0;
+  transition:opacity 160ms ease-out;
+}
+body.gp-enabled :is(
+  .workspace-split.mod-vertical > * > .workspace-leaf-resize-handle,
+  .workspace-split.mod-left-split > .workspace-leaf-resize-handle,
+  .workspace-split.mod-right-split > .workspace-leaf-resize-handle
+)::after {
+  top:0;bottom:0;left:50%;width:1px;transform:translateX(-50%);
+  background:linear-gradient(to bottom,transparent 0%,var(--gp-accent) 22%,var(--gp-accent) 78%,transparent 100%);
+}
+body.gp-enabled .workspace-split.mod-horizontal > * > .workspace-leaf-resize-handle::after {
+  top:50%;left:0;right:0;height:1px;transform:translateY(-50%);
+  background:linear-gradient(to right,transparent 0%,var(--gp-accent) 22%,var(--gp-accent) 78%,transparent 100%);
+}
+body.gp-enabled .workspace-leaf-resize-handle:is(:hover,.is-active,.mobile-tap)::after {opacity:1;}
 body.gp-enabled.gp-hide-ribbon .workspace-ribbon.mod-left {display:none;}
 body.gp-enabled.gp-hide-status .status-bar {display:none;}
 body.gp-enabled.gp-enabled.gp-hide-properties .mod-root .metadata-container {display:none;}
@@ -65,6 +134,12 @@ body.gp-enabled .gp-toolbar .gp-tool:hover {background:#edf1ed;color:#222b24;}
 body.gp-enabled .gp-toolbar .gp-tool:focus-visible {outline:2px solid #60846f;outline-offset:1px;}
 body.gp-enabled .gp-toolbar svg {width:16px;height:16px;stroke-width:1.7;}
 body.gp-enabled .gp-divider {height:13px;width:1px;background:#e6eae6;margin:0 7px;flex-shrink:0;}
+/* Native code-copy controls contain only an icon; remove baseline offset. */
+body.gp-enabled button.copy-code-button {
+  display:inline-flex;align-items:center;justify-content:center;
+  box-sizing:border-box;width:32px;height:32px;padding:0;line-height:0;
+}
+body.gp-enabled button.copy-code-button svg {display:block;margin:0;}
 @media(max-width:900px){body.gp-enabled .gp-toolbar{justify-content:flex-start;}body.gp-enabled{--file-margins:24px;}}
 @media(prefers-reduced-transparency:reduce){body.gp-enabled :is(.mod-left-split,.mod-right-split){background:#edf0ed;backdrop-filter:none;}}
 
@@ -269,6 +344,16 @@ body.gp-enabled :is(.mod-left-split,.mod-right-split) .workspace-tab-header-cont
 body.gp-enabled :is(.mod-left-split,.mod-right-split) .workspace-tab-header-container-inner {
   height:32px;margin-block:0;padding-block:0;align-items:center;
 }
+/* Sidebar tabs are icon controls, not stretchable document tabs. */
+body.gp-enabled :is(.mod-left-split,.mod-right-split) .workspace-tab-header {
+  box-sizing:border-box;flex:0 0 32px;
+  width:32px;min-width:32px;max-width:32px;
+  height:32px;min-height:32px;max-height:32px;
+  padding:0;border-radius:7px;
+}
+body.gp-enabled :is(.mod-left-split,.mod-right-split) .workspace-tab-header-inner {
+  width:100%;height:100%;padding:8px;justify-content:center;
+}
 body.gp-enabled .nav-header {padding:8px 12px;}
 body.gp-enabled .nav-buttons-container {gap:4px;}
 /* Native explorer actions can inherit flex-grow; keep each hit target square. */
@@ -396,3 +481,23 @@ body.gp-enabled .side-dock-actions .side-dock-ribbon-action:focus-visible {
 
 /* Suppress only a matching leading H1; the Markdown content stays untouched. */
 body.gp-enabled.gp-enabled .gp-duplicate-inline-title .inline-title { display: none; }
+
+/* Keep long agent and tool details readable without covering the workspace. */
+.catea-detail-modal.modal {
+  width: min(560px, calc(100vw - 32px));
+  max-width: calc(100vw - 32px);
+  max-height: min(72vh, 680px);
+}
+.catea-detail-modal .modal-content { min-height: 0; overflow: hidden; }
+.catea-detail-modal .modal-content pre {
+  max-height: min(54vh, 520px);
+  overflow: auto;
+  margin: 12px 0 0;
+  padding: 12px 14px;
+  border-radius: 8px;
+  background: var(--background-secondary);
+  font-size: 12px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}

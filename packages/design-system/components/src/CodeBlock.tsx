@@ -110,6 +110,8 @@ export function CodeBlock({ code, language = 'text', showHeader = true, streamin
   const shikiLanguage = resolvedLanguage in languages ? resolvedLanguage : 'text'
   const tokens = useCodeTokens(code, shikiLanguage, streaming)
   const viewportRef = useRef<HTMLDivElement>(null)
+  const followCode = useRef(true)
+  const lastCodeTop = useRef(0)
   const copyTimer = useRef<number | undefined>(undefined)
   const [copied, setCopied] = useState(false)
   let offset = 0
@@ -123,13 +125,9 @@ export function CodeBlock({ code, language = 'text', showHeader = true, streamin
 
   useLayoutEffect(() => {
     const viewport = viewportRef.current
-    if (!viewport || !streaming) return
-    const win=viewport.ownerDocument.defaultView??window
-    const frame = win.requestAnimationFrame(() => {
-      if (viewport.scrollHeight <= viewport.clientHeight) return
-      viewport.scrollTo({ top: viewport.scrollHeight, behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' })
-    })
-    return () => win.cancelAnimationFrame(frame)
+    if (!viewport || !streaming || !followCode.current) return
+    viewport.scrollTop = viewport.scrollHeight
+    lastCodeTop.current = viewport.scrollTop
   }, [code, streaming])
 
   const copy = useCallback(async () => {
@@ -149,7 +147,7 @@ export function CodeBlock({ code, language = 'text', showHeader = true, streamin
         <button type="button" aria-label={copied ? labels.copied : labels.copy} title={copied ? labels.copied : labels.copy} onClick={() => void copy()}><Icon name={copied ? 'check' : 'copy'} size={16} /></button>
       </span>
     </div>}
-    <div ref={viewportRef} className="anno-code-block__content anno-auto-scrollbar" style={{ maxHeight }} role={streaming ? 'log' : undefined} aria-live={streaming ? 'polite' : undefined}>
+    <div ref={viewportRef} className="anno-code-block__content anno-auto-scrollbar" style={{ maxHeight }} role={streaming ? 'log' : undefined} aria-live={streaming ? 'polite' : undefined} onWheel={event=>{if(event.deltaY<0)followCode.current=false}} onScroll={event=>{const viewport=event.currentTarget;if(viewport.scrollTop<lastCodeTop.current-1)followCode.current=false;else if(viewport.scrollHeight-viewport.scrollTop-viewport.clientHeight<16)followCode.current=true;lastCodeTop.current=viewport.scrollTop}}>
       <pre><code>{lines.map((line, index) => <span className="anno-code-block__line" key={line.offset}>
         <span className="anno-code-block__line-number" aria-hidden="true">{index + 1}</span>
         <span className="anno-code-block__line-content">{tokens?.[index]?.map(token => <span key={`${token.offset}-${token.content}`} className="anno-code-block__token" style={{ '--anno-code-light': token.light || 'currentColor', '--anno-code-dark': token.dark || token.light || 'currentColor' } as CSSProperties}>{token.content}</span>) || line.content || '\u00a0'}</span>

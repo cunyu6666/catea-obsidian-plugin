@@ -1,5 +1,5 @@
 import {ActionMenu} from './ActionMenu'
-import { useLayoutEffect, useRef, useState, type DragEvent, type KeyboardEvent, type ReactNode } from 'react'
+import { useId, useLayoutEffect, useRef, useState, type DragEvent, type KeyboardEvent, type ReactNode } from 'react'
 import { Icon } from './Icon'
 
 interface ComposerProps {
@@ -17,7 +17,7 @@ interface ComposerProps {
   trailing?: ReactNode
   attachments?: ReactNode
   onDropFiles?: (dataTransfer: DataTransfer) => void
-  onPickFolder?: (files: FileList) => void
+  onPickFolder?: () => void
   folderLabel?: string
   onPickFiles?: (files: FileList) => void
   workingDirectory?: ReactNode
@@ -33,8 +33,8 @@ interface ComposerProps {
 
 export function Composer({ value, onChange, onSubmit, placeholder, mode, inputLabel, submitLabel, running = false, stopLabel = 'Stop', onStop, leading, trailing, attachments, onDropFiles, onPickFiles, onPickFolder, folderLabel, workingDirectory, attachLabel, fileLabel, dropLabel, hasSubmitContent, disabled, busy, autoFocus, className = '' }: ComposerProps) {
   const inputRef = useRef<HTMLTextAreaElement>(null)
+  const inputId = useId()
   const fileInputRef = useRef<HTMLInputElement>(null)
-  const folderInputRef = useRef<HTMLInputElement>(null)
   const dragDepth = useRef(0)
   const [dragging, setDragging] = useState(false)
   const stopping = running && !!onStop
@@ -83,9 +83,10 @@ export function Composer({ value, onChange, onSubmit, placeholder, mode, inputLa
         onDropFiles?.(event.dataTransfer)
       }}>
       {attachments}
+      <label className="anno-composer__input-label" htmlFor={inputId}>{inputLabel}</label>
       <textarea
+        id={inputId}
         ref={inputRef}
-        aria-label={inputLabel}
         autoFocus={autoFocus}
         value={value}
         onChange={event => onChange(event.target.value)}
@@ -99,10 +100,9 @@ export function Composer({ value, onChange, onSubmit, placeholder, mode, inputLa
       <div className="anno-composer__toolbar">
         <div className="anno-composer__toolbar-group">
           {onPickFiles&&<input ref={fileInputRef} className="anno-composer__file-input" type="file" multiple tabIndex={-1} onChange={event=>{if(event.target.files?.length)onPickFiles(event.target.files);event.target.value=''}}/>}
-          {onPickFolder&&<input ref={folderInputRef} type="file" className="anno-composer__file-input" multiple {...{webkitdirectory:''}} tabIndex={-1} onChange={event=>{if(event.target.files?.length)onPickFolder(event.target.files);event.target.value=''}}/>}
           {(onPickFiles||onPickFolder)&&<ActionMenu label={attachLabel||'Add'} icon={<Icon name="add" size={17}/>} items={[
             ...(onPickFiles?[{id:'file',label:fileLabel||'Add files',icon:<Icon name="file" size={15}/>,onSelect:()=>fileInputRef.current?.click()}]:[]),
-            ...(onPickFolder?[{id:'folder',label:folderLabel||'Add folder',icon:<Icon name="folder" size={15}/>,onSelect:()=>folderInputRef.current?.click()}]:[]),
+            ...(onPickFolder?[{id:'folder',label:folderLabel||'Add folder',icon:<Icon name="folder" size={15}/>,onSelect:onPickFolder}]:[]),
           ]}/>}
           {workingDirectory}
           {leading}

@@ -1,6 +1,6 @@
 /**
  * [WHO]: Provides ModelReply, ModelServiceError, ToolDefinition, streamModel
- * [FROM]: Depends on ./types, ./i18n, ./transport, ./attachments
+ * [FROM]: Depends on ./types, ./i18n, ./transport, ./attachments, ./model-capabilities
  * [TO]: Consumed by apps/obsidian/src/obsidian-tools.ts, packages/agent-core/src/index.ts,
  *   packages/agent-core/src/upstream-stream.ts, packages/integrations/src/mcp.ts,
  *   packages/integrations/src/tools.ts, packages/integrations/src/web.ts,
@@ -11,6 +11,7 @@ import type { ChatAttachment, ModelConfig, TokenUsage, ToolCall, TranscriptItem 
 import { t } from './i18n'
 import { serviceFetch } from './transport'
 import { attachmentIsText, attachmentText } from './attachments'
+import {modelCapabilities,unsupportedAttachment} from './model-capabilities'
 
 export interface ToolDefinition { name: string; description: string; parameters: Record<string, unknown> }
 export interface ModelReply { text: string; calls: ToolCall[]; usage?: TokenUsage; stopReason?: 'stop'|'length'; anthropicContent?: Record<string, unknown>[] }
@@ -135,6 +136,10 @@ function dataUrl(file: ChatAttachment): string {
   return file.dataUrl
 }
 
+function folderReference(file: ChatAttachment): string {
+  return `[Vault folder reference: ${file.path}]\nThe folder contents were not attached. Inspect only what this request needs: use obsidian_search with folder=${JSON.stringify(file.path)} for notes, or ls/find/read for other vault files.`
+}
+
 function openAiMessages(transcript: TranscriptItem[], system: string, attachments: ReadonlyMap<string, ChatAttachment>) {
   return [{ role: 'system', content: system }, ...transcript.map(item => {
     if (item.role === 'tool') return { role: 'tool', tool_call_id: item.callId, content: item.content }
@@ -146,7 +151,8 @@ function openAiMessages(transcript: TranscriptItem[], system: string, attachment
     if (!files.length) return { role: 'user', content: item.content }
     const content: unknown[] = item.content ? [{ type: 'text', text: item.content }] : []
     for (const file of files) {
-      if (attachmentIsText(file)) content.push({ type: 'text', text: `[Attached file: ${file.path}]\n${attachmentText(file)}` })
+      if (file.kind==='folder') content.push({type:'text',text:folderReference(file)})
+      else if (attachmentIsText(file)) content.push({ type: 'text', text: `[Attached file: ${file.path}]\n${attachmentText(file)}` })
       else if ((file.mimeType || '').startsWith('image/')) {
         content.push({ type: 'text', text: `[Attached image: ${file.path}]` })
         content.push({ type: 'image_url', image_url: { url: dataUrl(file) } })
@@ -172,7 +178,8 @@ function anthropicMessages(transcript: TranscriptItem[], attachments: ReadonlyMa
     } else {
       const content: unknown[] = item.content ? [{ type: 'text', text: item.content }] : []
       for (const file of attachedFiles(item, attachments)) {
-        if (attachmentIsText(file)) content.push({ type: 'text', text: `[Attached file: ${file.path}]\n${attachmentText(file)}` })
+        if (file.kind==='folder') content.push({type:'text',text:folderReference(file)})
+        else if (attachmentIsText(file)) content.push({ type: 'text', text: `[Attached file: ${file.path}]\n${attachmentText(file)}` })
         else if ((file.mimeType || '').startsWith('image/')) {
           content.push({ type: 'text', text: `[Attached image: ${file.path}]` })
           content.push({ type: 'image', source: { type: 'base64', media_type: file.mimeType, data: encodedData(file) } })
@@ -201,6 +208,12 @@ export async function streamModel(
   signal: AbortSignal,
   options: {maxTokens?:number;onTransport?:(mode:'sse'|'buffered')=>void} = {},
 ): Promise<ModelReply> {
+  const capabilities=modelCapabilities(config)
+  const usedIds=new Set(transcript.flatMap(item=>item.role==='user'?item.attachmentIds||[]:[]))
+  const unsupported=unsupportedAttachment(config,[...attachments].filter(([id])=>usedIds.has(id)).map(([,file])=>file))
+  if(unsupported)throw new Error(`Model ${config.name} cannot read attachment ${unsupported.path}`)
+  const availableTools=capabilities.tools===false?[]:tools
+  const streaming=capabilities.streaming!==false
   if (config.protocol === 'anthropic') {
     const url = endpoint(config.baseUrl, '/messages')
     const headers: Record<string, string> = { 'Content-Type': 'application/json', 'x-api-key': config.apiKey, 'anthropic-version': '2023-06-01' }
@@ -208,7 +221,7 @@ export async function streamModel(
     const response = await serviceFetch(url, {
       method: 'POST', signal,
       headers,
-      body: JSON.stringify({ model: config.model, max_tokens: options.maxTokens||4096, stream: true, system, messages: anthropicMessages(transcript, attachments), ...(tools.length ? { tools: tools.map(tool => ({ name: tool.name, description: tool.description, input_schema: tool.parameters })) } : {}) }),
+      body: JSON.stringify({ model: config.model, max_tokens: options.maxTokens||4096, stream: streaming, system, messages: anthropicMessages(transcript, attachments), ...(availableTools.length ? { tools: availableTools.map(tool => ({ name: tool.name, description: tool.description, input_schema: tool.parameters })) } : {}) }),
     })
     if (!response.ok) throw await responseError(response)
     options.onTransport?.(response.headers.get('content-type')?.includes('text/event-stream')?'sse':'buffered')
@@ -263,11 +276,11 @@ export async function streamModel(
     return { text, stopReason,anthropicContent: [...content.values()], calls: [...blocks.entries()].map(([index,block]) => ({ id: block.id, name: block.name, args: block.input?parseArgs(block.input):record(content.get(index)?.input) })), usage: inputTokens === undefined || outputTokens === undefined ? undefined : { inputTokens, outputTokens, ...(cachedInputTokens === undefined ? {} : { cachedInputTokens }) } }
   }
 
-  const request = { model: config.model, stream: true,...(options.maxTokens?{max_tokens:options.maxTokens}:{}), messages: openAiMessages(transcript, system, attachments), ...(tools.length ? { tools: tools.map(tool => ({ type: 'function', function: { name: tool.name, description: tool.description, parameters: tool.parameters } })), tool_choice: 'auto' } : {}) }
+  const request = { model: config.model, stream: streaming,...(options.maxTokens?{max_tokens:options.maxTokens}:{}), messages: openAiMessages(transcript, system, attachments), ...(availableTools.length ? { tools: availableTools.map(tool => ({ type: 'function', function: { name: tool.name, description: tool.description, parameters: tool.parameters } })), tool_choice: 'auto',...(capabilities.parallelTools===false?{parallel_tool_calls:false}:{}) } : {}) }
   const fetchCompletion = (includeUsage: boolean) => serviceFetch(endpoint(config.baseUrl, '/chat/completions'), {
     method: 'POST', signal,
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${config.apiKey}` },
-    body: JSON.stringify({ ...request, ...(includeUsage ? { stream_options: { include_usage: true } } : {}) }),
+    body: JSON.stringify({ ...request, ...(includeUsage&&streaming ? { stream_options: { include_usage: true } } : {}) }),
   })
   let response = await fetchCompletion(true)
   if (response.status === 400 || response.status === 422) response = await fetchCompletion(false)

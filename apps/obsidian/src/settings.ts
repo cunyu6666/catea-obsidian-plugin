@@ -7,7 +7,7 @@
 import {App,PluginSettingTab,Setting,Notice,Modal,type SettingDefinitionItem} from 'obsidian'
 import type Catea from './main'
 import type {ModelConfig} from '../../../packages/agent-core/src/types'
-import {defaultBaseUrl,normalizeModel,selectedModel} from '../../../packages/agent-core/src/byok'
+import {OPENROUTER_BASE_URL,OPENROUTER_FREE_MODEL,createOpenRouterModel,defaultBaseUrl,isOpenRouterModel,normalizeModel,selectedModel} from '../../../packages/agent-core/src/byok'
 import {listSkills} from '../../../packages/integrations/src/skills'
 import {persona,personas} from '../../../packages/personas/src'
 interface SettingsRow {
@@ -52,13 +52,13 @@ export class CateaSettings extends PluginSettingTab {
       {name:tr('启用 Agent'),render:s=>{s.addToggle(t=>t.setValue(c.enabled).onChange(async value=>{c.enabled=value;if(!value)p.agent.stop();p.agent.memory.setEnabled(value&&c.memory);await p.saveAgentSettings()}))}},
       {name:tr('人格'),desc:tr('选择 Agent 的对话风格；从下一条消息开始使用。'),render:s=>{s.addDropdown(d=>{for(const item of personas)d.addOption(item.id,item.name);d.setValue(persona(c.personaId).id).onChange(async value=>{c.personaId=persona(value).id;await p.saveAgentSettings()})})}},
       {name:tr('附带当前笔记'),desc:tr('发送消息时将当前笔记内容加入上下文。默认开启。'),render:s=>{s.addToggle(t=>t.setValue(c.includeCurrentNote!==false).onChange(async value=>{c.includeCurrentNote=value;await p.saveAgentSettings()}))}},
-      {name:tr('网络搜索与网页读取'),desc:tr('复用 CatUI 联网工具：Exa / agent-reach（支持时）/ Jina / DuckDuckGo；无需模型 Key 之外的搜索 Key。搜索词和目标 URL 会发送到联网服务。'),render:s=>{s.addToggle(t=>t.setValue(c.web).onChange(async value=>{c.web=value;p.agent.stop();await p.saveAgentSettings()}))}},
+      {name:tr('网络搜索与网页读取'),desc:tr('网页搜索使用 Exa / Jina / DuckDuckGo；可诊断并经确认调用已安装的 Agent Reach。搜索词和目标 URL 会发送到联网服务。'),render:s=>{s.addToggle(t=>t.setValue(c.web).onChange(async value=>{c.web=value;p.agent.stop();await p.saveAgentSettings()}))}},
       {name:tr('长期记忆'),desc:tr('自动提取、召回和巩固；保存在当前知识库 .catea/memory。'),render:s=>{s.addToggle(t=>t.setValue(c.memory).onChange(async value=>{c.memory=value;if(!value)p.agent.stop();p.agent.memory.setEnabled(value&&c.enabled);await p.saveAgentSettings()}))}},
       {name:'Bash',desc:tr('默认开启，命令执行遵循下方权限模式。'),render:s=>{s.addToggle(t=>t.setValue(c.shell).onChange(async value=>{c.shell=value;p.agent.stop();await p.saveAgentSettings()}))}},
       {name:tr('权限模式'),desc:tr('帮我批准：自动放行 pwd、ls 等简单目录查看，其余操作请求确认。完全访问：跳过 Bash、文件修改、MCP 和记忆更新的审批，命令可访问知识库之外。'),render:s=>{s.addDropdown(d=>d.addOption('assist',tr('帮我批准')).addOption('full',tr('完全访问')).setValue(c.permissionMode||'assist').onChange(async value=>{p.agent.stop();c.permissionMode=value==='full'?'full':'assist';await p.saveAgentSettings()}))}},
     ]
-    const models:SettingsRow[]=c.models.map(model=>({name:model.name,desc:`${model.protocol==='openai'?tr('OpenAI 兼容'):tr('Anthropic 兼容')} · ${model.model} · ${model.baseUrl}${model.apiKey?'':tr(' · 请补充 API Key')}`,render:s=>{
-      s.addButton(b=>b.setButtonText(tr('编辑')).onClick(()=>new ModelModal(p,model,()=>this.refresh()).open()))
+    const models:SettingsRow[]=c.models.map(model=>({name:model.name,desc:`${isOpenRouterModel(model)?'OpenRouter':model.protocol==='openai'?tr('OpenAI 兼容'):tr('Anthropic 兼容')} · ${model.model} · ${model.baseUrl}${model.apiKey?'':tr(' · 请补充 API Key')}`,render:s=>{
+      s.addButton(b=>b.setButtonText(tr('编辑')).onClick(()=>(isOpenRouterModel(model)?new OpenRouterModal(p,model,()=>this.refresh()):new ModelModal(p,model,()=>this.refresh())).open()))
       s.addButton(b=>b.setButtonText(tr('移除')).onClick(async()=>{
         const previous=c.models,previousId=c.modelId
         c.models=c.models.filter(m=>m.id!==model.id);c.modelId=selectedModel(c.models,c.modelId)?.id||''
@@ -66,9 +66,10 @@ export class CateaSettings extends PluginSettingTab {
         catch{c.models=previous;c.modelId=previousId;new Notice(tr('模型移除失败，请重试'))}
       }))
     }}))
-    models.push({name:tr('添加模型'),desc:tr('使用自己的 API Key，直接连接 OpenAI / Anthropic 兼容服务。仅显示你配置的模型。'),render:s=>{s.addButton(b=>b.setButtonText(tr('添加模型')).onClick(()=>new ModelModal(p,{id:crypto.randomUUID(),name:'',protocol:'openai',baseUrl:defaultBaseUrl('openai'),apiKey:'',model:''},()=>this.refresh()).open()))}})
+    models.push({name:tr('添加 OpenRouter'),desc:tr('只需 API Key；选择 Free 自动路由，或填写模型 ID。'),render:s=>{s.addButton(b=>b.setButtonText(tr('添加 OpenRouter')).setCta().onClick(()=>new OpenRouterModal(p,{id:crypto.randomUUID(),name:'',protocol:'openai',baseUrl:OPENROUTER_BASE_URL,apiKey:'',model:OPENROUTER_FREE_MODEL},()=>this.refresh()).open()))}})
+    models.push({name:tr('添加其他模型'),desc:tr('使用自己的 API Key，直接连接 OpenAI / Anthropic 兼容服务。仅显示你配置的模型。'),render:s=>{s.addButton(b=>b.setButtonText(tr('添加其他模型')).onClick(()=>new ModelModal(p,{id:crypto.randomUUID(),name:'',protocol:'openai',baseUrl:defaultBaseUrl('openai'),apiKey:'',model:''},()=>this.refresh()).open()))}})
     const skills:SettingsRow[]=[
-      {name:tr('Obsidian 操作 · 内置'),desc:tr('随 Agent 启用：当前笔记、搜索、内部打开、阅读与编辑；写入和设置变更需确认。'),render:()=>{}},
+      {name:tr('Obsidian 操作 · 内置'),desc:tr('随 Agent 启用：当前笔记、搜索、内部打开、阅读、编辑与属性管理；写入和设置变更需确认。'),render:()=>{}},
       {name:'Skills',desc:tr('将 Skill 文件夹放到 .catea/skills/<名称>/SKILL.md，再启用。'),render:s=>{
         const box=s.settingEl.createDiv()
         void listSkills(p.vaultPath).then(ids=>{
@@ -97,6 +98,49 @@ export class CateaSettings extends PluginSettingTab {
   }
 }
 
+async function storeModel(owner:Catea,model:ModelConfig,select=false){
+  const c=owner.agentSettings,previous=c.models,previousId=c.modelId
+  c.models=c.models.filter(m=>m.id!==model.id).concat(model)
+  c.modelId=select?model.id:selectedModel(c.models,c.modelId)?.id||model.id
+  try{await owner.saveAgentSettings();owner.saveSecret(model.id,model.apiKey);await owner.addMiniMaxModels()}
+  catch(error){c.models=previous;c.modelId=previousId;owner.emit();throw error}
+}
+
+class OpenRouterModal extends Modal {
+  private key:string
+  private modelId:string
+  private free:boolean
+  constructor(private owner:Catea,private draft:ModelConfig,private saved:()=>void){
+    super(owner.app)
+    this.key=draft.apiKey||owner.agentSettings.models.find(isOpenRouterModel)?.apiKey||''
+    this.modelId=draft.model===OPENROUTER_FREE_MODEL?'':draft.model
+    this.free=draft.model===OPENROUTER_FREE_MODEL
+  }
+  onOpen(){
+    const tr=this.owner.t,el=this.contentEl
+    this.titleEl.setText(tr('配置 OpenRouter'))
+    el.createEl('a',{text:tr('创建 OpenRouter API Key ↗'),href:'https://openrouter.ai/settings/keys',attr:{target:'_blank',rel:'noopener noreferrer'}})
+    new Setting(el).setName(tr('模型选择')).addDropdown(dropdown=>dropdown.addOption('free',tr('Free 自动路由')).addOption('custom',tr('指定模型 ID')).setValue(this.free?'free':'custom').onChange(value=>{
+      this.free=value==='free';modelSetting.settingEl.style.display=this.free?'none':''
+    }))
+    const modelSetting=new Setting(el).setName(tr('模型 ID')).setDesc(tr('例如 openai/gpt-oss-120b:free；从 OpenRouter 模型页复制完整 ID。')).addText(input=>input.setPlaceholder('Provider/model').setValue(this.modelId).onChange(value=>{this.modelId=value}))
+    modelSetting.settingEl.style.display=this.free?'none':''
+    new Setting(el).setName('API key').setDesc(tr('在 OpenRouter 创建 Key；优先保存到 Obsidian 安全存储，不写入知识库配置。')).addText(input=>{
+      input.inputEl.type='password';input.inputEl.autocomplete='off';input.setValue(this.key).onChange(value=>{this.key=value})
+    })
+    new Setting(el).setDesc(tr('Free 会自动选择可用的免费模型；可用性、工具支持和请求限额由 OpenRouter 决定。笔记内容会发送给 OpenRouter 及其选定的模型提供方。'))
+    const error=el.createEl('p',{attr:{role:'alert'}})
+    new Setting(el).addButton(button=>button.setButtonText(tr('取消')).onClick(()=>this.close())).addButton(button=>button.setButtonText(tr('保存并使用')).setCta().onClick(async()=>{
+      let model:ModelConfig
+      try{model=createOpenRouterModel(this.draft.id,this.key,this.free?OPENROUTER_FREE_MODEL:this.modelId)}catch(reason){error.setText(tr(reason instanceof Error?reason.message:'请检查配置'));return}
+      button.setDisabled(true)
+      try{await storeModel(this.owner,model,true);this.saved();this.close()}
+      catch{error.setText(tr('保存失败，请重试'));button.setDisabled(false)}
+    }))
+  }
+  onClose(){this.contentEl.empty();this.key=''}
+}
+
 class ModelModal extends Modal {
   private draft:ModelConfig
   constructor(private owner:Catea,model:ModelConfig,private saved:()=>void){super(owner.app);this.draft={...model}}
@@ -119,13 +163,10 @@ class ModelModal extends Modal {
       let model:ModelConfig
       try{model=normalizeModel(d)}catch(e){error.setText(e instanceof Error?tr(e.message):tr('请检查配置'));return}
       b.setDisabled(true)
-      const c=this.owner.agentSettings,previous=c.models,previousId=c.modelId
-      c.models=c.models.filter(m=>m.id!==model.id).concat(model);c.modelId=selectedModel(c.models,c.modelId)?.id||model.id
       try{
-        await this.owner.saveAgentSettings();this.owner.saveSecret(model.id,model.apiKey)
-        await this.owner.addMiniMaxModels()
+        await storeModel(this.owner,model)
         this.saved();this.close()
-      }catch{c.models=previous;c.modelId=previousId;this.owner.emit();error.setText(tr('保存失败，请重试'));b.setDisabled(false)}
+      }catch{error.setText(tr('保存失败，请重试'));b.setDisabled(false)}
     }))
   }
   onClose(){this.contentEl.empty();this.draft.apiKey=''}

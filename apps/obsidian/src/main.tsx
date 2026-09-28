@@ -1,6 +1,6 @@
 /**
  * [WHO]: Provides Catea, default
- * [FROM]: Depends on ./note-thumbnails, ./note-previews, ./locale, ./selection, ../../../packages/agent-core/src/types, obsidian, react-dom/client, ./paper.cjs, ../../../packages/agent-core/src, ../../../packages/integrations/src/storage, ./panel, ./obsidian-tools, ./skills/obsidian.md, catea-components, ./settings, ./composition, node:fs/promises
+ * [FROM]: Depends on ./note-thumbnails, ./note-previews, ./locale, ./selection, ./session-drafts, ../../../packages/agent-core/src/types, obsidian, react-dom/client, ./paper.cjs, ../../../packages/agent-core/src, ../../../packages/integrations/src/storage, ./panel, ./obsidian-tools, ./skills/obsidian.md, catea-components, ./settings, ./composition, node:fs/promises
  * [TO]: Consumed by apps/obsidian/src/note-previews.ts, apps/obsidian/src/note-thumbnails.ts,
  *   apps/obsidian/src/obsidian-tools.ts, apps/obsidian/src/panel.tsx,
  *   apps/obsidian/src/selection.ts, apps/obsidian/src/settings.ts
@@ -10,6 +10,7 @@ import {installNoteThumbnails} from './note-thumbnails'
 import {registerNotePreviews} from './note-previews'
 import {translate} from './locale'
 import {installSelectionAction} from './selection'
+import {SessionDraftStore,type SelectedQuote} from './session-drafts'
 import type {AskUserQuestion,AskUserQuestionAnswer} from '../../../packages/agent-core/src/types'
 import {Plugin,ItemView,Modal,Setting,FileSystemAdapter,Notice,WorkspaceLeaf} from 'obsidian'
 import {createRoot,type Root} from 'react-dom/client'
@@ -35,6 +36,7 @@ const Base=Paper as unknown as {new(...args: ConstructorParameters<typeof Plugin
 export default class Catea extends Base {
   declare settings:Record<string,boolean>
   agentSettings:Settings & {includeCurrentNote:boolean}={language:"zh",enabled:true,web:true,models:[],modelId:'',personaId:'aria',skills:[],mcp:[],memory:true,shell:true,includeCurrentNote:true,permissionMode:"assist"}
+  drafts=new SessionDraftStore()
   refreshThumbnails:()=>void=()=>{}
   obsidian!:ObsidianTools;agent!:Agent;vaultPath='';private configWrites=new Serial();private listeners=new Set<()=>void>();private dialogs=new Set<Modal>()
   async onload(){
@@ -100,7 +102,8 @@ export default class Catea extends Base {
     this.bars?.clear();this.sync?.()
     for(const state of this.explorerMenus?.values()||[])state.button.setAttribute('aria-label',this.t('更多文件操作'))
   }
-  selections:Array<{id:string;path:string;text:string}>=[]
+  get selections():SelectedQuote[]{return this.drafts.get(this.agent.session.id).quotes}
+  set selections(quotes:SelectedQuote[]){this.drafts.update(this.agent.session.id,draft=>({...draft,quotes}))}
   async addSelection(path:string,text:string){
     if(!text.trim())return
     if(!this.selections.some(s=>s.path===path&&s.text===text))this.selections.push({id:crypto.randomUUID(),path,text})
@@ -144,7 +147,7 @@ export default class Catea extends Base {
     if(!enabled)return ''
     return JSON.stringify(await this.obsidian.context())
   }
-  showDetail(title:string,detail:string){const modal=new Modal(this.app);modal.titleEl.setText(title);modal.contentEl.createEl('pre',{text:detail,attr:{style:'white-space:pre-wrap;max-height:65vh;overflow:auto'}});modal.open()}
+  showDetail(title:string,detail:string){const modal=new Modal(this.app);modal.modalEl.addClass('catea-detail-modal');modal.titleEl.setText(title);modal.contentEl.createEl('pre',{text:detail});modal.open()}
   private confirm(title:string,detail:string,signal:AbortSignal):Promise<boolean>{
     signal.throwIfAborted()
     if(this.agentSettings.permissionMode==='full')return Promise.resolve(true)

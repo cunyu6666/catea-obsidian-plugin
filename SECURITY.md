@@ -51,13 +51,13 @@ network only in these ways:
 | `mcp.exa.ai` | web search, as the primary provider |
 | `r.jina.ai`, `s.jina.ai` | web search fallback and page reading |
 | `html.duckduckgo.com`, `api.duckduckgo.com` | final search fallback |
-| The `agent-reach` CLI, if the user has installed it | search and fetch, when available |
+| The `agent-reach` CLI, if the user has installed it | diagnostics and explicit commands after approval; the CLI is not a generic search/fetch provider |
 | Any MCP server the user explicitly enables | tool calls the agent makes |
 
-Web tools can be disabled in settings and are off-limits to private addresses: the
-URL guard rejects loopback, `.local`, and RFC1918 ranges, so the agent cannot be
-pointed at the local network. Fetched page content is treated as untrusted data,
-never as instructions.
+Web tools can be disabled in settings. `web_fetch` rejects loopback, `.local`,
+and RFC1918 URLs; `link_world_exec` calls an external CLI only after explicit
+approval and is not constrained by that URL guard. Fetched page content is
+treated as untrusted data, never as instructions.
 
 Note that search queries and fetched URLs are sent to those third parties, which is
 why the network-use disclosure exists in the README and in Obsidian's submission

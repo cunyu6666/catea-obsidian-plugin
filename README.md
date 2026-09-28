@@ -55,7 +55,7 @@ Catea is not another chat sidebar bolted onto Obsidian. It is a **Paper workspac
 | **Memory** | Forgotten between sessions | NanoMem — recall, episodes, consolidation, and reinforcement |
 | **Long tasks** | One-shot answers | CatUI agent loop: 256 turns / 512 tool calls, checkpoints, and context handoff |
 | **Models** | Locked to one provider | BYOK — any OpenAI- or Anthropic-compatible endpoint |
-| **Web** | None | Resilient search: Exa MCP → agent-reach → Jina → DuckDuckGo |
+| **Web** | None | Search: Exa MCP → Jina → DuckDuckGo; optional Agent Reach diagnostics and approved CLI calls |
 | **Safety** | Blind edits | `raw/` write-protected, `wiki/log.md` append-only, every write confirmed |
 
 ## ✨ Features
@@ -172,6 +172,7 @@ The agent acts on your vault through the bundled `obsidian-workspace` skill — 
 
 Catea is bring-your-own-key:
 
+- **OpenRouter quick setup** — choose **Add OpenRouter**, enter an API key, then use **Free automatic routing** or paste a model ID such as `provider/model`; Catea selects the saved model immediately. Free uses `openrouter/free`, so the selected model and availability may change between requests.
 - **Draft-based editing** — adding or editing a model uses an independent draft; cancelling never mutates your config
 - **Validated on save** — display name, model ID, API key, and HTTP(S) base URL
 - **Two protocols** — OpenAI-compatible and Anthropic-compatible; switching protocol fills the matching default endpoint, which you can replace with your own compatible service
@@ -184,7 +185,7 @@ Catea reaches the network only in visible, user-initiated ways — there is no t
 
 | Destination | When | Purpose |
 | --- | --- | --- |
-| Your model endpoint — `api.openai.com`, `api.anthropic.com`, or any OpenAI/Anthropic-compatible URL you configure | Every conversation | Prompts, context, and tool results out; model output back |
+| Your model endpoint — `api.openai.com`, `api.anthropic.com`, `openrouter.ai`, or any OpenAI/Anthropic-compatible URL you configure | Every conversation | Prompts, context, and tool results out; model output back. OpenRouter may forward them to its selected model provider. |
 | Exa MCP (`mcp.exa.ai`) | When the agent searches the web | Primary web search provider |
 | Jina (`r.jina.ai`, `s.jina.ai`) | Web search fallback and page reading | Search fallback and page extraction |
 | DuckDuckGo (`html.duckduckgo.com`, `api.duckduckgo.com`) | Web search fallback | Final search fallback |
