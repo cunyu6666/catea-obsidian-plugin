@@ -66,6 +66,8 @@ log(`version: ${version} (minAppVersion ${minAppVersion}, id ${manifest.id})`)
 for (const [label, argv] of [
   ['contracts and governance', ['test']],
   ['typecheck', ['run', 'typecheck']],
+  ['official plugin lint', ['run', 'lint']],
+  ['adapter regressions', ['run', 'test:behavior']],
 ]) {
   const result = run('npm', argv)
   if (!result.ok) fail(`${label} failed; fix it before releasing:\n${result.out}`)

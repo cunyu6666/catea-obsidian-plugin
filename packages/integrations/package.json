@@ -2,5 +2,8 @@
   "name": "catea-integrations",
   "version": "0.1.0",
   "type": "module",
-  "exports": "./src/index.ts"
+  "exports": "./src/index.ts",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.30.1"
+  }
 }

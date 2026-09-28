@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
-import { Icon as RemixIcon } from './Icon'
+import { Icon } from './Icon'
 
 export interface ApprovalCardQuestion {
   id: string
@@ -52,19 +52,19 @@ export function ApprovalCard({ questions, onSubmit, onDismiss, status = 'pending
   }
 
   return <section className="anno-approval-card" data-state={status} aria-busy={status === 'submitting'} aria-label={status === 'answered' ? result : question.title}>
-    <span className="anno-approval-card__icon" aria-hidden="true"><RemixIcon name={status === 'answered' ? 'check' : 'question'} size={16} /></span>
+    <span className="anno-approval-card__icon" aria-hidden="true"><Icon name={status === 'answered' ? 'check' : 'question'} size={16} /></span>
     <div className="anno-approval-card__body">
       <div className="anno-approval-card__top">
         <h3>{status === 'answered' ? result : question.title}</h3>
         {status !== 'answered' && questions.length > 1 && <span>{step + 1}/{questions.length}</span>}
-        {onDismiss && status === 'pending' && <button type="button" aria-label={dismissLabel} title={dismissLabel} onClick={onDismiss}><RemixIcon name="close" size={15} /></button>}
+        {onDismiss && status === 'pending' && <button type="button" aria-label={dismissLabel} title={dismissLabel} onClick={onDismiss}><Icon name="close" size={15} /></button>}
       </div>
       {status !== 'answered' && <>
         <AnimatePresence initial={false} mode="wait">
           <motion.div key={question.id} initial={{ opacity: 0, x: reduceMotion ? 0 : 8 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: reduceMotion ? 0 : -6 }} transition={{ duration: reduceMotion ? 0 : .2 }}>
             <div className="anno-approval-card__options">
               {question.options.map(option => <div className="anno-approval-card__option" key={option.value}>
-                <label title={option.description}>
+                <label title={option.description} data-selected={answer.selected.includes(option.value)}>
                   <input type={question.multiple ? 'checkbox' : 'radio'} name={`approval-${question.id}`} checked={answer.selected.includes(option.value)} disabled={status === 'submitting'} onChange={() => choose(option.value)} />
                   <span>{option.label}</span>
                 </label>
@@ -76,8 +76,8 @@ export function ApprovalCard({ questions, onSubmit, onDismiss, status = 'pending
           </motion.div>
         </AnimatePresence>
         <div className="anno-approval-card__footer">
-          {questions.length > 1 && <><button type="button" className="anno-approval-card__previous" disabled={step === 0 || status === 'submitting'} onClick={() => move(step - 1)} aria-label={previousLabel}><RemixIcon name="arrow-left" size={15} /></button><span className="anno-approval-card__dots" aria-label={progressLabel?.(step + 1, questions.length) || `Question ${step + 1} of ${questions.length}`}>{questions.map((item, index) => <i key={item.id} className={index === step ? 'is-active' : ''} />)}</span></>}
-          <button type="button" className={`anno-approval-card__next ${step === questions.length - 1 ? 'is-final' : ''}`} disabled={!valid || status === 'submitting'} onClick={continueQuestion} aria-label={step === questions.length - 1 ? submitLabel : nextLabel}>{step === questions.length - 1 && <span>{submitLabel}</span>}<RemixIcon name="arrow-right" size={16} /></button>
+          {questions.length > 1 && <><button type="button" className="anno-approval-card__previous" disabled={step === 0 || status === 'submitting'} onClick={() => move(step - 1)} aria-label={previousLabel}><Icon name="arrow-left" size={15} /></button><span className="anno-approval-card__dots" aria-label={progressLabel?.(step + 1, questions.length) || `Question ${step + 1} of ${questions.length}`}>{questions.map((item, index) => <i key={item.id} className={index === step ? 'is-active' : ''} />)}</span></>}
+          <button type="button" className={`anno-approval-card__next ${step === questions.length - 1 ? 'is-final' : ''}`} disabled={!valid || status === 'submitting'} onClick={continueQuestion} aria-label={step === questions.length - 1 ? submitLabel : nextLabel}>{step === questions.length - 1 && <span>{submitLabel}</span>}<Icon name="arrow-right" size={16} /></button>
         </div>
       </>}
     </div>

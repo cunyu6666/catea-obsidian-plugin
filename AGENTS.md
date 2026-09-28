@@ -70,7 +70,7 @@ the web, call MCP servers, and keep a long-term memory of the user's notes.
 |                      VENDORED UPSTREAM (excluded from DIP)             |
 |  packages/agent-core/upstream/  -> CatUI standard agent loop + AI      |
 |  packages/memory/upstream/      -> CatUI mem-core (GPL-3.0)            |
-|  Byte-verified against SOURCE_HASHES.json; never edited in place.      |
+|  Byte-verified original; reviewed loop patch applied during the build.  |
 |-----------------------------------------------------------------------|
 ```
 
@@ -119,6 +119,8 @@ npm install        # workspace install, including the vendored design system
 npm run build      # esbuild bundle -> dist/catea-paper/
 npm test           # node --test; requires no dependencies at all
 npm run typecheck  # scoped tsc over owned code only
+npm run lint       # official Obsidian rules for host and adapter source
+npm run test:behavior # runtime adapter regressions; requires npm install
 ```
 
 `npm run build` writes `dist/catea-paper/`, an installable Obsidian plugin
@@ -127,14 +129,22 @@ directory: `main.js`, `styles.css`, `manifest.json`, `LICENSE`,
 files. It does not install the plugin; copying it into
 `<vault>/.obsidian/plugins/catea-paper/` is a separate, manual step.
 
-**Verification status — measured on 2026-09-28 with this repository's `node_modules`
-installed, on the 0.3.4 build.**
+**Verification status — measured on 2026-09-28 with a clean temporary copy.**
+Only repository files were copied; no sibling checkout or existing node_modules
+was available. `npm ci` completed before these checks.
 
 | Command | Result |
 |---------|--------|
-| `npm run build` | **exit 0** — wrote `dist/catea-paper/`: `main.js` (3.9 MB, minified), `styles.css` (124 KB), `manifest.json` (version 0.3.4), `LICENSE`, `THIRD_PARTY_NOTICES.md`, `TABLER-LICENSE.txt` and the two design-system licence files |
-| `npm test` | **exit 0** — 183 assertions, 183 passing |
-| `npm run typecheck` | **exit 0** — a scoped gate over `apps/*/src`, `packages/*/src`, `packages/design-system` and `tests/`. Raw `tsc` still reports 84 diagnostics, all in vendored `packages/*/upstream/**` (the snapshot omits sibling modules such as `@catui/agent-core`), so `scripts/typecheck.mjs` reports those as counts and fails only on owned code. Narrowing tsconfig `exclude` does **not** work: it replaces the built-in `node_modules` exclusion and makes the count worse |
+| `npm run build` | **exit 0** — main.js approximately 4.14 MB, below the 5 MB limit enforced by the build script |
+| `npm test` | **exit 0** — contract and governance checks, including literal dynamic-import detection |
+| `npm run test:behavior` | **exit 0** — model streaming, context handoff and settings regression checks |
+| `npm run lint` | **exit 0** — official Obsidian recommended rules over hand-written host and adapter source |
+| `npm run typecheck` | **exit 0** — 0 diagnostics in owned source, 84 in the vendored snapshot, 0 external |
+
+The lint gate includes the vendored design system but excludes byte-verified
+upstream. This exclusion does not alter the marketplace scanner's scope. See
+`docs/MARKETPLACE_REVIEW.md` for the remaining capability notices and verification
+limits.
 
 Loading the built plugin inside Obsidian has **not** been verified here; that
 needs a running Obsidian instance and a test vault.
@@ -156,7 +166,7 @@ v24.21.0).
 
 ### `Agent` (`packages/agent-core/src/index.ts`)
 
-Owns one chat session: persists it, assembles the tool list for each turn, drives
+Owns one chat session: saves it through `ConversationStore`, assembles the tool list for each turn, drives
 the upstream loop, repairs interrupted tool calls, and enqueues memory extraction
 after the reply finishes. The only class the Obsidian host talks to directly.
 
@@ -307,14 +317,17 @@ the contributor-facing procedure and [SECURITY.md](./SECURITY.md) for the threat
 
 ### P3 — File Contracts
 
-**Status**: complete for every in-scope file — 33 source files carry a P3 header
+**Status**: complete for every in-scope file — all in-scope source files carry a P3 header
 and a matching contract test, and `npm test` passes.
 
-Three deliberate exclusions:
+Four deliberate exclusions:
 
-1. **Vendored upstream** — 74 files under `packages/*/upstream/`, byte-verified
-   against `packages/agent-core/upstream/SOURCE_HASHES.json`. Inserting a header
-   would invalidate that verification.
+1. **Vendored upstream** — 74 files under `packages/*/upstream/` are excluded
+   from DIP. Agent-core source digests are recorded in
+   `packages/agent-core/upstream/SOURCE_HASHES.json`; the one local loop patch
+   is applied in memory by `scripts/agent-loop-patch.mjs` and recorded in
+   `packages/agent-core/LOCAL_PATCHES.json`. Inserting a P3 header would
+   invalidate the original digests.
 2. **`scripts/`** — the scope rule above covers `apps/*/src` and `packages/*/src`
    only, so `scripts/build.mjs` is unheadered. Adding a header now would also race
    the concurrent marketplace work that edits that file.
@@ -330,6 +343,7 @@ Three deliberate exclusions:
 - [Security model and how to report a vulnerability](./SECURITY.md)
 - [Changelog](./CHANGELOG.md)
 - [Architecture decisions and acceptance record](./docs/ARCHITECTURE.md)
+- [Module boundaries and UI migration status](./docs/MODULARIZATION.md)
 - [DIP bootstrap design spec](./docs/specs/2026-09-28-dip-bootstrap-design.md)
 - [Third-party notices](./THIRD_PARTY_NOTICES.md)
 

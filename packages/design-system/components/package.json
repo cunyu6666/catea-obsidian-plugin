@@ -18,6 +18,8 @@
     "clsx": "^2.0.0",
     "motion": "^12.43.0",
     "tailwind-merge": "^3.0.0",
-    "shiki": "^3.21.0"
+    "shiki": "^3.21.0",
+    "@shikijs/langs": "^3.23.0",
+    "@shikijs/themes": "^3.23.0"
   }
 }

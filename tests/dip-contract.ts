@@ -208,7 +208,7 @@ export function extractImports(text: string): Set<string> {
     // Guard against an unterminated statement swallowing the rest of the file.
     if (buffer.length > 600) buffer = ''
   }
-  for (const m of source.matchAll(/require\s*\(\s*['"]([^'"]+)['"]\s*\)/g)) specs.add(m[1])
+  for (const m of source.matchAll(/(?:require|import)\s*\(\s*['"]([^'"]+)['"]\s*\)/g)) specs.add(m[1])
   return specs
 }
 

@@ -1,6 +1,6 @@
 /**
  * [WHO]: Provides Skill, listSkills, loadSkills, readSkillResource
- * [FROM]: Depends on ./storage, node:fs/promises
+ * [FROM]: Depends on node:fs/promises, ./storage
  * [TO]: Consumed by apps/obsidian/src/settings.ts, packages/agent-core/src/index.ts,
  *   packages/integrations/src/index.ts
  * [HERE]: packages/integrations/src/skills.ts - loads enabled .catea/skills/<id>/SKILL.md packages and reads path-guarded resources; content capped at 48000 chars, traversal rejected
@@ -9,7 +9,7 @@ import {readdir,readFile} from 'node:fs/promises'
 import {within} from './storage'
 export interface Skill {id:string;description:string;content:string}
 export async function loadSkills(vault:string, enabled:string[]):Promise<Skill[]>{
-  const root=await within(vault,'.catea/skills');const result:Skill[]=[]
+  await within(vault,'.catea/skills');const result:Skill[]=[]
   for(const id of enabled){
     if(!/^[\w-]+$/.test(id))continue
     const path=await within(vault,`.catea/skills/${id}/SKILL.md`)
@@ -19,7 +19,7 @@ export async function loadSkills(vault:string, enabled:string[]):Promise<Skill[]
   return result
 }
 export async function listSkills(vault:string){
-  try{return (await readdir(await within(vault,'.catea/skills'),{withFileTypes:true})).filter(d=>d.isDirectory()).map(d=>d.name)}catch(e:any){if(e.code==='ENOENT')return [];throw e}
+  try{return (await readdir(await within(vault,'.catea/skills'),{withFileTypes:true})).filter(d=>d.isDirectory()).map(d=>d.name)}catch(e:unknown){if((e as NodeJS.ErrnoException).code==='ENOENT')return [];throw e}
 }
 export async function readSkillResource(vault:string,enabled:string[],id:string,path:string){
   if(!enabled.includes(id)||!/^[\w-]+$/.test(id))throw new Error('Skill 未启用')

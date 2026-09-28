@@ -1,6 +1,6 @@
 /**
  * [WHO]: Provides ChatMarkdown
- * [FROM]: Depends on react-markdown, remark-gfm, catea-components, ./MermaidDiagram, ./locale
+ * [FROM]: Depends on react, react-markdown, remark-gfm, catea-components, ./MermaidDiagram, ./locale
  * [TO]: Consumed by apps/obsidian/src/panel.tsx
  * [HERE]: apps/obsidian/src/ChatMarkdown.tsx - renders assistant Markdown and converts [[wikilinks]] into internal-link clicks; code fences delegate to MermaidDiagram
  */
@@ -22,7 +22,7 @@ export const ChatMarkdown=memo(function ChatMarkdown({content,streaming=false,la
         const child=Children.toArray(children)[0]
         if(isValidElement<{className?:string;children?:ReactNode}>(child)){
           const lang=child.props.className?.match(/language-([\w-]+)/)?.[1]?.toLowerCase()
-          const code=String(child.props.children||'').replace(/\n$/,'')
+          const code=Children.toArray(child.props.children).filter((part):part is string|number=>typeof part==='string'||typeof part==='number').join('').replace(/\n$/,'')
           if(lang==='mermaid')return <MermaidDiagram code={code} t={t}/>
           return <CodeBlock code={code} language={lang} streaming={streaming} labels={{copy:t('copyCode'),copied:t('copiedResponse'),plainText:t('plainText'),writing:t('writingCode')}}/>
         }
@@ -30,5 +30,5 @@ export const ChatMarkdown=memo(function ChatMarkdown({content,streaming=false,la
       },
     }
   },[language,streaming,onOpenNote])
-  return <ReactMarkdown remarkPlugins={[remarkGfm]} components={components}>{content.replace(/\[\[([^\]|]+)(?:\|([^\]]+))?\]\]/g,(_,path,label)=>`[${label||path}](${encodeURI(path)})`)}</ReactMarkdown>
+  return <ReactMarkdown remarkPlugins={[remarkGfm]} components={components}>{content.replace(/\[\[([^\]|]+)(?:\|([^\]]+))?\]\]/g,(_match:string,path:string,label:string|undefined)=>`[${label||path}](${encodeURI(path)})`)}</ReactMarkdown>
 })

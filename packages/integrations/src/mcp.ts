@@ -1,8 +1,6 @@
 /**
  * [WHO]: Provides McpConfig, McpPool
- * [FROM]: Depends on ../../agent-core/src/providers, ../../agent-core/src/version,
- *   @modelcontextprotocol/sdk/client/index.js, @modelcontextprotocol/sdk/client/stdio.js,
- *   @modelcontextprotocol/sdk/client/streamableHttp.js
+ * [FROM]: Depends on @modelcontextprotocol/sdk/client/index.js, @modelcontextprotocol/sdk/client/stdio.js, @modelcontextprotocol/sdk/client/streamableHttp.js, ../../agent-core/src/providers, ../../agent-core/src/version
  * [TO]: Consumed by packages/agent-core/src/index.ts, packages/integrations/src/index.ts
  * [HERE]: packages/integrations/src/mcp.ts - connects enabled stdio and HTTP MCP servers, paginates tool discovery and namespaces tool names to 64 chars; catalog cap 1000, call timeout 120 s, output 24000 chars
  */
@@ -28,7 +26,7 @@ export class McpPool {
         let cursor:string|undefined
         do{
           const page=await client.listTools(cursor?{cursor}:{})
-          for(const [i,tool] of page.tools.entries()){
+          for(const tool of page.tools){
             const key=`mcp_${index}_${definitions.length}_${tool.name.replace(/[^a-zA-Z0-9_]/g,'_')}`.slice(0,64)
             this.calls.set(key,{client,name:tool.name});definitions.push({name:key,description:`[${c.id}] ${tool.description||tool.name}`,parameters:tool.inputSchema})
           }

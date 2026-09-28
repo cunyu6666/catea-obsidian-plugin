@@ -1,12 +1,11 @@
 // Adapted from CatUI link-world/index.ts (GPL-3.0); see THIRD_PARTY_NOTICES.md.
 /**
  * [WHO]: Provides runWeb, webSources, webTools
- * [FROM]: Depends on ../../agent-core/src/providers, ../../agent-core/src/transport,
- *   ../../agent-core/src/version, @modelcontextprotocol/sdk/client/index.js,
- *   @modelcontextprotocol/sdk/client/streamableHttp.js, node:child_process, node:util
+ * [FROM]: Depends on ../../agent-core/src/i18n, @modelcontextprotocol/sdk/client/index.js, @modelcontextprotocol/sdk/client/streamableHttp.js, node:child_process, node:util, ../../agent-core/src/transport, ../../agent-core/src/providers, ../../agent-core/src/version
  * [TO]: Consumed by packages/agent-core/src/index.ts
  * [HERE]: packages/integrations/src/web.ts - web_search and web_fetch via Exa MCP, agent-reach, Jina, DuckDuckGo or direct fetch; blocks local and private hosts; 10 results, 24000 chars, 30 s
  */
+import {textValue} from '../../agent-core/src/i18n'
 import {Client} from '@modelcontextprotocol/sdk/client/index.js'
 import {StreamableHTTPClientTransport} from '@modelcontextprotocol/sdk/client/streamableHttp.js'
 import {execFile} from 'node:child_process'
@@ -36,7 +35,7 @@ function capabilities(){return cli??= (async()=>{
  for(const command of ['agent-reach','/opt/homebrew/bin/agent-reach','/usr/local/bin/agent-reach'])try{
  const {stdout}=await exec(command,['--help'],{timeout:3000,maxBuffer:64000})
  return {command,search:/^\s+search\s/m.test(stdout),fetch:/^\s+fetch\s/m.test(stdout)}
- }catch{}
+ }catch{/* Optional provider unavailable or URL rejected. */}
  return undefined
 })()}
 async function exaSearch(query:string,limit:number,signal:AbortSignal){
@@ -54,7 +53,7 @@ async function exaSearch(query:string,limit:number,signal:AbortSignal){
 }
 export async function runWeb(name:string,args:Record<string,unknown>,signal:AbortSignal):Promise<string>{
  signal.throwIfAborted()
- const query=String(args.query||'').trim(),url=name==='web_fetch'?publicUrl(String(args.url||'')):''
+ const query=textValue(args.query||'').trim(),url=name==='web_fetch'?publicUrl(textValue(args.url||'')):''
  if(name==='web_search'&&(!query||query.length>2000))throw new Error('搜索词需为 1–2000 字符')
  const limit=Math.min(10,Math.max(1,Number(args.limit)||5))
  const timeout=Math.min(120,Math.max(5,Number(args.timeout)||60))*1000
@@ -104,7 +103,7 @@ async function nativeWebFetch(url: string, signal?: AbortSignal): Promise<string
 		const html = await res.text();
 		return htmlToPlainText(html, targetUrl);
 	} catch (err) {
-		throw new Error(`Failed to fetch ${targetUrl}: ${err instanceof Error ? err.message : err}`);
+		throw new Error(`Failed to fetch ${targetUrl}: ${textValue(err)}`);
 	}
 }
 
@@ -224,9 +223,11 @@ function parseDuckDuckGoResults(html: string, limit: number): string {
 
 
 export function webSources(output:string):Array<{title:string;url:string}>{
- const data=JSON.parse(output),content=String(data.content||''),sources=new Map<string,{title:string;url:string}>()
- const add=(raw:string,title?:string)=>{try{const url=publicUrl(raw);sources.set(url,{url,title:title?.trim()||new URL(url).hostname})}catch{}}
- if(data.url){add(data.url,content.match(/^Title:\s*(.+)$/m)?.[1]);return [...sources.values()]}
+ const parsed:unknown=JSON.parse(output)
+ if(!parsed||typeof parsed!=='object'||Array.isArray(parsed))return []
+ const data=parsed as Record<string,unknown>,content=textValue(data.content||''),sources=new Map<string,{title:string;url:string}>()
+ const add=(raw:string,title?:string)=>{try{const url=publicUrl(raw);sources.set(url,{url,title:title?.trim()||new URL(url).hostname})}catch{/* Optional provider unavailable or URL rejected. */}}
+ if(typeof data.url==='string'){add(data.url,content.match(/^Title:\s*(.+)$/m)?.[1]);return [...sources.values()]}
  for(const match of content.matchAll(/Title:\s*([^\n]+)\nURL:\s*(https?:\/\/[^\s]+)/g))add(match[2],match[1])
  for(const match of content.matchAll(/(?:^|\n)###? ([^\n]+)\n(https?:\/\/[^\s]+)/g))add(match[2],match[1])
  for(const match of content.matchAll(/(?:URL Source|URL):\s*(https?:\/\/[^\s]+)/g))add(match[1])

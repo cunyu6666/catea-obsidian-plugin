@@ -163,7 +163,7 @@ The repository now carries a verifiable documentation layer: a root `AGENTS.md`
 files, each enforced by a contract test. `npm test` covers both the per-file
 contracts and repo-wide isomorphism between documentation and code.
 
-Deliberately excluded from DIP: the 74 byte-verified vendored files under
+Deliberately excluded from DIP: the 74 vendored files under
 `packages/*/upstream/`; `scripts/`, which the scope rule does not cover at all
 (`apps/*/src` and `packages/*/src` only), so `scripts/build.mjs` carries no header;
 and `__tests__/` itself. See `docs/specs/2026-09-28-dip-bootstrap-design.md` for the

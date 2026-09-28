@@ -9,8 +9,8 @@ import type Catea from './main'
 
 /** CodeMirror owns selection state; DOM selection is only an optional anchor. */
 export function installSelectionAction(plugin:Catea){
-  let surface:HTMLDivElement|undefined,frame=0
-  const clear=()=>{cancelAnimationFrame(frame);surface?.remove();surface=undefined}
+  let surface:HTMLDivElement|undefined,frame=0,frameWindow:Window=window
+  const clear=()=>{frameWindow.cancelAnimationFrame(frame);surface?.remove();surface=undefined}
   const capture=()=>{
     const view=plugin.app.workspace.getActiveViewOfType(MarkdownView)
     const text=view?.editor?.getSelection()
@@ -22,15 +22,16 @@ export function installSelectionAction(plugin:Catea){
   }))
   const show=(event?:MouseEvent)=>{
     clear()
-    frame=requestAnimationFrame(()=>{
+    frameWindow=plugin.app.workspace.getActiveViewOfType(MarkdownView)?.containerEl.ownerDocument.defaultView??window
+    frame=frameWindow.requestAnimationFrame(()=>{
       const selected=capture();if(!selected)return
       const doc=selected.view.containerEl.ownerDocument,win=doc.defaultView;if(!win)return
-      if(event&&event.target instanceof Node&&!selected.view.containerEl.contains(event.target))return
+      if(event&&event.target instanceof win.Node&&!selected.view.containerEl.contains(event.target))return
       let anchor:{left:number;bottom:number}|undefined
       // CodeMirror 6 often exposes only a collapsed DOM selection, or none.
-      const cm=(selected.view.editor as any).cm
+      const cm=(selected.view.editor as typeof selected.view.editor & {cm?:{state?:{selection?:{main?:{head?:number}}};coordsAtPos(pos:number):{left:number;bottom:number}|null}}).cm
       const head=cm?.state?.selection?.main?.head
-      if(typeof head==='number')anchor=cm.coordsAtPos(head)||undefined
+      if(typeof head==='number')anchor=cm?.coordsAtPos(head)||undefined
       if(!anchor&&event)anchor={left:event.clientX,bottom:event.clientY}
       if(!anchor){
         const range=win.getSelection()?.rangeCount?win.getSelection()!.getRangeAt(0):undefined
@@ -57,7 +58,7 @@ export function installSelectionAction(plugin:Catea){
     const docs=new Set([document,...plugin.app.workspace.getLeavesOfType('markdown').map(leaf=>leaf.view.containerEl.ownerDocument)])
     for(const doc of docs){
       if(documents.has(doc))continue;documents.add(doc)
-      const isAction=(target:EventTarget|null)=>target instanceof Element&&!!target.closest('.catea-selection-surface')
+      const isAction=(target:EventTarget|null)=>!!doc.defaultView&&target instanceof doc.defaultView.Element&&!!target.closest('.catea-selection-surface')
       plugin.registerDomEvent(doc,'mouseup',e=>{if(e.button===0&&!isAction(e.target))show(e)})
       plugin.registerDomEvent(doc,'keyup',e=>{if(e.key==='Escape')clear();else if(!isAction(e.target))show()})
       plugin.registerDomEvent(doc,'mousedown',e=>{if(!isAction(e.target))clear()})

@@ -40,7 +40,8 @@ body.gp-enabled .workspace-tab-header::before,body.gp-enabled .workspace-tab-hea
 body.gp-enabled .mod-root .workspace-leaf {background:transparent;padding:0 9px 12px;}
 body.gp-enabled .mod-root .workspace-leaf-content {
   background:#fff;border:1px solid rgba(60,72,64,.12);border-radius:12px;
-  box-shadow:0 2px 4px rgba(30,42,34,.04),0 12px 30px rgba(30,42,34,.065);overflow:hidden;
+  /* Keep the shadow inside the existing 9px gutter, as on response cards. */
+  box-shadow:0 1px 2px rgba(30,42,34,.04),0 3px 4px -1px rgba(30,42,34,.06);overflow:hidden;
 }
 body.gp-enabled .mod-root :is(.view-header,.view-content,.markdown-source-view,.markdown-preview-view,.cm-editor,.cm-scroller) {background:#fff;}
 body.gp-enabled .mod-root .view-header {height:40px;border-bottom:1px solid #f1f3f1;}
@@ -53,8 +54,8 @@ body.gp-enabled .workspace-ribbon {background:var(--gp-shell-background);border:
 body.gp-enabled :is(.mod-left-split,.mod-right-split) {border-inline:0;}
 body.gp-enabled.gp-hide-ribbon .workspace-ribbon.mod-left {display:none;}
 body.gp-enabled.gp-hide-status .status-bar {display:none;}
-body.gp-enabled.gp-hide-properties .mod-root .metadata-container {display:none!important;}
-body.gp-enabled.gp-toolbar-on :is(#editingToolbarModalBar,#editingToolbarPopoverBar) {display:none!important;}
+body.gp-enabled.gp-enabled.gp-hide-properties .mod-root .metadata-container {display:none;}
+body.gp-enabled.gp-enabled.gp-toolbar-on :is(#editingToolbarModalBar,#editingToolbarPopoverBar) {display:none;}
 body.gp-enabled .workspace-leaf-content[data-type="markdown"]>.view-content {display:flex;flex-direction:column;padding:0;}
 body.gp-enabled .workspace-leaf-content[data-type="markdown"]>.view-content>:is(.markdown-source-view,.markdown-preview-view) {flex:1;min-height:0;}
 body.gp-enabled .gp-toolbar {display:flex;align-items:center;justify-content:center;gap:4px;min-height:46px;padding:7px 16px;border-bottom:1px solid #eff1ef;background:#fff;flex-shrink:0;overflow-x:auto;}
@@ -156,13 +157,13 @@ body.gp-enabled .nav-header .clickable-icon {width:28px;height:28px;padding:6px;
 body.gp-enabled {--gp-folder-icon:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22black%22%20stroke-width%3D%221.65%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20stroke%3D%22none%22%20d%3D%22M0%200h24v24H0z%22%20fill%3D%22none%22%20%2F%3E%0A%20%20%3Cpath%20d%3D%22M5%204h4l3%203h7a2%202%200%200%201%202%202v8a2%202%200%200%201%20-2%202h-14a2%202%200%200%201%20-2%20-2v-11a2%202%200%200%201%202%20-2%22%20%2F%3E%3C%2Fsvg%3E");--gp-document-icon:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22black%22%20stroke-width%3D%221.65%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20stroke%3D%22none%22%20d%3D%22M0%200h24v24H0z%22%20fill%3D%22none%22%20%2F%3E%0A%20%20%3Cpath%20d%3D%22M14%203v4a1%201%200%200%200%201%201h4%22%20%2F%3E%0A%20%20%3Cpath%20d%3D%22M17%2021h-10a2%202%200%200%201%20-2%20-2v-14a2%202%200%200%201%202%20-2h7l5%205v11a2%202%200%200%201%20-2%202%22%20%2F%3E%0A%20%20%3Cpath%20d%3D%22M9%209l1%200%22%20%2F%3E%0A%20%20%3Cpath%20d%3D%22M9%2013l6%200%22%20%2F%3E%0A%20%20%3Cpath%20d%3D%22M9%2017l6%200%22%20%2F%3E%3C%2Fsvg%3E");}
 
 /* Forest palette: single accent source, including inherited theme aliases. */
-body.gp-enabled {
+body.gp-enabled.gp-enabled {
   --gp-accent:#164b38;--gp-accent-hover:#103b2c;--gp-accent-soft:rgba(22,75,56,.10);
   --gp-accent-softer:rgba(22,75,56,.055);--gp-accent-selection:rgba(22,75,56,.20);
   --gp-accent-rgb:22,75,56;
-  --accent-h:158.5!important;--accent-s:54.6%!important;--accent-l:19%!important;
-  --color-accent:var(--gp-accent)!important;--color-accent-1:#1e6048!important;
-  --color-accent-2:#28745a!important;--color-accent-hsl:158.5,54.6%,19%!important;
+  --accent-h:158.5;--accent-s:54.6%;--accent-l:19%;
+  --color-accent:var(--gp-accent);--color-accent-1:#1e6048;
+  --color-accent-2:#28745a;--color-accent-hsl:158.5,54.6%,19%;
   --interactive-accent-hsl:158.5,54.6%,19%;
   --interactive-accent:var(--gp-accent);--interactive-accent-hover:var(--gp-accent-hover);
   --interactive-normal:#fff;--interactive-hover:#f2f6f3;
@@ -254,10 +255,10 @@ body.gp-enabled .catui-acp-view .catui-send-button:not(:disabled):hover {backgro
 
 /* Collapsing the explorer activates a more specific native ribbon background.
    Pin both states (and the titlebar cap) to the same opaque shell surface. */
-body.gp-enabled .workspace-ribbon.mod-left,
-body.gp-enabled .workspace-ribbon.mod-left.is-collapsed,
-body.gp-enabled .workspace-ribbon.mod-left::before {
-  background:var(--gp-shell-background)!important;
+body.gp-enabled.gp-enabled .workspace-ribbon.mod-left,
+body.gp-enabled.gp-enabled .workspace-ribbon.mod-left.is-collapsed,
+body.gp-enabled.gp-enabled .workspace-ribbon.mod-left::before {
+  background:var(--gp-shell-background);
   border-inline-end:0;box-shadow:none;transition:none;
 }
 
@@ -270,12 +271,19 @@ body.gp-enabled :is(.mod-left-split,.mod-right-split) .workspace-tab-header-cont
 }
 body.gp-enabled .nav-header {padding:8px 12px;}
 body.gp-enabled .nav-buttons-container {gap:4px;}
+/* Native explorer actions can inherit flex-grow; keep each hit target square. */
+body.gp-enabled .nav-buttons-container > :is(.nav-action-button,.gp-explorer-more) {
+  box-sizing:border-box;flex:0 0 32px;
+  width:32px;min-width:32px;max-width:32px;
+  height:32px;min-height:32px;max-height:32px;
+  padding:8px;
+}
 
 /* Keep tooltips as quiet rounded labels, without directional arrows. */
-body.gp-enabled .tooltip .tooltip-arrow {display:none!important;}
+body.gp-enabled.gp-enabled .tooltip .tooltip-arrow {display:none;}
 
 /* A shorter lead-in to the document; preserve generous horizontal margins. */
-body.gp-enabled .gp-explorer-overflow {display:none!important;}
+body.gp-enabled.gp-enabled .gp-explorer-overflow {display:none;}
 body.gp-enabled .gp-explorer-more {background:transparent;border:0;box-shadow:none;}
 body.gp-enabled .nav-buttons-container {justify-content:flex-start;}
 
@@ -301,11 +309,11 @@ body.gp-enabled .sidebar-toggle-button svg {width:16px;height:16px;}
 .catea-note-preview__tabs button[aria-pressed=true] { background:rgba(32,88,67,.09); color:#205843; }
 .catea-note-preview__viewport { height:320px; min-height:120px; max-height:80vh; resize:vertical; overflow:auto; background:white; }
 .catea-note-preview__viewport iframe { display:block; width:100%; height:100%; border:0; background:white; }
-.catea-note-preview__source { margin:0!important; padding:14px!important; max-height:480px; overflow:auto; white-space:pre; }
-.catea-note-preview [hidden] { display:none!important; }
+.catea-note-preview pre.catea-note-preview__source { margin:0; padding:14px; max-height:480px; overflow:auto; white-space:pre; }
+.catea-note-preview.catea-note-preview [hidden] { display:none; }
 
 .catea-note-thumbnail { display:none; }
-body.gp-enabled .nav-file-title.catea-has-thumbnail .nav-file-title-content::before { display:none!important; }
+body.gp-enabled.gp-enabled .nav-file-title.catea-has-thumbnail .nav-file-title-content::before { display:none; }
 body.gp-enabled .nav-file-title .catea-note-thumbnail { display:block; width:18px; height:24px; flex:0 0 18px; object-fit:cover; margin-inline-end:8px; border:1px solid #b9c0bb; border-radius:3px; background:white; box-shadow:0 1px 2px #20382a14; pointer-events:none; }
 body.gp-enabled .nav-file-title.catea-has-thumbnail { display:flex; align-items:center; min-height:30px; }
 
@@ -361,11 +369,11 @@ body.gp-enabled .side-dock-actions .side-dock-ribbon-action .svg-icon {
   transition: width 180ms ease-out, height 180ms ease-out;
 }
 @media (hover: hover) and (prefers-reduced-motion: no-preference) {
-  body.gp-enabled .side-dock-actions .side-dock-ribbon-action:has(+ .side-dock-ribbon-action + .side-dock-ribbon-action:hover),
+  body.gp-enabled .side-dock-actions .side-dock-ribbon-action.catea-dock-far,
   body.gp-enabled .side-dock-actions .side-dock-ribbon-action:hover + .side-dock-ribbon-action + .side-dock-ribbon-action {
     --dock-size: 32px; --dock-icon: 19px;
   }
-  body.gp-enabled .side-dock-actions .side-dock-ribbon-action:has(+ .side-dock-ribbon-action:hover),
+  body.gp-enabled .side-dock-actions .side-dock-ribbon-action.catea-dock-near,
   body.gp-enabled .side-dock-actions .side-dock-ribbon-action:hover + .side-dock-ribbon-action {
     --dock-size: 34px; --dock-icon: 21px;
   }
@@ -387,4 +395,4 @@ body.gp-enabled .side-dock-actions .side-dock-ribbon-action:focus-visible {
 }
 
 /* Suppress only a matching leading H1; the Markdown content stays untouched. */
-body.gp-enabled .gp-duplicate-inline-title .inline-title { display: none !important; }
+body.gp-enabled.gp-enabled .gp-duplicate-inline-title .inline-title { display: none; }

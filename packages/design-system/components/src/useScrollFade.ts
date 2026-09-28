@@ -4,6 +4,7 @@ import {useEffect,type RefObject} from 'react'
 export function useScrollFade(root:RefObject<HTMLElement>,height=12){
   useEffect(()=>{
     const container=root.current;if(!container)return
+    const win=container.ownerDocument.defaultView??window
     const selector='.chat-scroll, .catea-history, .anno-code-block__content, .anno-response-card__content'
     let frame=0
     const tracked=new Set<HTMLElement>()
@@ -15,7 +16,7 @@ export function useScrollFade(root:RefObject<HTMLElement>,height=12){
         el.style.setProperty('--scroll-fade-bottom',max>1&&el.scrollTop<max-1?`${height}px`:'0px')
       }
     }
-    const schedule=()=>{if(!frame)frame=requestAnimationFrame(paint)}
+    const schedule=()=>{if(!frame)frame=win.requestAnimationFrame(paint)}
     const resize=new ResizeObserver(schedule)
     const refresh=()=>{
       resize.disconnect();tracked.clear()
@@ -30,7 +31,7 @@ export function useScrollFade(root:RefObject<HTMLElement>,height=12){
     container.addEventListener('scroll',schedule,true)
     refresh()
     return()=>{
-      mutation.disconnect();resize.disconnect();cancelAnimationFrame(frame)
+      mutation.disconnect();resize.disconnect();win.cancelAnimationFrame(frame)
       container.removeEventListener('scroll',schedule,true)
       for(const el of tracked){el.style.removeProperty('--scroll-fade-top');el.style.removeProperty('--scroll-fade-bottom')}
     }

@@ -134,3 +134,5 @@ Object.assign(english,{'附件已保留：当前 M2 模型不支持图片或二�
 Object.assign(english,{'添加附件':'Add attachment','添加文件':'Add files','选区操作':'Selection actions'})
 
 Object.assign(english,{'笔记缩略图':'Note thumbnails','文件树显示真实标题、正文和首张本地图片的缩略预览。':'Preview note titles, content, and the first local image in the file tree.'})
+Object.assign(english,{'人格':'Persona','选择 Agent 的对话风格；从下一条消息开始使用。':'Choose the Agent’s conversation style. Applies from the next message.'})
+Object.assign(english,{'附带当前笔记':'Include current note','发送消息时将当前笔记内容加入上下文。默认开启。':'Include the current note in messages sent to the model. On by default.'})

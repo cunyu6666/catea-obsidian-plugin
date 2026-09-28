@@ -14,9 +14,8 @@
 .chat-message.user .chat-message-body {white-space:pre-wrap}
 .chat-message-body {font-family:var(--font-sans)}
 .anno-composer__toolbar-group:first-child {flex:1;overflow:hidden}
-.model-trigger {max-width:150px!important;min-width:0;overflow:hidden;box-shadow:none!important}
+.model-trigger.model-trigger {max-width:150px;min-width:0;overflow:hidden;box-shadow:none}
 .model-trigger>span:first-child {overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.persona-trigger {padding:0 6px!important;min-height:26.25px!important;height:26.25px;background:transparent!important;border:0!important;gap:4px;font-size:12px!important;box-shadow:none!important}
 .anno-composer__folder[data-active=true] {color:var(--accent);background:var(--surface-muted)}
 .catea-history {flex:1;min-height:0;overflow:auto;padding:16px 12px}
 .catea-history h2 {font-size:11px;color:var(--foreground-soft);font-weight:500;margin:0 8px 12px}
@@ -27,27 +26,16 @@
 .catea-change pre {max-height:55vh;overflow:auto;white-space:pre-wrap}
 .catea-change__removed {color:var(--danger)}
 .catea-change__added {color:var(--accent)}
-@container(max-width:360px){.chat-header-actions {gap:0}.chat-messages{padding-inline:12px}.anno-composer__folder span{display:none}.model-trigger{max-width:125px!important}}
+@container(max-width:360px){.chat-header-actions {gap:0}.chat-messages{padding-inline:12px}.anno-composer__folder span{display:none}.model-trigger.model-trigger{max-width:125px}}
 
 /* Obsidian theme button rules must not add chrome to ANNO controls. */
-button:not(.mod-cta) {box-shadow:none!important}
-.chat-header button {border:0!important;background:transparent!important}
-.chat-header button:hover {background:var(--surface-muted)!important}
-.anno-activities__toggle,.anno-activities__row {justify-content:flex-start;border:0!important;box-shadow:none!important}
-.anno-activities__toggle {background:transparent!important}
-.anno-activities__toggle:hover {background:var(--surface-muted)!important}
+button:not(.mod-cta):not(.mod-cta) {box-shadow:none}
+.chat-header.chat-header button {border:0;background:transparent}
+.chat-header.chat-header button:hover {background:var(--surface-muted)}
+.anno-activities__toggle.anno-activities__toggle,.anno-activities__row.anno-activities__row {justify-content:flex-start;border:0;box-shadow:none}
+.anno-activities__toggle.anno-activities__toggle {background:transparent}
+.anno-activities__toggle.anno-activities__toggle:hover {background:var(--surface-muted)}
 .ai-emblem {font-family:Arial,sans-serif;font-variant-emoji:text}
-
-.catea-ui .catea-note-toggle {
-  display: inline-flex; align-items: center; justify-content: center;
-  width: 30px; height: 30px; padding: 0; border: 1px solid transparent;
-  border-radius: 8px; background: #eceeed; color: #909794;
-  box-shadow: none; cursor: pointer;
-}
-.catea-ui .catea-note-toggle[data-active="true"] {
-  color: #fff; background: #205843; border-color: #174632;
-}
-.catea-ui .catea-note-toggle:focus-visible { outline: 2px solid #205843; outline-offset: 2px; }
 
 .catea-quotes { display: grid; gap: 6px; margin: 10px 10px 0; max-height: 180px; overflow: auto; }
 .catea-quote { display: flex; align-items: flex-start; gap: 8px; padding: 8px 10px; border-radius: 8px; background: var(--background-secondary, #edf2ef); font-size: 12px; }
@@ -69,7 +57,7 @@ button:not(.mod-cta) {box-shadow:none!important}
 .catea-panel .anno-approval-card__top > button { width: 24px; height: 24px; border-radius: 6px; box-shadow: none; }
 .catea-panel .anno-approval-card__options { margin-top: 8px; gap: 4px; }
 .catea-panel .anno-approval-card__option label { min-height: 32px; gap: 8px; padding: 6px 8px; font-size: 13px; line-height: 20px; }
-.catea-panel .anno-approval-card__option label:has(input:checked) { background: color-mix(in srgb, var(--accent) 9%, transparent); }
+.catea-panel .anno-approval-card__option label[data-selected="true"] { background: color-mix(in srgb, var(--accent) 9%, transparent); }
 .catea-panel .anno-approval-card__option label > span { white-space: normal; overflow-wrap: anywhere; }
 .catea-panel .anno-approval-card__option input { width: 16px; height: 16px; border-width: 1.5px; align-self: flex-start; margin-top: 2px; }
 .catea-panel .anno-approval-card__option input:checked { background: var(--accent); border-color: var(--accent); box-shadow: inset 0 0 0 3px var(--surface); }
@@ -81,7 +69,6 @@ button:not(.mod-cta) {box-shadow:none!important}
 .catea-panel .anno-approval-card__next:hover:not(:disabled) { background: color-mix(in srgb, var(--accent) 88%, black); transform: none; }
 .catea-panel .anno-approval-card__next:disabled { background: var(--surface-muted); color: var(--foreground-soft); opacity: .65; cursor: default; }
 .catea-panel .anno-approval-card :is(button,input):focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-.catea-panel .running-dot[data-waiting=true] { background: var(--foreground-soft); box-shadow: none; }
 
 /* One continuous composer surface, unchanged while hovering or typing. */
 .catea-panel .anno-composer,
@@ -95,15 +82,18 @@ button:not(.mod-cta) {box-shadow:none!important}
   border-top: 0;
   background: transparent;
 }
-.catea-panel textarea.anno-composer__input,
+.catea-panel.catea-panel textarea.anno-composer__input,
+.catea-panel
 .catea-panel textarea.anno-composer__input:hover,
+.catea-panel
 .catea-panel textarea.anno-composer__input:focus,
+.catea-panel
 .catea-panel textarea.anno-composer__input:focus-visible {
-  background: transparent !important;
-  border: 0 !important;
+  background: transparent;
+  border: 0;
   border-radius: 0;
-  box-shadow: none !important;
-  outline: none !important;
+  box-shadow: none;
+  outline: none;
   transition: none;
 }
 
@@ -126,7 +116,7 @@ button:not(.mod-cta) {box-shadow:none!important}
 .catea-panel .chat-header button { width: 26px; min-width: 26px; height: 26px; padding: 0; border-radius: 6px; }
 .catea-panel .chat-header button svg { width: 15px; height: 15px; }
 .catea-panel .chat-header-title { font-size: 13px; }
-.catea-panel .catea-history .anno-sidebar-item__trailing:has(.catea-history-confirm) { opacity: 1; pointer-events: auto; }
+.catea-panel .catea-history .anno-sidebar-item__trailing[data-open="true"] { opacity: 1; pointer-events: auto; }
 @media (hover: none) { .catea-panel .catea-history .anno-sidebar-item__trailing { opacity: 1; pointer-events: auto; } }
 
 .catea-panel :is(.chat-scroll, .catea-history, .anno-code-block__content, .anno-response-card__content) {

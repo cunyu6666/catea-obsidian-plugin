@@ -27,17 +27,22 @@ jobs:
       - name: Install
         run: npm ci
 
-      # 183 dependency-free assertions: per-file P3 contracts, repo-wide
+      # Per-file P3 contracts, upstream provenance, repo-wide
       # documentation/code isomorphism, and version consistency across
       # manifest.json, package.json, versions.json and the runtime constant.
       - name: Contract and governance gate
         run: npm test
 
       # Fails only on diagnostics in code this repository owns. The vendored
-      # CatUI snapshot is reported as a count instead, because it is byte-verified
-      # against SOURCE_HASHES.json and cannot be edited here.
+      # CatUI snapshot is reported as a count instead; upstream provenance and
+      # the build-time loop patch are checked by the contract and build gates.
       - name: Typecheck owned code
         run: npm run typecheck
+
+      - name: Official plugin lint and adapter regressions
+        run: |
+          npm run lint
+          npm run test:behavior
 
       - name: Build
         run: npm run build

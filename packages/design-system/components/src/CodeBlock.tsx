@@ -16,7 +16,7 @@ import typescript from '@shikijs/langs/typescript'
 import yaml from '@shikijs/langs/yaml'
 import githubDark from '@shikijs/themes/github-dark'
 import githubLight from '@shikijs/themes/github-light'
-import { Icon as RemixIcon } from './Icon'
+import { Icon } from './Icon'
 
 // A curated grammar set. Shiki's full registry is roughly 220 grammars plus an
 // inlined Oniguruma WASM, which added about 10 MB to every consumer bundle and
@@ -50,7 +50,7 @@ function highlight(code: string, language: string) {
     engine: createJavaScriptRegexEngine(),
   })
   return highlighter.then(instance => instance.codeToTokensWithThemes(code, {
-    lang: language as never,
+    lang: language,
     themes: { light: 'github-light', dark: 'github-dark' },
   }))
 }
@@ -124,11 +124,12 @@ export function CodeBlock({ code, language = 'text', showHeader = true, streamin
   useLayoutEffect(() => {
     const viewport = viewportRef.current
     if (!viewport || !streaming) return
-    const frame = requestAnimationFrame(() => {
+    const win=viewport.ownerDocument.defaultView??window
+    const frame = win.requestAnimationFrame(() => {
       if (viewport.scrollHeight <= viewport.clientHeight) return
       viewport.scrollTo({ top: viewport.scrollHeight, behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' })
     })
-    return () => cancelAnimationFrame(frame)
+    return () => win.cancelAnimationFrame(frame)
   }, [code, streaming])
 
   const copy = useCallback(async () => {
@@ -142,10 +143,10 @@ export function CodeBlock({ code, language = 'text', showHeader = true, streamin
 
   return <div className="anno-code-block" data-state={streaming ? 'streaming' : 'complete'} aria-busy={streaming}>
     {showHeader && <div className="anno-code-block__header">
-      <span className="anno-code-block__identity"><RemixIcon name="code" size={16} /><span>{resolvedLanguage === 'text' ? labels.plainText : resolvedLanguage}</span></span>
+      <span className="anno-code-block__identity"><Icon name="code" size={16} /><span>{resolvedLanguage === 'text' ? labels.plainText : resolvedLanguage}</span></span>
       <span className="anno-code-block__actions">
-        {streaming && <span className="anno-code-block__writing" role="status"><RemixIcon name="loading" size={12} className="anno-spin" />{labels.writing}</span>}
-        <button type="button" aria-label={copied ? labels.copied : labels.copy} title={copied ? labels.copied : labels.copy} onClick={() => void copy()}><RemixIcon name={copied ? 'check' : 'copy'} size={16} /></button>
+        {streaming && <span className="anno-code-block__writing" role="status"><Icon name="loading" size={12} className="anno-spin" />{labels.writing}</span>}
+        <button type="button" aria-label={copied ? labels.copied : labels.copy} title={copied ? labels.copied : labels.copy} onClick={() => void copy()}><Icon name={copied ? 'check' : 'copy'} size={16} /></button>
       </span>
     </div>}
     <div ref={viewportRef} className="anno-code-block__content anno-auto-scrollbar" style={{ maxHeight }} role={streaming ? 'log' : undefined} aria-live={streaming ? 'polite' : undefined}>

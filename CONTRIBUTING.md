@@ -14,11 +14,13 @@ enforce, so a change can be checked before it is proposed.
 
 ## Commands
 
-| Command | What it does | Needs the design system |
+| Command | What it does | Requires installed dependencies |
 |---|---|---|
 | `npm install` | workspace install | no |
 | `npm test` | the contract, isomorphism and version-consistency gates | no |
-| `npm run typecheck` | `tsc`, scoped to owned code | no |
+| `npm run typecheck` | `tsc`, scoped to owned code | yes |
+| `npm run lint` | official Obsidian rules over host and adapters | yes |
+| `npm run test:behavior` | runtime streaming, context and settings regressions | yes |
 | `npm run build` | bundle to `dist/catea-paper/` | **yes** |
 
 ## Documentation is enforced, not suggested
@@ -47,8 +49,9 @@ The P3 grammar is fixed because it is machine-checked:
 | `[TO]` | comma-separated repo-relative consumer paths, or `(entry)` |
 | `[HERE]` | `repo-relative/path.ext - role` |
 
-Out of scope, deliberately: `packages/*/upstream/**` (byte-verified against
-`SOURCE_HASHES.json`, so a header would invalidate the verification), `scripts/`
+Out of scope, deliberately: `packages/*/upstream/**` (agent-core original bytes
+are checked against `SOURCE_HASHES.json`, and its build-time patch against
+`LOCAL_PATCHES.json`; a header would invalidate the original digests), `scripts/`
 (the scope rule covers `apps/*/src` and `packages/*/src`), and `__tests__/`
 (a contract test for a contract test is circular).
 

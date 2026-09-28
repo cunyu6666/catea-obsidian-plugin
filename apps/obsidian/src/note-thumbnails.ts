@@ -18,7 +18,7 @@ export function installNoteThumbnails(plugin:Catea){
     const hit=cache.get(file.path);if(hit?.mtime===file.stat.mtime)return hit.url
     const mtime=file.stat.mtime
     const raw=(await plugin.app.vault.cachedRead(file)).slice(0,20000).replace(/^---\r?\n[\s\S]*?\r?\n---\r?\n/,'')
-    const canvas=document.createElement('canvas');canvas.width=108;canvas.height=144
+    const canvas=createEl('canvas');canvas.width=108;canvas.height=144
     const ctx=canvas.getContext('2d')!;ctx.fillStyle='#fff';ctx.fillRect(0,0,108,144)
     const title=raw.match(/^#\s+(.+)$/m)?.[1]||file.basename
     const wrap=(text:string,y:number,font:string,color:string,maxLines:number)=>{
@@ -32,10 +32,10 @@ export function installNoteThumbnails(plugin:Catea){
     const imageFile=embed&&plugin.app.metadataCache.getFirstLinkpathDest(embed.link.split(/[|#]/)[0],file.path)
     if(imageFile instanceof TFile&&imageFile.stat.size<5*1024*1024){
       const image=new Image()
-      const loaded=await new Promise<boolean>(resolve=>{const timeout=setTimeout(()=>resolve(false),1500);image.onload=()=>{clearTimeout(timeout);resolve(true)};image.onerror=()=>{clearTimeout(timeout);resolve(false)};image.src=plugin.app.vault.getResourcePath(imageFile)})
+      const loaded=await new Promise<boolean>(resolve=>{const timeout=window.setTimeout(()=>resolve(false),1500);image.onload=()=>{window.clearTimeout(timeout);resolve(true)};image.onerror=()=>{window.clearTimeout(timeout);resolve(false)};image.src=plugin.app.vault.getResourcePath(imageFile)})
       if(loaded&&image.naturalWidth){const h=Math.min(42,88*image.naturalHeight/image.naturalWidth);ctx.drawImage(image,10,y,88,h);y+=h+10}
     }
-    const excerpt=raw.replace(/^#\s+.+$/m,'').replace(/!\[\[[^\]]*\]\]|!\[[^\]]*\]\([^)]*\)/g,'').replace(/<[^>]*>/g,'').replace(/[`#*>_]/g,'').replace(/\[\[([^\]|]+)\|?([^\]]*)\]\]/g,(_,p,l)=>l||p).trim()
+    const excerpt=raw.replace(/^#\s+.+$/m,'').replace(/!\[\[[^\]]*\]\]|!\[[^\]]*\]\([^)]*\)/g,'').replace(/<[^>]*>/g,'').replace(/[`#*>_]/g,'').replace(/\[\[([^\]|]+)\|?([^\]]*)\]\]/g,(_match:string,p:string,l:string)=>l||p).trim()
     wrap(excerpt,y,'6px sans-serif','#829088',Math.max(0,Math.floor((136-y)/9)))
     let url:string;try{url=canvas.toDataURL('image/png')}catch{return ''}
     if(cache.size>=256)cache.delete(cache.keys().next().value!)
@@ -51,7 +51,7 @@ export function installNoteThumbnails(plugin:Catea){
       void render(file).then(url=>{
         if(!url||stopped||version!==generation||!row.isConnected||pathOf(row)!==path||plugin.agentSettings.noteThumbnails===false)return
         let image=row.querySelector<HTMLImageElement>('.catea-note-thumbnail')
-        if(!image){image=row.ownerDocument.createElement('img');image.className='catea-note-thumbnail';image.alt='';image.setAttribute('aria-hidden','true');row.prepend(image)}
+        if(!image){image=row.createEl('img');image.className='catea-note-thumbnail';image.alt='';image.setAttribute('aria-hidden','true');row.prepend(image)}
         image.src=url;row.classList.add('catea-has-thumbnail')
       }).catch(()=>{}).finally(()=>{active--;pump()})
     }
@@ -62,7 +62,7 @@ export function installNoteThumbnails(plugin:Catea){
     for(const row of observed)if(!row.isConnected){intersection.unobserve(row);observed.delete(row);visible.delete(row);pending.delete(row)}
     for(const row of document.querySelectorAll<HTMLElement>('.nav-files-container .nav-file-title'))if(!observed.has(row)){observed.add(row);intersection.observe(row)}
   }
-  const schedule=()=>{if(!scheduled)scheduled=requestAnimationFrame(scan)}
+  const schedule=()=>{if(!scheduled)scheduled=window.requestAnimationFrame(scan)}
   const mutation=new MutationObserver(schedule);mutation.observe(document.body,{childList:true,subtree:true})
   const refresh=()=>{
     generation++;cache.clear();pending.clear()
@@ -72,6 +72,6 @@ export function installNoteThumbnails(plugin:Catea){
   }
   plugin.registerEvent(plugin.app.vault.on('modify',refresh));plugin.registerEvent(plugin.app.vault.on('rename',refresh));plugin.registerEvent(plugin.app.vault.on('delete',refresh))
   plugin.registerEvent(plugin.app.workspace.on('layout-change',schedule));schedule()
-  plugin.register(()=>{stopped=true;cancelAnimationFrame(scheduled);mutation.disconnect();intersection.disconnect();for(const row of observed)remove(row);cache.clear();pending.clear()})
+  plugin.register(()=>{stopped=true;window.cancelAnimationFrame(scheduled);mutation.disconnect();intersection.disconnect();for(const row of observed)remove(row);cache.clear();pending.clear()})
   return refresh
 }

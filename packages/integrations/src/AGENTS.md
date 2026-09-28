@@ -8,6 +8,7 @@ package builds on.
 
 ## Member List
 
+conversation-store.ts: Vault-backed conversation persistence with serialized writes, session indexing and delete rollback.
 index.ts: Barrel re-exporting the integration surface (VaultTools, McpPool, skill loaders, storage helpers); nothing imports it, consumers import the submodules directly.
 mcp.ts: `McpPool` connects enabled stdio and HTTP MCP servers, paginates tool discovery and namespaces tool names to 64 chars; catalog cap 1000, call timeout 120 s, output 24000 chars.
 skills.ts: Loads enabled `.catea/skills/<id>/SKILL.md` packages, lists skill directories, and reads path-guarded resources; content capped at 48000 chars, traversal rejected.

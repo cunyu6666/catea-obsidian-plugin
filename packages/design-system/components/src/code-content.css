@@ -11,8 +11,8 @@
 .anno-code-block:hover .anno-code-block__header button, .anno-code-block__header button:focus-visible { opacity: 1; }
 .anno-code-block__header button:hover { color: var(--foreground); }
 .anno-code-block__content { overflow: auto; padding: 8px 0; }
-.anno-code-block__content pre { width: max-content; min-width: 100%; margin: 0; padding: 0; border: 0; border-radius: 0; background: transparent !important; color: var(--foreground); font: 12px/1.55 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; white-space: normal; }
-.anno-code-block__content code { padding: 0; border: 0; border-radius: 0; background: transparent !important; font: inherit; }
+.anno-code-block__content.anno-code-block__content pre { width: max-content; min-width: 100%; margin: 0; padding: 0; border: 0; border-radius: 0; background: transparent; color: var(--foreground); font: 12px/1.55 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; white-space: normal; }
+.anno-code-block__content.anno-code-block__content code { padding: 0; border: 0; border-radius: 0; background: transparent; font: inherit; }
 .anno-code-block__line { display: grid; grid-template-columns: 38px minmax(0, 1fr); min-height: 19px; }
 .anno-code-block__line-number { padding-right: 8px; color: color-mix(in srgb, var(--foreground-soft) 60%, transparent); text-align: right; user-select: none; }
 .anno-code-block__line-content { padding: 0 12px 0 4px; white-space: pre; }
@@ -28,16 +28,16 @@
 .chat-mermaid__sizing > div { flex: none; }
 .chat-mermaid svg { display: block; max-width: none; }
 .chat-mermaid-fallback { white-space: pre-wrap; }
-.chat-mermaid-preview { width: 100vw !important; max-width: none !important; height: 100dvh !important; max-height: none !important; overflow: hidden; padding: 0 !important; border-radius: 0 !important; background: var(--conversation-canvas); }
+.chat-mermaid-preview.chat-mermaid-preview { width: 100vw; max-width: none; height: 100dvh; max-height: none; overflow: hidden; padding: 0; border-radius: 0; background: var(--conversation-canvas); }
 .chat-mermaid-preview__header { position: absolute; z-index: 2; inset: 0 0 auto; display: flex; align-items: center; justify-content: space-between; height: 52px; padding: 0 16px; border-bottom: 1px solid var(--border); background: var(--background); }
 .chat-mermaid-preview__title { font-size: 12px; font-weight: 600; color: var(--foreground-soft); }
 .chat-mermaid-preview__actions { display: flex; align-items: center; gap: 5px; }
 .chat-mermaid-preview__zoom { display: flex; gap: 1px; align-items: center; border-radius: 6px; background: var(--background); box-shadow: var(--shadow-soft); }
-.chat-mermaid-preview__zoom button { box-shadow: none !important; }
+.chat-mermaid-preview__zoom.chat-mermaid-preview__zoom button { box-shadow: none; }
 .chat-mermaid-preview__zoom-menu { position: relative; }
-.chat-mermaid-preview__zoom-menu > button { min-width: 49px !important; font-variant-numeric: tabular-nums; }
+.chat-mermaid-preview__zoom-menu.chat-mermaid-preview__zoom-menu > button { min-width: 49px; font-variant-numeric: tabular-nums; }
 .chat-mermaid-preview__presets { position: absolute; top: calc(100% + 5px); right: 0; z-index: 5; display: flex; flex-direction: column; min-width: 140px; padding: 4px; border: 1px solid var(--border); border-radius: 8px; background: var(--background); box-shadow: var(--shadow-popover); }
-.chat-mermaid-preview__presets button { justify-content: flex-start !important; width: 100%; padding: 0 9px !important; box-shadow: none !important; }
+.chat-mermaid-preview__presets.chat-mermaid-preview__presets button { justify-content: flex-start; width: 100%; padding: 0 9px; box-shadow: none; }
 .chat-mermaid-preview__presets button span { width: 18px; margin-right: 4px; }
 .chat-mermaid-preview__divider { height: 1px; margin: 4px 2px; background: var(--border); }
 .chat-mermaid-preview__actions button { display: inline-flex; align-items: center; justify-content: center; min-width: 28px; height: 28px; padding: 0 6px; border: 0; border-radius: 6px; background: var(--background); color: var(--foreground-soft); font-size: 12px; box-shadow: var(--shadow-soft); }

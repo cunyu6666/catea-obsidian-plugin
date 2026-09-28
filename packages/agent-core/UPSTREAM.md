@@ -3,7 +3,8 @@
 Source: https://github.com/O-Pencil/Catui/tree/d6d110aa645cd5e2305dde42e04040bddafb5e6a
 License: GPL-3.0, distributed with the plugin LICENSE.
 
-- upstream/loop: the actual standard agentLoop and its transitive helpers, unchanged. Includes tool validation, safe read concurrency, budgets, cancellation, output recovery, steering, progress checks and run events. Catea supplies explicit provider and tool adapters; it does not start CatUI or load its user configuration.
+- upstream/loop: the unchanged standard agentLoop and its transitive helpers. Includes tool validation, safe read concurrency, budgets, cancellation, output recovery, steering, progress checks and run events. Catea supplies explicit provider and tool adapters; it does not start CatUI or load its user configuration.
+- `scripts/agent-loop-patch.mjs` applies one reviewed tool orchestration patch in memory during the build: a host approval callback forces serial execution, and a concurrent batch records every completed result before stopping on a progress cycle. `SOURCE_HASHES.json` verifies the original bytes; `LOCAL_PATCHES.json` records the expected patched digest. The build fails if either digest or patch context changes.
 - upstream/ai: only event stream, schema validation, overflow and type dependencies.
 - upstream/context/index.ts, history.ts, notes.ts: original context-management tools and prompt hooks.
 - upstream/context/controller.ts: original ContextWindowController with import redirected to local boundaries.ts.

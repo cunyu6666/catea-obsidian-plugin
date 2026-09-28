@@ -9,7 +9,7 @@ tools, and runs a durable extraction queue.
 ## Member List
 
 host.ts: `MemoryHost` boots the vendored nanomem extension inside the vault and replays host tool events under normalized names; exposes `injection()` and `run()` lifecycle hooks.
-index.ts: `MemoryService` hosts per-persona mem-core engines (global, vex, aria, pencil), races recall injection against a 600 ms cache timeout, and drains a durable queue with capped backoff.
+index.ts: `MemoryService` hosts per-persona mem-core engines (global, vex, aria, pencil), reads sessions through `ConversationStore`, races recall against a 600 ms cache timeout, and drains a durable queue with capped backoff.
 tools.ts: Declares the `memory_*` tool schemas, each with a persona or global scope, plus the `memoryReadOnly` allowlist that skips write approval.
 
 ## Notes

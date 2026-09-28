@@ -1,0 +1,10 @@
+{
+  "sourceCommit": "d6d110aa645cd5e2305dde42e04040bddafb5e6a",
+  "files": {
+    "loop/agent-loop.ts": {
+      "upstreamSha256": "726a7058cf133edc0159979021a22b1e8afccbdbeba46942426fdb0497abece8",
+      "localSha256": "294525db8772404323224bca8ac82b03e08fb2ed8df0e8a0625d04b29cd1800a",
+      "reason": "Keep host approval callbacks serial and retain every completed result in a concurrent tool batch."
+    }
+  }
+}

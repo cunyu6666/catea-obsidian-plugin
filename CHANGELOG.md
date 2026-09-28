@@ -3,6 +3,19 @@
 Notable changes per release. The version is the one in `manifest.json`; the GitHub
 release tag is that same number with no `v` prefix.
 
+## Unreleased
+
+### Changed
+
+- Split conversation persistence, model streaming, memory access, and context compaction behind host-owned interfaces while keeping the vendored agent loop byte-verified.
+- Move persona and current-note controls to Agent settings, and expand tool activity while a reply is pending.
+- Refine the paper shell, sidebar, composer, icons, note previews, and CSS scope without changing Obsidian's native UI contracts.
+
+### Fixed
+
+- Preserve completed tool results across concurrent batches and stop approval-dependent calls from racing through the upstream patch layer.
+- Keep the explorer's action buttons square and the paper shadow within its existing gutter.
+
 ## 0.3.5
 
 ### Changed
@@ -13,6 +26,7 @@ release tag is that same number with no `v` prefix.
 ## 0.3.4
 
 ### Changed
+
 
 - The design system is vendored into this repository under
   `packages/design-system` and linked through npm workspaces, replacing the
@@ -32,7 +46,7 @@ release tag is that same number with no `v` prefix.
 
 ### Fixed
 
-- `README.md` and `README_CN.md` now open with a `# Catea Paper` heading. The
+- `README.md` and `README_CN.md` now open with a `# Catea` heading. The
   checker reads a Markdown ATX heading, so the previous `<h1>` edit did not clear
   the `README title does not match the manifest name` warning.
 - The vendored `Composer` measures its textarea through `removeProperty` plus one

@@ -1,6 +1,6 @@
 import {ActionMenu} from './ActionMenu'
 import { useLayoutEffect, useRef, useState, type DragEvent, type KeyboardEvent, type ReactNode } from 'react'
-import { Icon as RemixIcon } from './Icon'
+import { Icon } from './Icon'
 
 interface ComposerProps {
   value: string
@@ -10,6 +10,9 @@ interface ComposerProps {
   mode: 'search' | 'ai'
   inputLabel: string
   submitLabel: string
+  running?: boolean
+  stopLabel?: string
+  onStop?: () => void
   leading?: ReactNode
   trailing?: ReactNode
   attachments?: ReactNode
@@ -28,12 +31,13 @@ interface ComposerProps {
   className?: string
 }
 
-export function Composer({ value, onChange, onSubmit, placeholder, mode, inputLabel, submitLabel, leading, trailing, attachments, onDropFiles, onPickFiles, onPickFolder, folderLabel, workingDirectory, attachLabel, fileLabel, dropLabel, hasSubmitContent, disabled, busy, autoFocus, className = '' }: ComposerProps) {
+export function Composer({ value, onChange, onSubmit, placeholder, mode, inputLabel, submitLabel, running = false, stopLabel = 'Stop', onStop, leading, trailing, attachments, onDropFiles, onPickFiles, onPickFolder, folderLabel, workingDirectory, attachLabel, fileLabel, dropLabel, hasSubmitContent, disabled, busy, autoFocus, className = '' }: ComposerProps) {
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const folderInputRef = useRef<HTMLInputElement>(null)
   const dragDepth = useRef(0)
   const [dragging, setDragging] = useState(false)
+  const stopping = running && !!onStop
   useLayoutEffect(() => {
     const input = inputRef.current
     if (!input) return
@@ -96,9 +100,9 @@ export function Composer({ value, onChange, onSubmit, placeholder, mode, inputLa
         <div className="anno-composer__toolbar-group">
           {onPickFiles&&<input ref={fileInputRef} className="anno-composer__file-input" type="file" multiple tabIndex={-1} onChange={event=>{if(event.target.files?.length)onPickFiles(event.target.files);event.target.value=''}}/>}
           {onPickFolder&&<input ref={folderInputRef} type="file" className="anno-composer__file-input" multiple {...{webkitdirectory:''}} tabIndex={-1} onChange={event=>{if(event.target.files?.length)onPickFolder(event.target.files);event.target.value=''}}/>}
-          {(onPickFiles||onPickFolder)&&<ActionMenu label={attachLabel||'Add'} icon={<RemixIcon name="add" size={17}/>} items={[
-            ...(onPickFiles?[{id:'file',label:fileLabel||'Add files',icon:<RemixIcon name="file" size={15}/>,onSelect:()=>fileInputRef.current?.click()}]:[]),
-            ...(onPickFolder?[{id:'folder',label:folderLabel||'Add folder',icon:<RemixIcon name="folder" size={15}/>,onSelect:()=>folderInputRef.current?.click()}]:[]),
+          {(onPickFiles||onPickFolder)&&<ActionMenu label={attachLabel||'Add'} icon={<Icon name="add" size={17}/>} items={[
+            ...(onPickFiles?[{id:'file',label:fileLabel||'Add files',icon:<Icon name="file" size={15}/>,onSelect:()=>fileInputRef.current?.click()}]:[]),
+            ...(onPickFolder?[{id:'folder',label:folderLabel||'Add folder',icon:<Icon name="folder" size={15}/>,onSelect:()=>folderInputRef.current?.click()}]:[]),
           ]}/>}
           {workingDirectory}
           {leading}
@@ -106,15 +110,16 @@ export function Composer({ value, onChange, onSubmit, placeholder, mode, inputLa
         <div className="anno-composer__toolbar-group">{trailing}
           <button
             type="button"
-            aria-label={submitLabel}
-            title={submitLabel}
-            disabled={(!value.trim() && !hasSubmitContent) || disabled || busy}
-            onClick={onSubmit}
+            aria-label={stopping ? stopLabel : submitLabel}
+            title={stopping ? stopLabel : submitLabel}
+            data-state={stopping ? 'stop' : 'submit'}
+            disabled={stopping ? disabled : (!value.trim() && !hasSubmitContent) || disabled || busy}
+            onClick={stopping ? onStop : onSubmit}
             className="anno-composer__send"
-          ><RemixIcon name={mode === 'search' ? 'search' : 'arrow-up'} size={16} /></button>
+          ><Icon name={stopping ? 'stop' : mode === 'search' ? 'search' : 'arrow-up'} size={stopping ? 14 : 16} /></button>
         </div>
       </div>
-      {dragging && <div className="anno-composer__drop-overlay" role="status"><RemixIcon name="upload" size={18} />{dropLabel}</div>}
+      {dragging && <div className="anno-composer__drop-overlay" role="status"><Icon name="upload" size={18} />{dropLabel}</div>}
     </div>
   )
 }

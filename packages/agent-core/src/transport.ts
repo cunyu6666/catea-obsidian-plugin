@@ -46,24 +46,31 @@ export async function serviceFetch(input: string, init: Omit<RequestInit, 'body'
     if (!['SELF_SIGNED_CERT_IN_CHAIN','UNABLE_TO_GET_ISSUER_CERT_LOCALLY','UNABLE_TO_VERIFY_LEAF_SIGNATURE'].includes((error as NodeJS.ErrnoException).code || '')) throw error
     init.signal?.throwIfAborted()
     // Electron net uses macOS trust and preserves SSE; no TLS override or fabricated streaming.
-    let net:any
-    try{net=require('electron').net}catch{}
-    if(!net)try{net=require('@electron/remote').net}catch{}
-    if(net?.fetch)return net.fetch(input,{...init,redirect:'error'})
+    for(const load of [()=>import('electron'),()=>import('@electron/remote')]){
+      let host:unknown
+      try{host=await load()}catch{continue}
+      if(!host||typeof host!=='object')continue
+      const module=host as {net?:unknown;default?:{net?:unknown}}
+      const candidate=module.net??module.default?.net
+      if(candidate&&typeof candidate==='object'&&'fetch' in candidate&&typeof candidate.fetch==='function'){
+        const net=candidate as {fetch:typeof fetch}
+        return net.fetch(input,{...init,redirect:'error'})
+      }
+    }
     // requestUrl buffers the response, so ask the same provider for a JSON reply.
-    const payload=init.body?JSON.parse(init.body):undefined
-    const body=payload?JSON.stringify(payload.model?{...payload,stream:false}:payload):undefined
+    const payload:unknown=init.body?JSON.parse(init.body):undefined
+    const body=payload?JSON.stringify(typeof payload==='object'&&'model' in payload?{...payload,stream:false}:payload):undefined
     const pending=requestUrl({url:input, method:init.method||'GET', headers:Object.fromEntries(new Headers(init.headers)), body, throw:false})
     let abort: (()=>void)|undefined
-    let timer:ReturnType<typeof setTimeout>|undefined
+    let timer:number|undefined
     try {
       const result=await Promise.race([pending,new Promise<never>((_,reject)=>{
         abort=()=>reject(new DOMException('Aborted','AbortError'))
         init.signal?.addEventListener('abort',abort,{once:true})
-        timer=setTimeout(()=>reject(new Error('模型连接超时')),120000)
+        timer=window.setTimeout(()=>reject(new Error('模型连接超时')),120000)
       })])
       init.signal?.throwIfAborted()
       return new Response(result.text,{status:result.status,headers:result.headers})
-    } finally { if(abort)init.signal?.removeEventListener('abort',abort);if(timer)clearTimeout(timer) }
+    } finally { if(abort)init.signal?.removeEventListener('abort',abort);if(timer)window.clearTimeout(timer) }
   }
 }

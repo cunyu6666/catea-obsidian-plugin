@@ -66,9 +66,9 @@ function mimeTypeFor(file: File, path: string): string {
 function readDataUrl(file: File, mimeType: string): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader()
-    reader.onerror = () => reject(reader.error)
+    reader.onerror = () => reject(reader.error ?? new Error(`Could not read ${file.name}`))
     reader.onload = () => {
-      const value = String(reader.result || '')
+      const value = typeof reader.result==='string'?reader.result:''
       const base64 = value.split(',', 2)[1]
       if (!value.includes(',')) reject(new Error(`Could not encode ${file.name}`))
       else resolve(`data:${mimeType};base64,${base64}`)

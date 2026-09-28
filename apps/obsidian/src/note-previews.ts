@@ -26,7 +26,7 @@ export function registerNotePreviews(plugin:Catea){
     // No scripts, forms, parent navigation or network requests. The preview
     // shares neither the editor DOM nor Obsidian's privileged Electron context.
     const document=new DOMParser().parseFromString(source,'text/html')
-    const policy=document.createElement('meta');policy.httpEquiv='Content-Security-Policy'
+    const policy=document.head.createEl('meta');policy.httpEquiv='Content-Security-Policy'
     policy.content="default-src 'none'; script-src 'none'; style-src 'unsafe-inline'; img-src data:; font-src data:; base-uri 'none'; form-action 'none'"
     document.head.prepend(policy)
     // The iframe's own stylesheet is part of the srcdoc string, never a <style>

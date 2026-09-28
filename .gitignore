@@ -6,6 +6,10 @@ dist/
 # May contain private note content — must never be committed or distributed.
 .catea/
 
+# Local test-vault configuration and agent traces.
+.obsidian/
+.catui/
+
 # Leftover temporary files from atomic JSON writes
 *.tmp
 

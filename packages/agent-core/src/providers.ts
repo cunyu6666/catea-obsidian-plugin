@@ -1,6 +1,6 @@
 /**
  * [WHO]: Provides ModelReply, ModelServiceError, ToolDefinition, streamModel
- * [FROM]: Depends on ./attachments, ./i18n, ./transport, ./types
+ * [FROM]: Depends on ./types, ./i18n, ./transport, ./attachments
  * [TO]: Consumed by apps/obsidian/src/obsidian-tools.ts, packages/agent-core/src/index.ts,
  *   packages/agent-core/src/upstream-stream.ts, packages/integrations/src/mcp.ts,
  *   packages/integrations/src/tools.ts, packages/integrations/src/web.ts,
@@ -15,31 +15,41 @@ import { attachmentIsText, attachmentText } from './attachments'
 export interface ToolDefinition { name: string; description: string; parameters: Record<string, unknown> }
 export interface ModelReply { text: string; calls: ToolCall[]; usage?: TokenUsage; stopReason?: 'stop'|'length'; anthropicContent?: Record<string, unknown>[] }
 
+// Provider payloads are untrusted JSON; narrow fields before using them.
+function record(value: unknown): Record<string, unknown> {
+  return value !== null && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : {}
+}
+function records(value: unknown): Record<string, unknown>[] {
+  return Array.isArray(value) ? value.map((item:unknown)=>record(item)) : []
+}
+function string(value: unknown): string { return typeof value === 'string' ? value : '' }
+
 function tokenCount(value: unknown): number | undefined {
   return typeof value === 'number' && Number.isSafeInteger(value) && value >= 0 ? value : undefined
 }
 
-function anthropicInputTokens(value: any): number | undefined {
-  const input = tokenCount(value?.input_tokens)
-  const cacheCreation = tokenCount(value?.cache_creation_input_tokens)
-  const cacheRead = tokenCount(value?.cache_read_input_tokens)
+function anthropicInputTokens(value: unknown): number | undefined {
+  const data=record(value)
+  const input = tokenCount(data.input_tokens)
+  const cacheCreation = tokenCount(data.cache_creation_input_tokens)
+  const cacheRead = tokenCount(record(value).cache_read_input_tokens)
   if (input === undefined && cacheCreation === undefined && cacheRead === undefined) return undefined
   return (input || 0) + (cacheCreation || 0) + (cacheRead || 0)
 }
 
-function anthropicUsage(value: any): TokenUsage | undefined {
+function anthropicUsage(value: unknown): TokenUsage | undefined {
   const input = anthropicInputTokens(value)
-  const output = tokenCount(value?.output_tokens)
+  const output = tokenCount(record(value).output_tokens)
   if (input === undefined || output === undefined) return undefined
-  const cached = tokenCount(value?.cache_read_input_tokens)
+  const cached = tokenCount(record(value).cache_read_input_tokens)
   return { inputTokens: input, outputTokens: output, ...(cached === undefined ? {} : { cachedInputTokens: cached }) }
 }
 
-function openAiUsage(value: any): TokenUsage | undefined {
-  const input = tokenCount(value?.prompt_tokens ?? value?.input_tokens)
-  const output = tokenCount(value?.completion_tokens ?? value?.output_tokens)
+function openAiUsage(value: unknown): TokenUsage | undefined {
+  const input = tokenCount(record(value).prompt_tokens ?? record(value).input_tokens)
+  const output = tokenCount(record(value).completion_tokens ?? record(value).output_tokens)
   if (input === undefined || output === undefined) return undefined
-  const cached = tokenCount(value?.prompt_tokens_details?.cached_tokens ?? value?.input_tokens_details?.cached_tokens)
+  const cached = tokenCount(record(record(value).prompt_tokens_details).cached_tokens ?? record(record(value).input_tokens_details).cached_tokens)
   return { inputTokens: input, outputTokens: output, ...(cached === undefined ? {} : { cachedInputTokens: cached }) }
 }
 
@@ -88,7 +98,7 @@ async function* sse(response: Response, signal: AbortSignal): AsyncGenerator<{ e
         }
         if (data.length) yield { event, data: data.join('\n') }
       }
-      if (signal.aborted) throw signal.reason
+      signal.throwIfAborted()
     }
     if (buffer.trim()) {
       let event = 'message'
@@ -103,7 +113,7 @@ async function* sse(response: Response, signal: AbortSignal): AsyncGenerator<{ e
 }
 
 function parseArgs(value: string): Record<string, unknown> {
-  try { const parsed = JSON.parse(value || '{}'); return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {} }
+  try { const parsed:unknown = JSON.parse(value || '{}'); return record(parsed) }
   catch { return {} }
 }
 
@@ -203,10 +213,10 @@ export async function streamModel(
     if (!response.ok) throw await responseError(response)
     options.onTransport?.(response.headers.get('content-type')?.includes('text/event-stream')?'sse':'buffered')
     if (!response.headers.get('content-type')?.includes('text/event-stream')) {
-      const data = await response.json() as any
-      const content = Array.isArray(data.content) ? data.content : []
-      const text = content.filter((item: any) => item.type === 'text').map((item: any) => String(item.text || '')).join('')
-      const calls = content.filter((item: any) => item.type === 'tool_use').map((item: any) => ({ id: String(item.id || crypto.randomUUID()), name: String(item.name), args: item.input || {} }))
+      const data = record(await response.json())
+      const content = records(data.content)
+      const text = content.filter((item) => item.type === 'text').map((item) => string(item.text)).join('')
+      const calls = content.filter((item) => item.type === 'tool_use').map((item) => ({ id: string(item.id)||crypto.randomUUID(), name: string(item.name), args: record(item.input) }))
       if (text) onDelta(text)
       return { text, calls, stopReason:data.stop_reason==='max_tokens'?'length':'stop',usage: anthropicUsage(data.usage), anthropicContent: content }
     }
@@ -216,38 +226,41 @@ export async function streamModel(
     let outputTokens: number | undefined
     let cachedInputTokens: number | undefined
     const blocks = new Map<number, { id: string; name: string; input: string }>()
-    const content = new Map<number, Record<string, any>>()
+    const content = new Map<number, Record<string, unknown>>()
     for await (const frame of sse(response, signal)) {
       if (frame.data === '[DONE]') break
-      let data: any
-      try { data = JSON.parse(frame.data) } catch { continue }
-      if (frame.event === 'error' || data.type === 'error') throw new ModelServiceError(String(data.error?.message || ''))
+      let data: Record<string,unknown>
+      try { data = record(JSON.parse(frame.data)) } catch { continue }
+      if (frame.event === 'error' || data.type === 'error') throw new ModelServiceError(string(record(data.error).message))
       if (data.type === 'message_start') {
-        inputTokens = anthropicInputTokens(data.message?.usage) ?? inputTokens
-        outputTokens = tokenCount(data.message?.usage?.output_tokens) ?? outputTokens
-        cachedInputTokens = tokenCount(data.message?.usage?.cache_read_input_tokens) ?? cachedInputTokens
+        inputTokens = anthropicInputTokens(record(data.message).usage) ?? inputTokens
+        outputTokens = tokenCount(record(record(data.message).usage).output_tokens) ?? outputTokens
+        cachedInputTokens = tokenCount(record(record(data.message).usage).cache_read_input_tokens) ?? cachedInputTokens
       }
       if (data.type === 'message_delta') {
-        if(data.delta?.stop_reason==='max_tokens')stopReason='length'
+        if(record(data.delta).stop_reason==='max_tokens')stopReason='length'
         inputTokens = anthropicInputTokens(data.usage) ?? inputTokens
-        outputTokens = tokenCount(data.usage?.output_tokens) ?? outputTokens
-        cachedInputTokens = tokenCount(data.usage?.cache_read_input_tokens) ?? cachedInputTokens
+        outputTokens = tokenCount(record(data.usage).output_tokens) ?? outputTokens
+        cachedInputTokens = tokenCount(record(data.usage).cache_read_input_tokens) ?? cachedInputTokens
       }
-      if (data.type === 'content_block_start') content.set(data.index, {...data.content_block})
-      if (data.type === 'content_block_start' && data.content_block?.type === 'tool_use') blocks.set(data.index, { id: data.content_block.id, name: data.content_block.name, input: '' })
+      const index=typeof data.index==='number'&&Number.isInteger(data.index)&&data.index>=0?data.index:undefined
+      if(index===undefined)continue
+      const block=record(data.content_block),delta=record(data.delta)
+      if (data.type === 'content_block_start') content.set(index, {...block})
+      if (data.type === 'content_block_start' && block.type === 'tool_use') blocks.set(index, { id: string(block.id), name: string(block.name), input: '' })
       if (data.type === 'content_block_delta') {
-        const raw = content.get(data.index)
+        const raw = content.get(index)
         if(raw){
-          if(data.delta?.type==='text_delta') raw.text=(raw.text||'')+data.delta.text
-          if(data.delta?.type==='thinking_delta') raw.thinking=(raw.thinking||'')+data.delta.thinking
-          if(data.delta?.type==='signature_delta') raw.signature=(raw.signature||'')+data.delta.signature
+          if(delta.type==='text_delta') raw.text=string(raw.text)+string(delta.text)
+          if(delta.type==='thinking_delta') raw.thinking=string(raw.thinking)+string(delta.thinking)
+          if(delta.type==='signature_delta') raw.signature=string(raw.signature)+string(delta.signature)
         }
-        if (data.delta?.type === 'text_delta') { text += data.delta.text; onDelta(data.delta.text) }
-        if (data.delta?.type === 'input_json_delta') { const block = blocks.get(data.index); if (block) block.input += data.delta.partial_json }
+        if (delta.type === 'text_delta' && typeof delta.text==='string') { text += delta.text; onDelta(delta.text) }
+        if (delta.type === 'input_json_delta') { const tool = blocks.get(index); if (tool) tool.input += string(delta.partial_json) }
       }
     }
     for(const [index,block] of blocks){const raw=content.get(index);if(raw)raw.input=block.input?parseArgs(block.input):raw.input||{}}
-    return { text, stopReason,anthropicContent: [...content.values()], calls: [...blocks.values()].map(block => ({ id: block.id, name: block.name, args: parseArgs(block.input) })), usage: inputTokens === undefined || outputTokens === undefined ? undefined : { inputTokens, outputTokens, ...(cachedInputTokens === undefined ? {} : { cachedInputTokens }) } }
+    return { text, stopReason,anthropicContent: [...content.values()], calls: [...blocks.entries()].map(([index,block]) => ({ id: block.id, name: block.name, args: block.input?parseArgs(block.input):record(content.get(index)?.input) })), usage: inputTokens === undefined || outputTokens === undefined ? undefined : { inputTokens, outputTokens, ...(cachedInputTokens === undefined ? {} : { cachedInputTokens }) } }
   }
 
   const request = { model: config.model, stream: true,...(options.maxTokens?{max_tokens:options.maxTokens}:{}), messages: openAiMessages(transcript, system, attachments), ...(tools.length ? { tools: tools.map(tool => ({ type: 'function', function: { name: tool.name, description: tool.description, parameters: tool.parameters } })), tool_choice: 'auto' } : {}) }
@@ -261,12 +274,13 @@ export async function streamModel(
   if (!response.ok) throw await responseError(response)
   options.onTransport?.(response.headers.get('content-type')?.includes('text/event-stream')?'sse':'buffered')
   if (!response.headers.get('content-type')?.includes('text/event-stream')) {
-    const data = await response.json() as any
-    const message = data.choices?.[0]?.message || {}
+    const data = record(await response.json())
+    const choice=records(data.choices)[0]||{}
+    const message = record(choice.message)
     const text = typeof message.content === 'string' ? message.content : ''
-    const calls = (message.tool_calls || []).map((item: any) => ({ id: String(item.id || crypto.randomUUID()), name: String(item.function?.name || ''), args: parseArgs(item.function?.arguments || '{}') }))
+    const calls = records(message.tool_calls).map((item) => ({ id: string(item.id)||crypto.randomUUID(), name: string(record(item.function).name), args: parseArgs(string(record(item.function).arguments)) }))
     if (text) onDelta(text)
-    return { text, calls, stopReason:data.choices?.[0]?.finish_reason==='length'?'length':'stop',usage: openAiUsage(data.usage) }
+    return { text, calls, stopReason:records(data.choices)[0]?.finish_reason==='length'?'length':'stop',usage: openAiUsage(data.usage) }
   }
   let text = ''
   let stopReason:'stop'|'length'='stop'
@@ -274,18 +288,19 @@ export async function streamModel(
   const calls = new Map<number, { id: string; name: string; args: string }>()
   for await (const frame of sse(response, signal)) {
     if (frame.data === '[DONE]') break
-    let data: any
-    try { data = JSON.parse(frame.data) } catch { continue }
-    if (data.error) throw new ModelServiceError(String(data.error.message || ''))
+    let data:Record<string,unknown>
+    try { data = record(JSON.parse(frame.data)) } catch { continue }
+    if (data.error) throw new ModelServiceError(string(record(data.error).message))
     if (data.usage) usage = openAiUsage(data.usage)
-    if(data.choices?.[0]?.finish_reason==='length')stopReason='length'
-    const delta = data.choices?.[0]?.delta
+    if(records(data.choices)[0]?.finish_reason==='length')stopReason='length'
+    const delta = record(records(data.choices)[0]?.delta)
     if (typeof delta?.content === 'string') { text += delta.content; onDelta(delta.content) }
-    for (const part of delta?.tool_calls || []) {
+    for (const part of records(delta.tool_calls)) {
+      if(typeof part.index!=='number'||!Number.isInteger(part.index)||part.index<0)continue
       const current = calls.get(part.index) || { id: '', name: '', args: '' }
-      current.id += part.id || ''
-      current.name += part.function?.name || ''
-      current.args += part.function?.arguments || ''
+      current.id += string(part.id)
+      current.name += string(record(part.function).name)
+      current.args += string(record(part.function).arguments)
       calls.set(part.index, current)
     }
   }

@@ -1,10 +1,10 @@
 /**
  * [WHO]: Provides ObsidianTools, obsidianTools
- * [FROM]: Depends on ../../../packages/agent-core/src/providers, ../../../packages/integrations/src/tools,
- *   ./main, obsidian
+ * [FROM]: Depends on ../../../packages/agent-core/src/i18n, obsidian, ./main, ../../../packages/agent-core/src/providers, ../../../packages/integrations/src/tools
  * [TO]: Consumed by apps/obsidian/src/main.tsx
  * [HERE]: apps/obsidian/src/obsidian-tools.ts - seven obsidian_* tools over the Obsidian API with hidden-path guards; search 50 hits, read 300 lines x 2000 chars, note cap 2 MB, write cap 100 KB
  */
+import {textValue} from '../../../packages/agent-core/src/i18n'
 import {TFile,MarkdownView,getAllTags} from 'obsidian'
 import type Catea from './main'
 import type {ToolDefinition} from '../../../packages/agent-core/src/providers'
@@ -29,7 +29,7 @@ export class ObsidianTools {
   plugin.registerEvent(plugin.app.workspace.on('file-open',file=>{if(file)this.lastPath=file.path}))
  }
  private get app(){return this.plugin.app}
- private path(value:unknown){const path=String(value||'').replace(/\\/g,'/');if(!path||path.startsWith('/')||path.split('/').some(p=>!p||p.startsWith('.'))||path.includes(':'))throw new Error('请使用知识库内的完整相对路径，不访问隐藏目录');return path}
+ private path(value:unknown){const path=textValue(value).replace(/\\/g,'/');if(!path||path.startsWith('/')||path.split('/').some(p=>!p||p.startsWith('.'))||path.includes(':'))throw new Error('请使用知识库内的完整相对路径，不访问隐藏目录');return path}
  private file(value:unknown){const path=this.path(value),file=this.app.vault.getAbstractFileByPath(path);if(!(file instanceof TFile))throw new Error('笔记不存在，请先搜索并使用完整路径');return file}
  private writable(path:string){if(/^raw(?:\/|$)/.test(path))throw new Error('raw 原始资料不可修改');if(!/\.md$/i.test(path))throw new Error('此工具只修改 Markdown 笔记')}
  private view(file:TFile){return this.app.workspace.getLeavesOfType('markdown').map(l=>l.view).find((v):v is MarkdownView=>v instanceof MarkdownView&&v.file===file)}
@@ -41,12 +41,12 @@ export class ObsidianTools {
   signal.throwIfAborted()
   if(name==='obsidian_context')return JSON.stringify(await this.context())
   if(name==='obsidian_search'){
-   const q=String(a.query||'').trim().toLowerCase(),limit=Math.min(50,Math.max(1,Number(a.limit)||10)),hits:Array<Record<string,unknown>>=[]
+   const q=textValue(a.query||'').trim().toLowerCase(),limit=Math.min(50,Math.max(1,Number(a.limit)||10)),hits:Array<Record<string,unknown>>=[]
    const files=this.app.vault.getMarkdownFiles().filter(f=>!f.path.split('/').some(p=>p.startsWith('.'))).sort((a,b)=>Number(b.basename.toLowerCase().includes(q))-Number(a.basename.toLowerCase().includes(q))||a.path.localeCompare(b.path))
    for(const f of files){
     signal.throwIfAborted();const cache=this.app.metadataCache.getFileCache(f),tags=cache?getAllTags(cache)||[]:[]
-    if(a.tag&&!tags.some(t=>t.replace(/^#/,'').toLowerCase()===String(a.tag).replace(/^#/,'').toLowerCase()))continue
-    if(a.property){const value=cache?.frontmatter?.[String(a.property)];if(value===undefined)continue;if(a.value!==undefined&&!JSON.stringify(value).toLowerCase().includes(String(a.value).toLowerCase()))continue}
+    if(a.tag&&!tags.some(t=>t.replace(/^#/,'').toLowerCase()===textValue(a.tag).replace(/^#/,'').toLowerCase()))continue
+    if(a.property){const value:unknown=cache?.frontmatter?.[textValue(a.property)];if(value===undefined)continue;if(a.value!==undefined&&!JSON.stringify(value).toLowerCase().includes(textValue(a.value).toLowerCase()))continue}
     let matched=!q||f.path.toLowerCase().includes(q),excerpt=''
     if(a.scope==='content'||(!matched&&a.scope!=='title')){if(f.stat.size>2000000)continue;const body=await this.content(f),i=body.toLowerCase().indexOf(q);matched=i>=0;if(matched)excerpt=body.slice(Math.max(0,i-60),i+220)}
     if(matched)hits.push({path:f.path,title:f.basename,tags,link:`[[${f.path}|${f.basename}]]`,excerpt})
@@ -55,23 +55,23 @@ export class ObsidianTools {
    return JSON.stringify({results:hits,limit,limitReached:hits.length===limit})
   }
   if(name==='obsidian_settings'){
-   const shell=this.plugin as any,values=Object.fromEntries([...appearance.map(k=>[k,shell.settings[k]]),...agentKeys.map(k=>[k,this.plugin.agentSettings[k]])])
+   const shell=this.plugin,values=Object.fromEntries<boolean|undefined>([...appearance.map(k=>[k,shell.settings[k]] as const),...agentKeys.map(k=>[k,this.plugin.agentSettings[k]] as const)])
    if(a.action==='get')return JSON.stringify({scope:'Catea',values,supportedKeys:Object.keys(values)})
    if(a.action==='open'){this.plugin.openAgentSettings();return JSON.stringify({opened:'Catea settings'})}
-   if(a.action!=='set'||!Object.hasOwn(values,String(a.key))||typeof a.value!=='boolean')throw new Error('仅支持列出的 Catea 布尔设置')
-   const key=String(a.key);await this.approved(`更改 Catea 设置：${key}`,{key,before:values[key],after:a.value},signal)
-   if(appearance.includes(key as any)){shell.settings[key]=a.value;await this.plugin.saveData(shell.settings);shell.apply()}
-   else{(this.plugin.agentSettings as any)[key]=a.value;this.plugin.agent.memory.setEnabled(this.plugin.agentSettings.enabled&&this.plugin.agentSettings.memory);await this.plugin.saveAgentSettings()}
+   if(a.action!=='set'||!Object.hasOwn(values,textValue(a.key))||typeof a.value!=='boolean')throw new Error('仅支持列出的 Catea 布尔设置')
+   const key=textValue(a.key);await this.approved(`更改 Catea 设置：${key}`,{key,before:values[key],after:a.value},signal)
+   if(appearance.some(item=>item===key)){shell.settings[key]=a.value;await this.plugin.saveData(shell.settings);shell.apply()}
+   else{this.plugin.agentSettings[key as typeof agentKeys[number]]=a.value;this.plugin.agent.memory.setEnabled(this.plugin.agentSettings.enabled&&this.plugin.agentSettings.memory);await this.plugin.saveAgentSettings()}
    return JSON.stringify({key,value:a.value})
   }
   if(name==='obsidian_manage'&&a.action==='create'){
-   const path=this.path(a.path);this.writable(path);const content=String(a.content||'');if(content.length>100000)throw new Error('单次写入最多 100 KB');if(this.app.vault.getAbstractFileByPath(path))throw new Error('路径已存在')
+   const path=this.path(a.path);this.writable(path);const content=textValue(a.content||'');if(content.length>100000)throw new Error('单次写入最多 100 KB');if(this.app.vault.getAbstractFileByPath(path))throw new Error('路径已存在')
    const parent=path.includes('/')?path.slice(0,path.lastIndexOf('/')):'';if(parent&&!this.app.vault.getAbstractFileByPath(parent))throw new Error('请使用已有文件夹')
    await this.approved('新建笔记',{path,before:null,after:content},signal);await this.app.vault.create(path,content);return JSON.stringify({created:path})
   }
   const file=this.file(a.path),path=file.path
   if(name==='obsidian_open'){
-   const target=String(a.target||'current');if(!['current','tab','split'].includes(target))throw new Error('无效打开方式')
+   const target=textValue(a.target||'current');if(!['current','tab','split'].includes(target))throw new Error('无效打开方式')
    const recent=this.app.workspace.getMostRecentLeaf();const leaf=target==='current'&&recent&&recent.view instanceof MarkdownView?recent:this.app.workspace.getLeaf(target==='split'?'split':'tab')
    await leaf.openFile(file);await this.app.workspace.revealLeaf(leaf);this.lastPath=path;return JSON.stringify({opened:path,target,inside:'Obsidian'})
   }
@@ -79,7 +79,7 @@ export class ObsidianTools {
   this.writable(path)
   const before=await this.content(file)
   if(name==='obsidian_edit'){
-   const oldText=String(a.oldText??''),newText=String(a.newText??'');if(!oldText||before.split(oldText).length!==2)throw new Error('原文必须唯一匹配，请重新读取')
+   const oldText=textValue(a.oldText??''),newText=textValue(a.newText??'');if(!oldText||before.split(oldText).length!==2)throw new Error('原文必须唯一匹配，请重新读取')
    const after=before.replace(oldText,()=>newText);if(after.length>100000)throw new Error('单次修改最多 100 KB');if(path==='wiki/log.md'&&!after.startsWith(before))throw new Error('日志只允许追加')
    await this.approved('修改笔记',{path,before,after},signal)
    if(file.path!==path||await this.content(file)!==before)throw new Error('笔记已变化，请重新读取并确认')

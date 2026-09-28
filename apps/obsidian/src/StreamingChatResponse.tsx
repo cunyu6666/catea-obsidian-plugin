@@ -41,6 +41,7 @@ export function StreamingChatResponse({ content, streaming = false, paused = fal
       setVisible(content)
       return
     }
+    const win = container.current?.ownerDocument.defaultView ?? window
     let frame = 0
     let previous = performance.now()
     let cursor = revealed.current.length
@@ -53,10 +54,10 @@ export function StreamingChatResponse({ content, streaming = false, paused = fal
       if (end < content.length && end > 0 && /[\uD800-\uDBFF]/.test(content[end - 1])) end--
       revealed.current = content.slice(0, end)
       setVisible(revealed.current)
-      if (cursor < content.length) frame = requestAnimationFrame(reveal)
+      if (cursor < content.length) frame = win.requestAnimationFrame(reveal)
     }
-    if (cursor < content.length) frame = requestAnimationFrame(reveal)
-    return () => cancelAnimationFrame(frame)
+    if (cursor < content.length) frame = win.requestAnimationFrame(reveal)
+    return () => win.cancelAnimationFrame(frame)
   }, [content, reduceMotion, interrupted, paused])
 
   return <ResponseCard {...props} copyText={content} streaming={busy}>

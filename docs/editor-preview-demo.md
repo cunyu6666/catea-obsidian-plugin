@@ -4,7 +4,7 @@
 
 ```html
 <div style="padding:28px;border-radius:16px;background:#edf3ef;border:1px solid #d5e2d9">
-  <h2 style="color:#205843">Hello, Catea Paper</h2>
+  <h2 style="color:#205843">Hello, Catea</h2>
   <p>这是笔记正文中的 HTML 预览。</p>
 </div>
 ```

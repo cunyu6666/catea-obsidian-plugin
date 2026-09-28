@@ -1,12 +1,12 @@
 /**
  * [WHO]: Provides MermaidDiagram
- * [FROM]: Depends on obsidian, catea-components, react, ./DiagramDialog
+ * [FROM]: Depends on obsidian, react, catea-components, ./DiagramDialog
  * [TO]: Consumed by apps/obsidian/src/ChatMarkdown.tsx
  * [HERE]: apps/obsidian/src/MermaidDiagram.tsx - renders Mermaid through the Obsidian loadMermaid runtime after a 180 ms debounce; zoom clamped to 0.25-4x
  */
 import {loadMermaid} from 'obsidian'
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
-import { CodeBlock, Icon as RemixIcon } from 'catea-components'
+import { CodeBlock, Icon } from 'catea-components'
 import { DiagramDialog } from './DiagramDialog'
 
 
@@ -43,7 +43,8 @@ export function MermaidDiagram({ code, showExpandButton = true, t }: { code: str
     let cancelled=false
     // Debounce incomplete streaming fences; ignore stale async results.
     const timer=window.setTimeout(()=>{
-      void loadMermaid().then(async mermaid=>{
+      void loadMermaid().then(async (loaded:unknown)=>{
+        const mermaid=loaded as {render(id:string,source:string):Promise<{svg:string}>}
         if(cancelled)return
         const id=`catea-mermaid-${crypto.randomUUID()}`
         try{
@@ -93,7 +94,7 @@ export function MermaidDiagram({ code, showExpandButton = true, t }: { code: str
 
   return <>
     <div className="chat-mermaid">
-      {showExpandButton && <button type="button" className="chat-mermaid__expand" aria-label={t('viewDiagramFullscreen')} title={t('viewDiagramFullscreen')} onClick={() => setOpen(true)}><RemixIcon name="fullscreen" size={14} /></button>}
+      {showExpandButton && <button type="button" className="chat-mermaid__expand" aria-label={t('viewDiagramFullscreen')} title={t('viewDiagramFullscreen')} onClick={() => setOpen(true)}><Icon name="fullscreen" size={14} /></button>}
       <div ref={scrollRef} className="chat-mermaid__scroller anno-auto-scrollbar" onScroll={updateFade} style={{
         maskImage: `linear-gradient(to right, ${scroll.left ? 'transparent 0, #000 32px' : '#000 0'}, #000 ${scroll.right ? 'calc(100% - 32px), transparent 100%' : '100%'})`,
       }}>
@@ -120,9 +121,9 @@ export function MermaidDiagram({ code, showExpandButton = true, t }: { code: str
               </div>
               <button type="button" aria-label={t('zoomIn')} title={t('zoomIn')} disabled={scale >= 4} onClick={() => setScale(current => Math.min(4, current * 1.25))}>+</button>
             </div>
-            <button type="button" aria-label={t('resetZoom')} title={t('resetZoom')} disabled={scale === 1 && position.x === 0 && position.y === 0} onClick={() => { setScale(1); setPosition({ x: 0, y: 0 }) }}><RemixIcon name="loading" size={15} /></button>
-            <button type="button" aria-label={t('copyDiagramSource')} title={t('copyDiagramSource')} onClick={() => void navigator.clipboard.writeText(code)}><RemixIcon name="copy" size={15} /></button>
-            <button type="button" aria-label={t('closeDialog')} title={t('closeDialog')} onClick={() => setOpen(false)}><RemixIcon name="close" size={16} /></button>
+            <button type="button" aria-label={t('resetZoom')} title={t('resetZoom')} disabled={scale === 1 && position.x === 0 && position.y === 0} onClick={() => { setScale(1); setPosition({ x: 0, y: 0 }) }}><Icon name="loading" size={15} /></button>
+            <button type="button" aria-label={t('copyDiagramSource')} title={t('copyDiagramSource')} onClick={() => void navigator.clipboard.writeText(code)}><Icon name="copy" size={15} /></button>
+            <button type="button" aria-label={t('closeDialog')} title={t('closeDialog')} onClick={() => setOpen(false)}><Icon name="close" size={16} /></button>
           </div>
         </header>
         <div className={`chat-mermaid-preview__stage ${dragging ? 'is-dragging' : ''}`} onWheel={event => {

@@ -52,6 +52,8 @@ jobs:
         run: |
           npm test
           npm run typecheck
+          npm run lint
+          npm run test:behavior
 
       - name: Build
         run: npm run build
@@ -62,6 +64,17 @@ jobs:
           for asset in main.js manifest.json styles.css; do
             test -f "dist/catea-paper/$asset" || { echo "::error::missing release asset: $asset"; exit 1; }
           done
+
+      # Provenance lets a user cryptographically verify that the main.js and
+      # styles.css they downloaded were built by this workflow run, which is what
+      # Obsidian's release review recommends. Only the two built artifacts are
+      # attested; manifest.json is copied from the repository unchanged.
+      - name: Attest the built release assets
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: |
+            dist/catea-paper/main.js
+            dist/catea-paper/styles.css
 
       - name: Publish the release
         env:
@@ -75,14 +88,3 @@ jobs:
             dist/catea-paper/styles.css \
             --title "$version" \
             --generate-notes
-
-      # Provenance lets a user cryptographically verify that the main.js and
-      # styles.css they downloaded were built by this workflow run, which is what
-      # Obsidian's release review recommends. Only the two built artifacts are
-      # attested; manifest.json is copied from the repository unchanged.
-      - name: Attest the built release assets
-        uses: actions/attest-build-provenance@v2
-        with:
-          subject-path: |
-            dist/catea-paper/main.js
-            dist/catea-paper/styles.css

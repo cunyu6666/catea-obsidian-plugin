@@ -7,20 +7,21 @@ tools, and the paper-appearance extras that adapt the agent core to Obsidian.
 
 ## Member List
 
-assets.d.ts: Declares `*.md` and `*.css` module types returning file contents as strings, so the esbuild text loader type-checks; no runtime code.
+assets.d.ts: Declares `*.md` and `*.css` module types returning file contents as strings, plus optional Electron host transport types; no runtime code.
 ChatMarkdown.tsx: Renders assistant Markdown through react-markdown and remark-gfm, converting `[[wikilinks]]` into internal-link clicks; code fences delegate to MermaidDiagram.
+composition.ts: Creates conversation storage and memory, then injects them into Agent at the Obsidian boundary.
 DiagramDialog.tsx: Portals children into a native `<dialog>` opened with `showModal()`, giving Escape handling, focus trap and focus restore for diagram zoom.
-MermaidDiagram.tsx: Renders Mermaid through beautiful-mermaid, falling back to Obsidian `loadMermaid` after a 180 ms debounce; zoom clamped to 0.25-4x.
+MermaidDiagram.tsx: Renders Mermaid through Obsidian `loadMermaid` after a 180 ms debounce; zoom clamped to 0.25-4x.
 StreamingChatResponse.tsx: requestAnimationFrame typewriter reveal for streamed text that never splits surrogate pairs; auto-follows scroll within 40 px in a card and 80 px in chat.
 locale.ts: Chinese-keyed English string table exposing `translate()` and `contentLabel()`; returns the key unchanged when a string is unmapped.
 main.tsx: Plugin entry: `class Catea extends Paper`, wiring config, secure secrets, ObsidianTools, Agent, the settings tab and the sidebar view; 60 s memory interval.
 note-previews.ts: Registers `html` and `svg` code-block previews as sandboxed, script-blocking CSP iframes with Preview, Source and Copy tabs.
 note-thumbnails.ts: Paints 108x144 canvas file-tree thumbnails from title, excerpt and first local raster under 5 MB; 2 MB Markdown cap, 256-entry cache, concurrency 2.
 obsidian-tools.ts: Seven `obsidian_*` tools over the Obsidian API with hidden-path guards; search 50 hits, read 300 lines x 2000 chars, note cap 2 MB, write cap 100 KB.
-panel.tsx: React sidebar root composing header, history, message list and composer; maps persona and model pickers, approvals, quotes and attachments.
+panel.tsx: React sidebar root composing header, history, message list and composer; maps model picker, approvals, quotes and attachments.
 paper.cjs: Vendored, generated 1.6 MB bundle providing the Paper base class with embedded Tabler icon assets; skipped by DIP, never hand-edited.
 selection.ts: Adds an editor-menu entry and a floating add-to-Catea popup positioned through CodeMirror `coordsAtPos`, rebinding listeners on layout change.
-settings.ts: PluginSettingTab for language, paper toggles, Agent toggles, BYOK models and MCP servers; ModelModal validates through `normalizeModel`.
+settings.ts: Searchable setting definitions for Obsidian 1.13+, with an imperative fallback for older hosts; language, paper, Agent persona and capabilities, BYOK and MCP; ModelModal validates through `normalizeModel`.
 
 ## Submodules
 
