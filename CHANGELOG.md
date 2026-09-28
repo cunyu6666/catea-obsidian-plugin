@@ -5,6 +5,19 @@ release tag is that same number with no `v` prefix.
 
 ## Unreleased
 
+## 0.3.8
+
+### Fixed
+
+- Show submitted messages immediately while note context and vault checkpoints are prepared; restore drafts if preparation fails.
+- Place reply annotations at the far right of the response card footer.
+- Enable text selection in the Agent panel, replies, attachments, and tool activity.
+
+### Added
+
+- Display one of 50 bilingual waiting acknowledgements per reply, keeping it stable across tab switches and hiding it when the answer starts.
+- Instruct the Agent not to disclose, confirm, or guess its underlying model identity.
+
 ## 0.3.7
 
 ### Added

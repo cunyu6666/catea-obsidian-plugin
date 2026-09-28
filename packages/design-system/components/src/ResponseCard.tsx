@@ -10,6 +10,7 @@ interface ResponseCardProps {
   startedAt?: number
   hideExpand?: boolean
   sources?: Array<{ title: string; url: string }>
+  footerActions?: ReactNode
   tokenUsage?: { label: string; title: string }
   onExpand: () => void
   onViewMarkdown: () => void
@@ -28,7 +29,7 @@ function elapsedLabel(seconds: number) {
   return `${Math.floor(minutes / 60)}h${String(minutes % 60).padStart(2, '0')}m`
 }
 
-export function ResponseCard({ children, copyText, streaming, startedAt, hideExpand = false, sources = [], tokenUsage, onExpand, onViewMarkdown, labels }: ResponseCardProps) {
+export function ResponseCard({ children, copyText, streaming, startedAt, hideExpand = false, sources = [], tokenUsage, footerActions, onExpand, onViewMarkdown, labels }: ResponseCardProps) {
   const [copied, setCopied] = useState(false)
   const [sourcesOpen, setSourcesOpen] = useState(false)
   const [streamingIndex, setStreamingIndex] = useState(0)
@@ -76,6 +77,7 @@ export function ResponseCard({ children, copyText, streaming, startedAt, hideExp
           <Icon name="chevron-down" size={12} className="anno-response-card__chevron" data-open={sourcesOpen} />
         </button>}
         {tokenUsage && <span className="anno-response-card__token-usage" title={tokenUsage.title}>{tokenUsage.label}</span>}
+        {footerActions && <div className="anno-response-card__footer-actions">{footerActions}</div>}
       </div>
       {safeSources.length > 0 && <div id={sourcesId} className="anno-response-card__sources" hidden={!sourcesOpen}>
         <ol>{safeSources.map((source, index) => <li key={source.url}>

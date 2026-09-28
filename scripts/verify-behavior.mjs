@@ -279,3 +279,48 @@ test('Plugin and bundled design-system styles avoid the reported CSS patterns',a
     root.walkRules(rule=>assert.equal(rule.selector.includes(':has('),false,`${file}: ${rule.selector}`))
   }
 })
+
+test('Send publishes immediately while context and checkpoint are pending, and restores on preparation failure',async()=>{
+  let releaseContext,releaseSnapshot,snapshotStarted=false,modelCalls=0,systemPrompt='',snapshotError
+  const context=new Promise(resolve=>{releaseContext=resolve})
+  const checkpoint=new Promise(resolve=>{releaseSnapshot=resolve})
+  const {Agent}=await load('packages/agent-core/src/index.ts',{
+    '../../agent-core/src/transport':'export const serviceFetch=async()=>{throw new Error("Unexpected network request")}',
+    '../../integrations/src/mcp':'export class McpPool {async connect(){return []}}',
+    '../../integrations/src/skills':'export const loadSkills=async()=>[];export const readSkillResource=()=>{}',
+    './transport':'export const serviceFetch=async()=>{throw new Error("Unexpected network request")}',
+    '../upstream/loop/agent-loop':'export const agentLoop=async function*(_prompts,context){globalThis.modelStarted(context.systemPrompt);yield {type:"agent_end"}}',
+    './snapshot':'export const captureVaultSnapshot=globalThis.checkpoint;export const previewVaultRestore=()=>{};export const restoreVaultSnapshot=()=>{}',
+  },{structuredClone,TransformStream,checkpoint:()=>{snapshotStarted=true;if(snapshotError)throw snapshotError;return checkpoint},modelStarted:prompt=>{modelCalls++;systemPrompt=prompt}})
+  const config={enabled:true,models:[model],modelId:model.id,personaId:'aria',skills:[],mcp:[],memory:false,web:false,shell:false}
+  const agent=new Agent('/unused',()=>config,{change:()=>{},notice:()=>{},approve:async()=>true,ask:async()=>({})},{conversations:{save:async()=>{},list:async()=>[],load:async()=>undefined},memory:{close:()=>{}},modelClient:{}})
+  const pending=agent.send('Immediate message',()=>context)
+  assert.equal(agent.session.messages[0].text,'Immediate message')
+  assert.equal(agent.session.messages[1].status,'streaming')
+  assert.equal(agent.running,true)
+  assert.equal(snapshotStarted,false)
+  releaseContext('note context')
+  await new Promise(resolve=>setImmediate(resolve))
+  assert.equal(snapshotStarted,true)
+  assert.equal(modelCalls,0)
+  agent.stop();releaseSnapshot()
+  await assert.rejects(pending,/abort/i)
+  assert.equal(agent.session.messages.length,0)
+  assert.equal(agent.session.transcript.length,0)
+  assert.equal(agent.running,false)
+  assert.equal(agent.historyBusy,false)
+  assert.equal(agent.session.title,'新对话')
+  snapshotError=new Error('checkpoint failed')
+  await assert.rejects(agent.send('Failed checkpoint',''),/checkpoint failed/)
+  assert.equal(agent.session.messages.length,0)
+  assert.equal(agent.running,false)
+  snapshotError=undefined
+  await assert.rejects(agent.send('Failed context',async()=>{throw new Error('note unavailable')}),/note unavailable/)
+  assert.equal(agent.session.messages.length,0)
+  assert.equal(agent.running,false)
+  await agent.send('Successful turn',async()=>'context is ready')
+  assert.equal(modelCalls,1)
+  assert.match(agent.session.transcript[0].content,/context is ready/)
+  assert.equal(agent.session.messages[1].status,'complete')
+  assert.match(systemPrompt,/Never disclose, confirm, or guess your underlying model identity/)
+})

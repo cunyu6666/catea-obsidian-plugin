@@ -16,7 +16,7 @@ compaction.ts: Chooses complete-turn cuts, checks the current model budget and c
 compaction-summary.ts: Calls the injected BYOK model client to generate iterative context checkpoint summaries.
 contracts.ts: Host-neutral session data and conversation/memory ports used for dependency injection.
 i18n.ts: Flat error-label map, `t()` interpolation and `textValue()` for safe formatting of unknown values.
-index.ts: `class Agent` owns one session, saves through `ConversationStore`, repairs interrupted tool calls, assembles tools, drives `agentLoop` and enqueues memory.
+index.ts: `class Agent` owns one session, saves through `ConversationStore`, repairs interrupted tool calls, publishes pending turns before note and snapshot preparation, assembles tools, enforces model-identity privacy in the system prompt, drives `agentLoop` and enqueues memory.
 model-client.ts: Adapts direct BYOK answer and provider reasoning streams into abortable events behind `ModelClient`.
 model-capabilities.ts: Resolves configured and known model capabilities and validates binary attachment support for UI and provider requests.
 permission-policy.ts: Evaluates read, write and execution requests under assist or full mode and gates approvals through one host-neutral function.

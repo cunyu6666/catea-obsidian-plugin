@@ -1,7 +1,7 @@
 /**
- * [WHO]: Provides Language, contentLabel, translate
+ * [WHO]: Provides Language, contentLabel, translate, pendingReplyText
  * [FROM]: Depends on (none)
- * [TO]: Consumed by apps/obsidian/src/ChatMarkdown.tsx, apps/obsidian/src/main.tsx
+ * [TO]: Consumed by apps/obsidian/src/ChatMarkdown.tsx, apps/obsidian/src/main.tsx, apps/obsidian/src/panel.tsx
  * [HERE]: apps/obsidian/src/locale.ts - Chinese-keyed English string table with translate() and contentLabel() lookups; returns the key unchanged when unmapped
  */
 export type Language="zh"|"en"
@@ -186,3 +186,217 @@ Object.assign(english,{"请先选中回复中的文字":"Select text in the repl
 
 Object.assign(english,{"批注内容":"Annotation","针对这段回复写下你的问题或意见…":"Write a question or comment about this passage…","添加批注":"Add annotation"})
 Object.assign(english,{"请按批注继续":"Please respond to these annotations"})
+
+Object.assign(english,{"引用批注":"Annotate"})
+
+// UI-only acknowledgements: never added to the model transcript or saved as replies.
+const replyAcknowledgements = [
+  [
+    "明白你的诉求，让我探索一下。",
+    "Got it. Let me take a closer look."
+  ],
+  [
+    "收到，让我先理一理思路。",
+    "Got it. Let me organize my thoughts."
+  ],
+  [
+    "好的，让我仔细看看你的问题。",
+    "Okay, let me look carefully at your question."
+  ],
+  [
+    "明白，我先梳理一下重点。",
+    "Understood. Let me work through the key points."
+  ],
+  [
+    "收到，我会从你的需求出发来考虑。",
+    "Got it. I'll start with what you need."
+  ],
+  [
+    "好的，给我一点时间把思路整理清楚。",
+    "Okay, give me a moment to think this through."
+  ],
+  [
+    "让我先理解上下文，再给你回复。",
+    "Let me understand the context before replying."
+  ],
+  [
+    "明白，让我想想怎样回答更有帮助。",
+    "Understood. Let me think about the most helpful response."
+  ],
+  [
+    "收到，我先把问题拆开看看。",
+    "Got it. Let me break the question down."
+  ],
+  [
+    "好的，让我从关键的地方开始。",
+    "Okay, let me start with what matters most."
+  ],
+  [
+    "让我仔细考虑一下，再和你展开。",
+    "Let me give this some thought before we go further."
+  ],
+  [
+    "明白，我先看看有哪些需要留意的细节。",
+    "Understood. Let me consider the details that matter."
+  ],
+  [
+    "收到，让我把相关思路串起来。",
+    "Got it. Let me connect the relevant ideas."
+  ],
+  [
+    "好的，我先想想合适的切入点。",
+    "Okay, let me find a useful starting point."
+  ],
+  [
+    "让我先抓住重点，再一步步展开。",
+    "Let me identify the key points, then work through them."
+  ],
+  [
+    "明白，让我把你的要求逐项理清。",
+    "Understood. Let me work through your requirements."
+  ],
+  [
+    "收到，我会先考虑你最关心的部分。",
+    "Got it. I'll start with what matters most to you."
+  ],
+  [
+    "好的，让我先看看问题的脉络。",
+    "Okay, let me get a sense of the bigger picture."
+  ],
+  [
+    "让我想一想，怎样把这件事讲清楚。",
+    "Let me think about how to explain this clearly."
+  ],
+  [
+    "明白，我先整理一个清晰的回答思路。",
+    "Understood. Let me shape a clear response."
+  ],
+  [
+    "收到，让我从几个角度考虑一下。",
+    "Got it. Let me consider a few perspectives."
+  ],
+  [
+    "好的，我先留意一下可能遗漏的地方。",
+    "Okay, let me think about what might be missing."
+  ],
+  [
+    "让我把你的目标和细节一起考虑。",
+    "Let me consider both your goal and the details."
+  ],
+  [
+    "明白，让我先分清主要问题和补充信息。",
+    "Understood. Let me separate the main question from the supporting details."
+  ],
+  [
+    "收到，我先想想下一步怎么推进。",
+    "Got it. Let me think about the next step."
+  ],
+  [
+    "好的，让我先把思路铺开。",
+    "Okay, let me explore the possibilities."
+  ],
+  [
+    "让我围绕你的问题仔细想一想。",
+    "Let me give your question a closer look."
+  ],
+  [
+    "明白，我先考虑一下怎样更贴近你的需求。",
+    "Understood. Let me think about what would best fit your needs."
+  ],
+  [
+    "收到，让我看看各个要点之间的联系。",
+    "Got it. Let me consider how the points connect."
+  ],
+  [
+    "好的，我先整理需要回应的几个部分。",
+    "Okay, let me organize the parts that need a response."
+  ],
+  [
+    "让我先想清楚重点，再给你展开说明。",
+    "Let me clarify the main points before explaining."
+  ],
+  [
+    "明白，让我考虑一下不同的可能性。",
+    "Understood. Let me consider the different possibilities."
+  ],
+  [
+    "收到，我先从你提供的信息入手。",
+    "Got it. I'll start with the information you've shared."
+  ],
+  [
+    "好的，让我把这件事的前后关系理一理。",
+    "Okay, let me think through how this fits together."
+  ],
+  [
+    "让我先看看什么对你最有用。",
+    "Let me think about what would be most useful to you."
+  ],
+  [
+    "明白，我先把复杂的部分拆小一些。",
+    "Understood. Let me break the complex parts into smaller pieces."
+  ],
+  [
+    "收到，让我想想有哪些值得说明的地方。",
+    "Got it. Let me consider what needs explanation."
+  ],
+  [
+    "好的，我会带着你的目标来整理思路。",
+    "Okay, I'll organize my thoughts with your goal in mind."
+  ],
+  [
+    "让我先仔细理解，再组织回复。",
+    "Let me understand this carefully, then put a response together."
+  ],
+  [
+    "明白，让我看看怎样让回答更具体。",
+    "Understood. Let me think about how to make the answer more concrete."
+  ],
+  [
+    "收到，我先想想有哪些关键区别。",
+    "Got it. Let me consider the key distinctions."
+  ],
+  [
+    "好的，让我先捋顺这几个要点。",
+    "Okay, let me work through these points."
+  ],
+  [
+    "让我把注意力放在你提出的核心问题上。",
+    "Let me focus on the core question you've raised."
+  ],
+  [
+    "明白，我先考虑一下回答的顺序。",
+    "Understood. Let me think about the best order to explain this."
+  ],
+  [
+    "收到，让我把细节和整体一起看看。",
+    "Got it. Let me consider the details alongside the bigger picture."
+  ],
+  [
+    "好的，我先想想怎样把建议说得更明确。",
+    "Okay, let me think about how to make the guidance clearer."
+  ],
+  [
+    "让我先整理一下，再接着和你聊。",
+    "Let me gather my thoughts before continuing."
+  ],
+  [
+    "明白，让我沿着你的思路再往前想一步。",
+    "Understood. Let me take your idea a step further."
+  ],
+  [
+    "收到，我先认真考虑一下你的提问。",
+    "Got it. Let me give your question some careful thought."
+  ],
+  [
+    "好的，让我把要点理清后再回复你。",
+    "Okay, let me sort through the key points before replying."
+  ]
+] as const
+Object.assign(english,Object.fromEntries(replyAcknowledgements))
+
+// The random message UUID seeds a stable choice across renders, tabs and remounts.
+export function pendingReplyText(messageId:string,language:Language="zh"):string {
+  let hash=2166136261
+  for(let i=0;i<messageId.length;i++)hash=Math.imul(hash^messageId.charCodeAt(i),16777619)
+  return translate(language,replyAcknowledgements[(hash>>>0)%replyAcknowledgements.length][0])
+}

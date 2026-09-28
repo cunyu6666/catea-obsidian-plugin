@@ -183,3 +183,9 @@ button:not(.mod-cta):not(.mod-cta) {box-shadow:none}
 .catea-action-menu .catea-action-menu__item:hover,
 .catea-action-menu .catea-action-menu__item:focus-visible { background: #f0f3f1; outline: none; }
 .catea-action-menu__item svg { width: 15px; height: 15px; color: #66746c; }
+
+/* Override the desktop host's inherited selection lock inside the agent panel. */
+.catea-panel, .catea-panel .chat-message-body, .catea-panel .anno-activities, .catea-panel .anno-attachment {user-select:text;-webkit-user-select:text}
+.anno-response-card__footer-actions {display:flex;align-items:center;margin-left:auto;flex:none}
+
+.catea-reply-acknowledgement {padding:4px 0 8px;color:var(--foreground-soft);font-size:14px;line-height:1.6;user-select:text;-webkit-user-select:text}
