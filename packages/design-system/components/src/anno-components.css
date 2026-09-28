@@ -124,9 +124,14 @@
 .anno-activities__summary { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; opacity: .72; }
 .anno-activities__open { flex: none; margin-left: auto; opacity: 0; transition: opacity .15s; }
 .anno-activities__row:not(:disabled):hover .anno-activities__open, .anno-activities__row:focus-visible .anno-activities__open { opacity: 1; }
-.anno-thinking { min-height: 30px; padding: 5px 12px; color: var(--foreground-soft); font-size: 13px; line-height: 20px; }
-.anno-thinking__heading { display: flex; align-items: center; gap: 8px; }
-.anno-thinking__content { max-height: 180px; overflow-y: auto; margin: 7px 0 2px 26px; padding: 8px 10px; border-left: 2px solid var(--surface-muted); white-space: pre-wrap; overflow-wrap: anywhere; user-select: text; }
+.anno-thinking { min-height: 30px; color: var(--foreground-soft); font-size: 13px; line-height: 20px; }
+.anno-thinking__heading { display: flex; align-items: center; gap: 8px; width: 100%; min-height: 30px; padding: 5px 10px; border: 0; border-radius: 8px; background: transparent; color: inherit; font: inherit; text-align: left; }
+button.anno-thinking__heading:hover { background: var(--surface-muted); }
+button.anno-thinking__heading:focus-visible { outline: 2px solid var(--foreground-soft); outline-offset: 2px; }
+.anno-thinking__icon { display: inline-flex; flex: none; align-items: center; justify-content: center; width: 16px; height: 16px; }
+.anno-thinking__chevron { margin-left: auto; transition: transform .15s ease-out; }
+.anno-thinking__chevron.is-expanded { transform: rotate(90deg); }
+.anno-thinking__content { max-height: 180px; overflow-y: auto; margin: 2px 10px 8px 18px; padding: 6px 10px; border-left: 2px solid var(--surface-muted); white-space: pre-wrap; overflow-wrap: anywhere; user-select: text; }
 .anno-code-block { position: relative; overflow: hidden; margin: 12px 0; border: 1px solid var(--border); border-radius: 8px; background: color-mix(in srgb, var(--foreground) 3%, var(--background)); }
 .anno-code-block__header { display: flex; align-items: center; justify-content: space-between; min-height: 34px; padding: 4px 12px; border-bottom: 1px solid var(--border); background: color-mix(in srgb, var(--foreground) 4%, var(--background)); }
 .anno-code-block__header > span { color: var(--foreground-soft); font-size: 11px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; }
@@ -147,12 +152,10 @@
 .anno-code-block__line-content { padding: 0 12px 0 4px; white-space: pre; }
 .anno-code-block__token { color: var(--anno-code-light); }
 .dark .anno-code-block__token { color: var(--anno-code-dark); }
-.anno-thinking__fish { display: inline-flex; flex: none; align-items: center; justify-content: center; width: 18px; height: 18px; font-family: "Noto Sans Egyptian Hieroglyphs", "Segoe UI Historic", serif; font-size: 16px; font-weight: 400; line-height: 1; }
-.anno-thinking__fish::after { content: "𓆝"; animation: anno-thinking-fish 1s steps(1, end) infinite; }
-@keyframes anno-thinking-fish { 0% { content: "𓆝"; } 12.5% { content: "𓆟"; } 25% { content: "𓆜"; } 37.5% { content: "𓆞"; } 50% { content: "𓆝"; } 62.5% { content: "𓆟"; } 75% { content: "𓆝"; } 87.5% { content: "𓆟"; } }
-.anno-activities__list .anno-thinking { min-height: 24px; padding: 2px 0; opacity: .8; }
+.anno-activities__list .anno-thinking { min-height: 24px; opacity: .8; }
+.anno-activities__list .anno-thinking__heading { padding: 2px 0; min-height: 24px; }
 @keyframes anno-activities-enter { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
-@media (prefers-reduced-motion: reduce) { .anno-activities__count, .anno-activities__chevron, .anno-activities__open, .anno-code-block__header button { transition: none; } .anno-activities__list, .anno-thinking__fish::after { animation: none; } }
+@media (prefers-reduced-motion: reduce) { .anno-activities__count, .anno-activities__chevron, .anno-activities__open, .anno-thinking__chevron, .anno-code-block__header button { transition: none; } .anno-activities__list { animation: none; } }
 
 /* BeUI Approval Card question flow, using the original compact proportions. */
 .anno-approval-card { display: flex; gap: 12px; width: min(100%, 512px); overflow: hidden; margin: 14px 0; padding: 16px; border: 0; border-radius: 16px; background: color-mix(in srgb, var(--foreground) 4.5%, var(--background)); color: var(--foreground); font-size: 14px; line-height: 20px; }

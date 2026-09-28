@@ -43,6 +43,7 @@ const english:Record<string,string>={
   "管理笔记": "Manage notes",
   "Catea 设置": "Catea settings",
   "正在思考": "Thinking",
+  "思考过程": "Thinking details",
   "查看操作": "View actions",
   "工具详情": "Tool details",
   "填写其他回答": "Enter another answer",

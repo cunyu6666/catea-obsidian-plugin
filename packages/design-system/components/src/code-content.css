@@ -18,7 +18,7 @@
 .anno-code-block__line-content { padding: 0 12px 0 4px; white-space: pre; }
 .anno-code-block__token { color: var(--anno-code-light); }
 .dark .anno-code-block__token { color: var(--anno-code-dark); }
-@media (prefers-reduced-motion: reduce) { .anno-activities__count, .anno-activities__chevron, .anno-activities__open, .anno-code-block__header button { transition: none; } .anno-activities__list, .anno-thinking__fish::after { animation: none; } }
+@media (prefers-reduced-motion: reduce) { .anno-activities__count, .anno-activities__chevron, .anno-activities__open, .anno-thinking__chevron, .anno-code-block__header button { transition: none; } .anno-activities__list { animation: none; } }
 .chat-mermaid { position: relative; margin: 12px 0; max-width: 100%; }
 .chat-mermaid__expand { position: absolute; top: 8px; right: 8px; z-index: 1; display: inline-flex; align-items: center; justify-content: center; width: 25px; height: 25px; padding: 0; border: 0; border-radius: 6px; background: var(--background); box-shadow: var(--shadow-soft); color: var(--foreground-soft); opacity: 0; transition: opacity .15s, color .15s; }
 .chat-mermaid:hover .chat-mermaid__expand, .chat-mermaid__expand:focus-visible { opacity: 1; }

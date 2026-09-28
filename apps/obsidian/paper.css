@@ -21,11 +21,14 @@ body.gp-enabled {
   --header-height:56px;
   --file-line-width:760px; --file-margins:48px clamp(32px,6vw,96px);
   --font-text-size:var(--gp-body-font-size);--line-height-normal:var(--gp-body-line-height-ratio);
-  --p-spacing:8px; --heading-spacing:16px; --list-spacing:2px;
-  --h1-size:1.4em; --h2-size:1.2em; --h3-size:1.067em;
+  --p-spacing:.65rem; --heading-spacing:1.1em; --list-spacing:.25rem;
+  --h1-size:1.75em; --h2-size:1.55em; --h3-size:1.35em;
+  --h4-size:1.2em; --h5-size:1.1em; --h6-size:1em;
+  --h1-weight:600; --h2-weight:600; --h3-weight:600;
+  --h4-weight:600; --h5-weight:600; --h6-weight:600;
   --h1-color:#222824; --h2-color:#222824; --h3-color:#222824;
   --h1-font:var(--font-text-theme); --h2-font:var(--font-text-theme); --h3-font:var(--font-text-theme);
-  --bold-color:inherit; --italic-color:inherit;
+  --bold-color:inherit; --bold-weight:500; --italic-color:inherit;
   --code-background:#f3f5f3; --code-normal:#46534a;
   --blockquote-border-color:#8d9c92; --blockquote-background-color:transparent;
   --radius-s:6px; --radius-m:10px; --radius-l:12px;
@@ -46,10 +49,15 @@ body.gp-enabled .mod-root .workspace-leaf-content {
   box-shadow:0 1px 2px rgba(30,42,34,.04),0 3px 4px -1px rgba(30,42,34,.06);overflow:hidden;
 }
 body.gp-enabled .mod-root :is(.view-header,.view-content,.markdown-source-view,.markdown-preview-view,.cm-editor,.cm-scroller) {background:#fff;}
+/* Obsidian renders Mermaid colors into the SVG using its dark theme before Paper paints the note white. */
+body.gp-enabled.theme-dark .workspace-leaf-content[data-type="markdown"] .mermaid svg {
+  filter: invert(1) hue-rotate(180deg);
+}
 body.gp-enabled .mod-root .view-header {height:40px;border-bottom:1px solid #f1f3f1;}
 body.gp-enabled .view-header-title-container {font-size:11px;color:var(--text-muted);}
 body.gp-enabled .inline-title {font-family:var(--font-text-theme);font-size:1.85em;font-weight:700;letter-spacing:-.035em;line-height:1.35;margin-bottom:28px;}
-/* Match the compact Craft Agent markdown rhythm in Reading and Live Preview. */
+/* Bring Synara's assistant-markdown rhythm into the note editor itself.
+   Reading and Live Preview share these variables and explicit block rules. */
 body.gp-enabled .workspace-leaf-content[data-type="markdown"] {
   --blockquote-border-color:rgba(41,45,43,.22);
   --blockquote-color:var(--text-muted);
@@ -67,23 +75,27 @@ body.gp-enabled .workspace-leaf-content[data-type="markdown"] {
 body.gp-enabled :is(.markdown-rendered,.markdown-source-view.mod-cm6 .cm-content) {
   font-size:var(--gp-body-font-size);line-height:var(--gp-body-line-height);
 }
-body.gp-enabled .markdown-rendered p {margin:8px 0;line-height:var(--gp-body-line-height);}
-body.gp-enabled .markdown-rendered :is(ul,ol) {margin:8px 0;padding-inline-start:24px;}
-body.gp-enabled .markdown-rendered li {margin:4px 0;}
+body.gp-enabled .markdown-rendered p {margin:.65rem 0;line-height:var(--gp-body-line-height);}
+body.gp-enabled .markdown-rendered :is(ul,ol) {margin:.65rem 0;padding-inline-start:1.25rem;}
+body.gp-enabled .markdown-rendered li {margin:.25rem 0;}
 body.gp-enabled .markdown-rendered li > p {margin:0;}
-body.gp-enabled .markdown-rendered :is(h1,h2,h3,h4) {
-  font-family:var(--font-text-theme);line-height:1.4;letter-spacing:-.015em;
+body.gp-enabled .markdown-rendered :is(h1,h2,h3,h4,h5,h6) {
+  margin:1.1em 0 .35em;font-family:var(--font-text-theme);
+  font-weight:600;line-height:1.25;letter-spacing:-.01em;
 }
-body.gp-enabled .markdown-rendered h1 {margin:20px 0 12px;font-size:1.4em;font-weight:700;}
-body.gp-enabled .markdown-rendered h2 {margin:18px 0 10px;font-size:1.2em;font-weight:650;}
-body.gp-enabled .markdown-rendered h3 {margin:16px 0 8px;font-size:1.067em;font-weight:600;}
-body.gp-enabled .markdown-rendered h4 {margin:14px 0 8px;font-size:1em;font-weight:600;}
-body.gp-enabled .markdown-rendered strong {font-weight:600;}
+body.gp-enabled .markdown-rendered h1 {font-size:1.75em;}
+body.gp-enabled .markdown-rendered h2 {font-size:1.55em;}
+body.gp-enabled .markdown-rendered h3 {font-size:1.35em;}
+body.gp-enabled .markdown-rendered h4 {font-size:1.2em;}
+body.gp-enabled .markdown-rendered h5 {font-size:1.1em;}
+body.gp-enabled .markdown-rendered h6 {font-size:1em;color:var(--text-muted);}
+body.gp-enabled .markdown-rendered :is(h1,h2,h3,h4,h5,h6) + :is(h2,h3,h4,h5,h6) {margin-top:.5em;}
+body.gp-enabled .markdown-rendered strong {font-weight:500;font-synthesis:none;}
 body.gp-enabled .markdown-rendered blockquote {
-  margin:8px 0;padding:2px 0 2px 12px;border-inline-start:2px solid var(--blockquote-border-color);
-  color:var(--text-muted);font-style:italic;
+  margin:.65rem 0;padding:0 0 0 .8rem;border-inline-start:2px solid var(--blockquote-border-color);
+  color:var(--text-muted);font-style:normal;
 }
-body.gp-enabled .markdown-rendered hr {height:0;margin:16px 0;border:0;border-top:1px solid var(--background-modifier-border);}
+body.gp-enabled .markdown-rendered hr {height:0;margin:1.5rem 0;border:0;border-top:1px solid var(--background-modifier-border);}
 body.gp-enabled .markdown-rendered :not(pre) > code {
   padding:.12em .32em;border-radius:4px;background:var(--code-background);font-size:.9em;
 }
@@ -118,7 +130,15 @@ body.gp-enabled.gp-enabled .markdown-source-view.mod-cm6 .cm-table-widget .table
   font-size:var(--gp-body-font-size);line-height:var(--gp-body-line-height);
 }
 body.gp-enabled .markdown-rendered img {border-radius:8px;}
-body.gp-enabled .markdown-source-view.mod-cm6 .cm-line.HyperMD-header {line-height:1.4;letter-spacing:-.015em;}
+body.gp-enabled .markdown-source-view.mod-cm6 .cm-line.HyperMD-header {
+  font-weight:600;line-height:1.25;letter-spacing:-.01em;
+}
+body.gp-enabled .markdown-source-view.mod-cm6 .cm-line.HyperMD-header-1 {font-size:1.75em;}
+body.gp-enabled .markdown-source-view.mod-cm6 .cm-line.HyperMD-header-2 {font-size:1.55em;}
+body.gp-enabled .markdown-source-view.mod-cm6 .cm-line.HyperMD-header-3 {font-size:1.35em;}
+body.gp-enabled .markdown-source-view.mod-cm6 .cm-line.HyperMD-header-4 {font-size:1.2em;}
+body.gp-enabled .markdown-source-view.mod-cm6 .cm-line.HyperMD-header-5 {font-size:1.1em;}
+body.gp-enabled .markdown-source-view.mod-cm6 .cm-line.HyperMD-header-6 {font-size:1em;color:var(--text-muted);}
 body.gp-enabled .nav-file-title,body.gp-enabled .nav-folder-title {border-radius:6px;margin-block:1px;padding:var(--nav-item-padding);font-size:12px;position:relative;}
 body.gp-enabled .nav-file-title.is-active {box-shadow:0 1px 3px #26362d09;}
 body.gp-enabled .nav-header {padding:8px;}
