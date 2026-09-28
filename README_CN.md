@@ -1,4 +1,4 @@
-# Catea Paper
+# Catea
 
 <div align="center">
 
@@ -22,7 +22,7 @@
 </p>
 
 <p>
-  <a href="#-为什么选择-catea-paper">为什么选择 Catea Paper？</a> •
+  <a href="#-为什么选择-catea">为什么选择 Catea？</a> •
   <a href="#-功能特性">功能特性</a> •
   <a href="#-快速开始">快速开始</a> •
   <a href="#-架构">架构</a> •
@@ -40,15 +40,15 @@
 
 ---
 
-## 🌟 为什么选择 Catea Paper
+## 🌟 为什么选择 Catea
 
 > **你的仓库，焕然一新。** 一个原生的 Catea Agent 住在 Obsidian 里——阅读、写作、搜索、记忆，把一堆静态笔记变成真正的工作空间。
 
-Catea Paper 不是又一个挂在 Obsidian 旁边的聊天框。它是一个**搭载原生 Catea Agent 的 Paper 工作区**——用一等公民的原生工具操作你的仓库，写入之前先征求确认，跨会话保留记忆，并把长任务执行到底。
+Catea 不是又一个挂在 Obsidian 旁边的聊天框。它是一个**搭载原生 Catea Agent 的 Paper 工作区**——用一等公民的原生工具操作你的仓库，写入之前先征求确认，跨会话保留记忆，并把长任务执行到底。
 
 ### 有什么不一样？
 
-| | 常见的 AI 插件 | Catea Paper |
+| | 常见的 AI 插件 | Catea |
 | --- | --- | --- |
 | **工作区** | 笔记旁边的聊天框 | 一等公民的 Paper 面板，工作流式写回仓库 |
 | **仓库访问** | 复制粘贴来回搬运 | 原生 `obsidian-workspace` 工具，写入需确认 |
@@ -76,7 +76,7 @@ Catea Paper 不是又一个挂在 Obsidian 旁边的聊天框。它是一个**�
 
 ### 环境要求
 
-- **Obsidian 桌面版** ≥ 1.8.0 —— Catea Paper 仅支持桌面端（`isDesktopOnly: true`）
+- **Obsidian 桌面版** ≥ 1.8.0 —— Catea 仅支持桌面端（`isDesktopOnly: true`）
 - **Node.js 18+**，支持 npm workspaces
 - 无需其他仓库。设计系统已随本仓库一起提供（`packages/design-system`），克隆即可完成构建。
 
@@ -109,7 +109,7 @@ dist/catea-paper/
 cp -R dist/catea-paper "<你的仓库>/.obsidian/plugins/catea-paper"
 ```
 
-然后在 Obsidian 打开 **设置 → 第三方插件**，启用 **Catea Paper**。文件夹名需保持 `catea-paper` 以匹配 manifest id。
+然后在 Obsidian 打开 **设置 → 第三方插件**，启用 **Catea**。文件夹名需保持 `catea-paper` 以匹配 manifest id。
 
 ### 首次使用
 
@@ -117,7 +117,7 @@ cp -R dist/catea-paper "<你的仓库>/.obsidian/plugins/catea-paper"
 
 ## 📐 架构
 
-Catea Paper 是一个 monorepo（`catea-source`），将插件宿主、Agent 与 Agent 可触达的一切清晰分层。
+Catea 是一个 monorepo（`catea-source`），将插件宿主、Agent 与 Agent 可触达的一切清晰分层。
 
 ```
 catea/
@@ -169,7 +169,7 @@ Agent 通过内置的 `obsidian-workspace` Skill 操作你的仓库——无需�
 
 ## 🔑 BYOK 配置
 
-Catea Paper 是自带密钥（bring-your-own-key）：
+Catea 是自带密钥（bring-your-own-key）：
 
 - **草稿式编辑**——添加或编辑模型使用独立草稿，取消不会修改现有配置
 - **保存前校验**——显示名称、模型 ID、API Key 与 HTTP(S) 基础地址
@@ -179,7 +179,7 @@ Catea Paper 是自带密钥（bring-your-own-key）：
 
 ## 🌐 网络使用
 
-Catea Paper 只在你可见、可控的场景下联网——没有遥测、没有统计、也没有 Catea 运营的后端。
+Catea 只在你可见、可控的场景下联网——没有遥测、没有统计、也没有 Catea 运营的后端。
 
 | 目标地址 | 触发时机 | 用途 |
 | --- | --- | --- |
@@ -195,7 +195,7 @@ Catea Paper 只在你可见、可控的场景下联网——没有遥测、没�
 
 ## 📦 致谢
 
-Catea Paper 站在优秀的开源工作之上——完整详情见 [THIRD_PARTY_NOTICES.md](./THIRD_PARTY_NOTICES.md)：
+Catea 站在优秀的开源工作之上——完整详情见 [THIRD_PARTY_NOTICES.md](./THIRD_PARTY_NOTICES.md)：
 
 - **ANNO**——流式 provider、输入框、回复卡片、活动组件与 Persona 基础
 - **CatUI**——记忆核心（GPL-3.0，内置在 `packages/memory/upstream`）、link-world 网络层与 Agent 循环（固定版本 `d6d110aa`）
@@ -204,11 +204,11 @@ Catea Paper 站在优秀的开源工作之上——完整详情见 [THIRD_PARTY_
 
 ## 📄 许可证
 
-Catea Paper 以 **GNU General Public License v3.0** 发布——见 [LICENSE](./LICENSE)。内置与第三方组件保留其原始许可——尤其是 `packages/memory/upstream` 下的 GPL-3.0 记忆核心。完整清单见 [THIRD_PARTY_NOTICES.md](./THIRD_PARTY_NOTICES.md)。
+Catea 以 **GNU General Public License v3.0** 发布——见 [LICENSE](./LICENSE)。内置与第三方组件保留其原始许可——尤其是 `packages/memory/upstream` 下的 GPL-3.0 记忆核心。完整清单见 [THIRD_PARTY_NOTICES.md](./THIRD_PARTY_NOTICES.md)。
 
 ---
 
 <div align="center">
   <sub>由 <a href="https://github.com/cunyu6666">Cunyu</a> 用 ✎ 打造 —— 你的仓库值得拥有一个大脑。</sub><br>
-  <sub>Catea Paper 是独立项目，与 Obsidian 官方无隶属或背书关系。</sub>
+  <sub>Catea 是独立项目，与 Obsidian 官方无隶属或背书关系。</sub>
 </div>

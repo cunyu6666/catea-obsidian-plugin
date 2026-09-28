@@ -1,4 +1,4 @@
-# Catea Paper
+# Catea
 
 <div align="center">
 
@@ -22,7 +22,7 @@
 </p>
 
 <p>
-  <a href="#-why-catea-paper">Why Catea Paper?</a> •
+  <a href="#-why-catea">Why Catea?</a> •
   <a href="#-features">Features</a> •
   <a href="#-quick-start">Quick Start</a> •
   <a href="#-architecture">Architecture</a> •
@@ -40,15 +40,15 @@
 
 ---
 
-## 🌟 Why Catea Paper?
+## 🌟 Why Catea?
 
 > **Your vault, reborn.** A native Catea agent lives inside Obsidian — it reads, writes, searches, and remembers, turning a folder of notes into a living workspace.
 
-Catea Paper is not another chat sidebar bolted onto Obsidian. It is a **Paper workspace with a native Catea agent** — an agent that operates your vault with first-class tools, asks before it writes, carries memory across sessions, and runs long-horizon tasks to completion.
+Catea is not another chat sidebar bolted onto Obsidian. It is a **Paper workspace with a native Catea agent** — an agent that operates your vault with first-class tools, asks before it writes, carries memory across sessions, and runs long-horizon tasks to completion.
 
 ### What Makes It Different?
 
-| | Typical AI plugins | Catea Paper |
+| | Typical AI plugins | Catea |
 | --- | --- | --- |
 | **Workspace** | A chat box beside your notes | A first-class Paper panel that streams work straight into your vault |
 | **Vault access** | Copy and paste in and out | Native `obsidian-workspace` tools with confirmation-gated writes |
@@ -76,7 +76,7 @@ Catea Paper is not another chat sidebar bolted onto Obsidian. It is a **Paper wo
 
 ### Requirements
 
-- **Obsidian desktop** ≥ 1.8.0 — Catea Paper is desktop-only (`isDesktopOnly: true`)
+- **Obsidian desktop** ≥ 1.8.0 — Catea is desktop-only (`isDesktopOnly: true`)
 - **Node.js 18+** with npm workspaces
 - Nothing else. The design system is vendored under `packages/design-system`, so a clone of this repository is the whole build input.
 
@@ -110,7 +110,7 @@ dist/catea-paper/
 cp -R dist/catea-paper "<YourVault>/.obsidian/plugins/catea-paper"
 ```
 
-Then open **Settings → Community plugins** in Obsidian and enable **Catea Paper**. Keep the folder name `catea-paper` to match the manifest id.
+Then open **Settings → Community plugins** in Obsidian and enable **Catea**. Keep the folder name `catea-paper` to match the manifest id.
 
 ### First Run
 
@@ -118,7 +118,7 @@ Add a model in **Catea settings** — protocol, base URL, model ID, and API key 
 
 ## 📐 Architecture
 
-Catea Paper is a monorepo (`catea-source`) that cleanly separates the plugin host, the agent, and everything the agent can touch.
+Catea is a monorepo (`catea-source`) that cleanly separates the plugin host, the agent, and everything the agent can touch.
 
 ```
 catea/
@@ -170,7 +170,7 @@ The agent acts on your vault through the bundled `obsidian-workspace` skill — 
 
 ## 🔑 Configuration (BYOK)
 
-Catea Paper is bring-your-own-key:
+Catea is bring-your-own-key:
 
 - **Draft-based editing** — adding or editing a model uses an independent draft; cancelling never mutates your config
 - **Validated on save** — display name, model ID, API key, and HTTP(S) base URL
@@ -180,7 +180,7 @@ Catea Paper is bring-your-own-key:
 
 ## 🌐 Network Use
 
-Catea Paper reaches the network only in visible, user-initiated ways — there is no telemetry, no analytics, and no Catea-operated backend.
+Catea reaches the network only in visible, user-initiated ways — there is no telemetry, no analytics, and no Catea-operated backend.
 
 | Destination | When | Purpose |
 | --- | --- | --- |
@@ -196,7 +196,7 @@ Catea Paper reaches the network only in visible, user-initiated ways — there i
 
 ## 📦 Credits
 
-Catea Paper stands on excellent open-source work — full details in [THIRD_PARTY_NOTICES.md](./THIRD_PARTY_NOTICES.md):
+Catea stands on excellent open-source work — full details in [THIRD_PARTY_NOTICES.md](./THIRD_PARTY_NOTICES.md):
 
 - **ANNO** — streaming provider, input, response cards, activity components, and persona foundations
 - **CatUI** — memory core (GPL-3.0, vendored in `packages/memory/upstream`), link-world web layer, and the agent loop (pinned revision `d6d110aa`)
@@ -205,11 +205,11 @@ Catea Paper stands on excellent open-source work — full details in [THIRD_PART
 
 ## 📄 License
 
-Catea Paper is released under the **GNU General Public License v3.0** — see [LICENSE](./LICENSE). Vendored and third-party components keep their original licenses — most notably the GPL-3.0 memory core under `packages/memory/upstream`. Full inventory in [THIRD_PARTY_NOTICES.md](./THIRD_PARTY_NOTICES.md).
+Catea is released under the **GNU General Public License v3.0** — see [LICENSE](./LICENSE). Vendored and third-party components keep their original licenses — most notably the GPL-3.0 memory core under `packages/memory/upstream`. Full inventory in [THIRD_PARTY_NOTICES.md](./THIRD_PARTY_NOTICES.md).
 
 ---
 
 <div align="center">
   <sub>Built with ✎ by <a href="https://github.com/cunyu6666">Cunyu</a> — your vault deserves a mind.</sub><br>
-  <sub>Catea Paper is an independent project, not affiliated with or endorsed by Obsidian.</sub>
+  <sub>Catea is an independent project, not affiliated with or endorsed by Obsidian.</sub>
 </div>

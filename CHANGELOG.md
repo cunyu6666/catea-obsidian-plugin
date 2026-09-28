@@ -3,6 +3,13 @@
 Notable changes per release. The version is the one in `manifest.json`; the GitHub
 release tag is that same number with no `v` prefix.
 
+## 0.3.5
+
+### Changed
+
+- Rename the plugin display name to Catea. The plugin ID remains `catea-paper`, preserving existing installations and updates.
+- Align the English and Chinese README titles and agent identity with the display name.
+
 ## 0.3.4
 
 ### Changed
