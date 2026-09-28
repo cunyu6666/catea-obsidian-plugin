@@ -161,7 +161,7 @@ export class Agent {
       if(hasJournal){
         const input=fromTranscript(latest);continuity.append(input);contextMessages.push(input)
       }
-      let answerPrefix=''
+      let answerPrefix='',reasoningPrefix=''
       const upstream=runLoop([],{
         systemPrompt:system,messages:contextMessages,
         tools:tools.map(t=>({...t,label:t.name,isConcurrencySafe:readOnly.has(t.name),execute:async(_id:string,args:Record<string,unknown>)=>({content:[{type:'text',text:await execute(t.name,args)}],details:{}})}))
@@ -175,7 +175,7 @@ export class Agent {
         recoverModelError:async event=>{
           if(event.errorSubtype!=='context_overflow'||event.attempt!==1)return {action:'stop' as const}
           const recovered=await compaction.check('overflow',event.messages)
-          if(recovered){reply.status='streaming';delete reply.error;reply.text='';answerPrefix='';this.hooks.change()}
+          if(recovered){reply.status='streaming';delete reply.error;reply.text='';delete reply.reasoning;answerPrefix='';reasoningPrefix='';this.hooks.change()}
           return recovered?{action:'retry' as const,messages:recovered}:{action:'stop' as const}
         },maxModelErrorRecoveryAttempts:1,
         getSteeringMessages:()=>this.steering.splice(0),maxToolConcurrency:4,
@@ -183,15 +183,20 @@ export class Agent {
       },signal,providerStream(model,()=>new Map((this.session.attachments||[]).map(file=>[file.id,file])),this.modelClient))
       for await(const event of upstream){
         if(event.type==='message_update'){
-          const part=toTranscript(event.message).content;reply.text=answerPrefix+part;this.hooks.change()
+          const part=toTranscript(event.message).content;reply.text=answerPrefix+part
+          const reasoning=event.message.role==='assistant'?event.message.content.filter(block=>block.type==='thinking').map(block=>block.thinking).join(''):''
+          if(reasoning)reply.reasoning=reasoningPrefix+reasoning
+          this.hooks.change()
         }else if(event.type==='message_end'){
           const m=event.message
           continuity.append(m)
           // Complete journal is canonical; transcript remains protocol-neutral for existing sessions.
-          this.session.transcript.push(toTranscript(m))
+          if(m.role!=='assistant'||m.stopReason!=='error'&&m.stopReason!=='aborted')this.session.transcript.push(toTranscript(m))
           if(m.role==='assistant'){
             const part=m.content.filter(b=>b.type==='text').map(b=>b.text).join('')
             if(part)answerPrefix+=part+'\n\n'
+            const reasoning=m.content.filter(b=>b.type==='thinking').map(b=>b.thinking).join('')
+            if(reasoning)reasoningPrefix+=reasoning+'\n\n'
             reply.text=answerPrefix.trimEnd()
             if(m.stopReason==='error'||m.stopReason==='aborted'){reply.status=m.stopReason==='aborted'?'stopped':'error';reply.error=m.errorMessage}
           }
@@ -202,7 +207,10 @@ export class Agent {
           const tool=reply.tools.find(t=>t.id===event.toolCallId);if(tool){tool.result=event.result.content.map(c=>c.text||'').join('\n');if(event.isError)tool.error=tool.result}
           await save();this.hooks.change()
         }else if(event.type==='agent_end'){
-          if(reply.status==='streaming')reply.status=signal.aborted?'stopped':'complete'
+          if(reply.status==='streaming'){
+            reply.status=signal.aborted?'stopped':'complete'
+            if(reply.status==='complete')reply.completedAt=Date.now()
+          }
         }
       }
       continuity.cancel()

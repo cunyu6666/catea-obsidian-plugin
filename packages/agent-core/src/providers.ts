@@ -5,7 +5,7 @@
  *   packages/agent-core/src/upstream-stream.ts, packages/integrations/src/mcp.ts,
  *   packages/integrations/src/tools.ts, packages/integrations/src/web.ts,
  *   packages/memory/src/index.ts, packages/memory/src/tools.ts
- * [HERE]: packages/agent-core/src/providers.ts - streamModel maps transcripts to OpenAI or Anthropic requests and parses SSE or buffered JSON; retries once without usage on 400/422; error bodies cut to 2000 chars
+ * [HERE]: packages/agent-core/src/providers.ts - streamModel maps transcripts to OpenAI or Anthropic requests and parses answer and provider reasoning streams; retries once without usage on 400/422
  */
 import type { ChatAttachment, ModelConfig, TokenUsage, ToolCall, TranscriptItem } from './types'
 import { t } from './i18n'
@@ -206,7 +206,7 @@ export async function streamModel(
   attachments: ReadonlyMap<string, ChatAttachment>,
   onDelta: (text: string) => void,
   signal: AbortSignal,
-  options: {maxTokens?:number;onTransport?:(mode:'sse'|'buffered')=>void} = {},
+  options: {maxTokens?:number;onTransport?:(mode:'sse'|'buffered')=>void;onReasoning?:(text:string)=>void} = {},
 ): Promise<ModelReply> {
   const capabilities=modelCapabilities(config)
   const usedIds=new Set(transcript.flatMap(item=>item.role==='user'?item.attachmentIds||[]:[]))
@@ -229,6 +229,7 @@ export async function streamModel(
       const data = record(await response.json())
       const content = records(data.content)
       const text = content.filter((item) => item.type === 'text').map((item) => string(item.text)).join('')
+      for(const item of content)if(item.type==='thinking'&&typeof item.thinking==='string')options.onReasoning?.(item.thinking)
       const calls = content.filter((item) => item.type === 'tool_use').map((item) => ({ id: string(item.id)||crypto.randomUUID(), name: string(item.name), args: record(item.input) }))
       if (text) onDelta(text)
       return { text, calls, stopReason:data.stop_reason==='max_tokens'?'length':'stop',usage: anthropicUsage(data.usage), anthropicContent: content }
@@ -269,6 +270,7 @@ export async function streamModel(
           if(delta.type==='signature_delta') raw.signature=string(raw.signature)+string(delta.signature)
         }
         if (delta.type === 'text_delta' && typeof delta.text==='string') { text += delta.text; onDelta(delta.text) }
+        if (delta.type === 'thinking_delta' && typeof delta.thinking==='string') options.onReasoning?.(delta.thinking)
         if (delta.type === 'input_json_delta') { const tool = blocks.get(index); if (tool) tool.input += string(delta.partial_json) }
       }
     }
@@ -291,6 +293,7 @@ export async function streamModel(
     const choice=records(data.choices)[0]||{}
     const message = record(choice.message)
     const text = typeof message.content === 'string' ? message.content : ''
+    if(typeof message.reasoning_content==='string')options.onReasoning?.(message.reasoning_content)
     const calls = records(message.tool_calls).map((item) => ({ id: string(item.id)||crypto.randomUUID(), name: string(record(item.function).name), args: parseArgs(string(record(item.function).arguments)) }))
     if (text) onDelta(text)
     return { text, calls, stopReason:records(data.choices)[0]?.finish_reason==='length'?'length':'stop',usage: openAiUsage(data.usage) }
@@ -307,6 +310,7 @@ export async function streamModel(
     if (data.usage) usage = openAiUsage(data.usage)
     if(records(data.choices)[0]?.finish_reason==='length')stopReason='length'
     const delta = record(records(data.choices)[0]?.delta)
+    if(typeof delta.reasoning_content==='string')options.onReasoning?.(delta.reasoning_content)
     if (typeof delta?.content === 'string') { text += delta.content; onDelta(delta.content) }
     for (const part of records(delta.tool_calls)) {
       if(typeof part.index!=='number'||!Number.isInteger(part.index)||part.index<0)continue

@@ -128,9 +128,9 @@ test('OpenRouter quick configuration selects Free or a model slug and uses the c
 const stream=frames=>new Response(frames.map(frame=>`data: ${typeof frame==='string'?frame:JSON.stringify(frame)}\n\n`).join(''),{headers:{'content-type':'text/event-stream'}})
 const parse=async(protocol,response)=>{
   const {streamModel}=await load('packages/agent-core/src/providers.ts',{'./transport':'export const serviceFetch=globalThis.testFetch'},{testFetch:async()=>response})
-  const deltas=[]
-  const reply=await streamModel({...model,protocol},[{role:'user',content:'Hello'}],'',[],new Map(),text=>deltas.push(text),new AbortController().signal)
-  return {reply,deltas}
+  const deltas=[],reasoning=[]
+  const reply=await streamModel({...model,protocol},[{role:'user',content:'Hello'}],'',[],new Map(),text=>deltas.push(text),new AbortController().signal,{onReasoning:text=>reasoning.push(text)})
+  return {reply,deltas,reasoning}
 }
 
 test('OpenAI SSE joins tool fragments and reports usage',async()=>{
@@ -143,7 +143,7 @@ test('OpenAI SSE joins tool fragments and reports usage',async()=>{
   assert.equal(reply.usage.inputTokens,20);assert.equal(reply.usage.outputTokens,8)
 })
 test('Anthropic SSE retains signed blocks and complete initial tool input',async()=>{
-  const {reply}=await parse('anthropic',stream([
+  const {reply,reasoning}=await parse('anthropic',stream([
     {type:'message_start',message:{usage:{input_tokens:10,cache_read_input_tokens:2,output_tokens:0}}},
     {type:'content_block_start',index:0,content_block:{type:'thinking',thinking:'',signature:''}},
     {type:'content_block_delta',index:0,delta:{type:'thinking_delta',thinking:'reason'}},
@@ -152,7 +152,31 @@ test('Anthropic SSE retains signed blocks and complete initial tool input',async
     {type:'message_delta',delta:{stop_reason:'tool_use'},usage:{output_tokens:5}},
   ]))
   assert.equal(reply.anthropicContent[0].thinking,'reason');assert.equal(reply.anthropicContent[0].signature,'signed')
+  assert.equal(reasoning.join(''),'reason')
   assert.equal(reply.calls[0].args.path,'note.md');assert.equal(reply.usage.inputTokens,12)
+})
+test('OpenAI compatible reasoning streams separately from answer text',async()=>{
+  const {reply,deltas,reasoning}=await parse('openai',stream([
+    {choices:[{delta:{reasoning_content:'Checking the note.'}}]},
+    {choices:[{delta:{content:'Here is the answer.'}}]},'[DONE]',
+  ]))
+  assert.equal(reasoning.join(''),'Checking the note.')
+  assert.equal(deltas.join(''),'Here is the answer.')
+  assert.equal(reply.text,'Here is the answer.')
+})
+test('Agent stream forwards provider reasoning before the answer',async()=>{
+  const {providerStream}=await load('packages/agent-core/src/upstream-stream.ts',{'./providers':'export class ModelServiceError extends Error { status=0 }'})
+  const client={async *stream(){
+    yield {type:'reasoning',text:'Check the note.'}
+    yield {type:'delta',text:'Done.'}
+    yield {type:'done',reply:{text:'Done.',calls:[]}}
+  }}
+  const events=[]
+  const modelInfo={id:model.model,api:'openai-completions',provider:'catea'}
+  for await(const event of providerStream(model,()=>new Map(),client)(modelInfo,{messages:[],systemPrompt:'',tools:[]}))events.push(event)
+  assert.equal(events.find(event=>event.type==='thinking_delta')?.delta,'Check the note.')
+  assert.equal(events.find(event=>event.type==='text_delta')?.delta,'Done.')
+  assert.equal(events.find(event=>event.type==='done')?.message.content.find(block=>block.type==='thinking')?.thinking,'Check the note.')
 })
 test('Malformed optional JSON fields cannot become executable tool arguments',async()=>{
   const {reply}=await parse('anthropic',Response.json({content:[null,{type:'tool_use',id:'x',name:'read',input:['bad']}],usage:null}))

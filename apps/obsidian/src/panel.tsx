@@ -22,6 +22,14 @@ import type Catea from './main'
 const toolPresenters=createToolPresenters()
 const catReplyActions=['正在踩奶…','正在舔爪…','正在甩尾巴…','正在扒拉键盘…'] as const
 
+function activityPreview(status:string,startedAt:number|undefined,completedAt:number|undefined,count:number,language:string|undefined){
+  if(status==='complete'&&startedAt!==undefined&&completedAt!==undefined&&completedAt>=startedAt){
+    const seconds=Math.floor((completedAt-startedAt)/1000)
+    return language==='en'?`Cat ran for ${Math.floor(seconds/60)}m${seconds%60}s`:`猫咪奔跑了 ${Math.floor(seconds/60)}m${seconds%60}s`
+  }
+  return `${count} ${language==='en'?'actions':'个操作'}`
+}
+
 function chooseVaultFolder(plugin:Catea,label:string):Promise<string|null>{
   return new Promise(resolve=>{
     let settled=false
@@ -103,7 +111,7 @@ export function Panel({plugin,agent}:{plugin:Catea;agent:Agent}){
     empty?<><div className="catea-welcome-art" aria-hidden="true"><img src={catWelcome} alt=""/></div><div className="chat-composer-wrap catea-welcome-composer">{composer}</div></>:<>
     <div ref={scroll} className="chat-scroll anno-auto-scrollbar" onWheel={e=>{if(e.deltaY<0)follow.current=false}} onScroll={e=>{const el=e.currentTarget;if(el.scrollTop<lastScrollTop.current-1)follow.current=false;else if(el.scrollHeight-el.scrollTop-el.clientHeight<24)follow.current=true;lastScrollTop.current=el.scrollTop}}><div className="chat-messages">
       {agent.session.messages.map(m=><div className={`chat-message ${m.role}`} key={m.id}>{m.role==='user'?<div className="chat-user-content">{fileCards((agent.session.attachments||[]).filter(file=>m.attachmentIds?.includes(file.id)))}<div className="chat-message-body">{m.text}</div></div>:<>
-        <AgentActivities items={m.tools.filter(tool=>tool.name!=='AskUserQuestion'||tool.result!==undefined||tool.error).map(tool=>({id:tool.id,name:toolPresenters.title(tool,t),summary:toolPresenters.summary(tool),status:tool.error?'error':tool.result!==undefined?'completed':'running'}))} preview={`${m.tools.length} ${config.language==='en'?'actions':'个操作'}`} autoExpand={m.status==='streaming'&&!m.text.trim()} thinking={m.status==='streaming'&&!m.text.trim()&&!plugin.question} labels={{thinking:t('正在思考'),details:t('查看操作')}} onOpenDetails={id=>{const tool=m.tools.find(item=>item.id===id);if(tool)plugin.showDetail(t('工具详情'),toolPresenters.details(tool))}}/>
+        <AgentActivities items={m.tools.filter(tool=>tool.name!=='AskUserQuestion'||tool.result!==undefined||tool.error).map(tool=>({id:tool.id,name:toolPresenters.title(tool,t),summary:toolPresenters.summary(tool),status:tool.error?'error':tool.result!==undefined?'completed':'running'}))} preview={activityPreview(m.status,m.startedAt,m.completedAt,m.tools.length,config.language)} autoExpand={m.status==='streaming'&&!m.text.trim()} thinking={m.status==='streaming'&&!m.text.trim()&&!plugin.question} thinkingContent={m.reasoning} startedAt={m.startedAt} labels={{thinking:t('正在思考'),details:t('查看操作')}} onOpenDetails={id=>{const tool=m.tools.find(item=>item.id===id);if(tool)plugin.showDetail(t('工具详情'),toolPresenters.details(tool))}}/>
 
 
         {m.error?<div className="message-error">{m.error}</div>:(m.text||m.status!=='streaming')&&<StreamingChatResponse sources={m.sources} content={m.text} interrupted={m.status==='stopped'} streaming={m.status==='streaming'&&!plugin.question} startedAt={m.startedAt} paused={!!plugin.question} onExpand={()=>plugin.showDetail(t('回复'),m.text)} onViewMarkdown={()=>plugin.showDetail('Markdown',m.text)} labels={{copy:t('复制'),copied:t('已复制'),markdown:'Markdown',expand:t('展开'),streaming:catReplyActions.map(t),sources:t('来源')}} render={(displayed,busy)=><ChatMarkdown content={displayed} streaming={busy} language={config.language||'zh'} onOpenNote={openNote}/>}/> }

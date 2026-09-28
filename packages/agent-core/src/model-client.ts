@@ -2,7 +2,7 @@
  * [WHO]: Provides DirectModelClient
  * [FROM]: Depends on ./contracts, ./providers
  * [TO]: Consumed by apps/obsidian/src/composition.ts
- * [HERE]: packages/agent-core/src/model-client.ts - adapts the local BYOK provider into an abortable model event stream
+ * [HERE]: packages/agent-core/src/model-client.ts - adapts local BYOK answer and reasoning deltas into an abortable model event stream
  */
 import type {ModelClient,ModelEvent,ModelRequest} from './contracts'
 import {streamModel} from './providers'
@@ -16,7 +16,7 @@ export class DirectModelClient implements ModelClient {
     const task=streamModel(
       request.model,[...request.transcript],request.system,[...request.tools],request.attachments,
       text=>emit({type:'delta',text}),signal,
-      {maxTokens:request.maxTokens,onTransport:mode=>emit({type:'transport',mode})},
+      {maxTokens:request.maxTokens,onTransport:mode=>emit({type:'transport',mode}),onReasoning:text=>emit({type:'reasoning',text})},
     ).then(reply=>emit({type:'done',reply}),reason=>{error=reason}).finally(()=>{finished=true;wake?.();wake=undefined})
     while(!finished||pending.length){
       if(pending.length){yield pending.shift()!;continue}

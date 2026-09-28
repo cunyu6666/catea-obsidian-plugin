@@ -124,7 +124,9 @@
 .anno-activities__summary { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; opacity: .72; }
 .anno-activities__open { flex: none; margin-left: auto; opacity: 0; transition: opacity .15s; }
 .anno-activities__row:not(:disabled):hover .anno-activities__open, .anno-activities__row:focus-visible .anno-activities__open { opacity: 1; }
-.anno-thinking { display: flex; align-items: center; gap: 8px; min-height: 30px; padding: 5px 12px; color: var(--foreground-soft); font-size: 13px; line-height: 20px; }
+.anno-thinking { min-height: 30px; padding: 5px 12px; color: var(--foreground-soft); font-size: 13px; line-height: 20px; }
+.anno-thinking__heading { display: flex; align-items: center; gap: 8px; }
+.anno-thinking__content { max-height: 180px; overflow-y: auto; margin: 7px 0 2px 26px; padding: 8px 10px; border-left: 2px solid var(--surface-muted); white-space: pre-wrap; overflow-wrap: anywhere; user-select: text; }
 .anno-code-block { position: relative; overflow: hidden; margin: 12px 0; border: 1px solid var(--border); border-radius: 8px; background: color-mix(in srgb, var(--foreground) 3%, var(--background)); }
 .anno-code-block__header { display: flex; align-items: center; justify-content: space-between; min-height: 34px; padding: 4px 12px; border-bottom: 1px solid var(--border); background: color-mix(in srgb, var(--foreground) 4%, var(--background)); }
 .anno-code-block__header > span { color: var(--foreground-soft); font-size: 11px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; }

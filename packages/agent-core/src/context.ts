@@ -56,9 +56,12 @@ export class WorkingContext {
  messages():RuntimeMessage[]{
   const rows=this.session.journal!,checkpoint=[...rows].reverse().find(e=>e.type==='compaction')
   const windowMessages=(entries:JournalEntry[])=>{
-   const errors=entries.filter((e):e is Extract<JournalEntry,{type:'message'}>=>e.type==='message'&&e.message.role==='assistant'&&e.message.stopReason==='error')
-   const excluded=new Set(errors.flatMap(e=>e.message.role==='assistant'?e.message.content.filter(b=>b.type==='toolCall').map(b=>b.id):[]))
-   return entries.flatMap(e=>e.type!=='message'||e.message.role==='assistant'&&e.message.stopReason==='error'||e.message.role==='toolResult'&&excluded.has(e.message.toolCallId)?[]:[e.message])
+   const unusable=entries.filter((e):e is Extract<JournalEntry,{type:'message'}>=>e.type==='message'&&e.message.role==='assistant'&&(
+    e.message.stopReason==='error'||e.message.stopReason==='aborted'||!e.message.content.some(block=>block.type==='text'&&block.text.trim()||block.type==='toolCall')
+   ))
+   const excluded=new Set(unusable.flatMap(e=>e.message.role==='assistant'?e.message.content.filter(b=>b.type==='toolCall').map(b=>b.id):[]))
+   const skipped=new Set(unusable.map(e=>e.id))
+   return entries.flatMap(e=>e.type!=='message'||skipped.has(e.id)||e.message.role==='toolResult'&&excluded.has(e.message.toolCallId)?[]:[e.message])
   }
   if(!checkpoint)return windowMessages(rows)
   const first=rows.findIndex(e=>e.id===checkpoint.firstKeptEntryId)

@@ -77,6 +77,25 @@ test('saved checkpoint rebuilds window while original journal stays complete',as
  assert.equal(session.journal.length,4)
 })
 
+test('resuming skips aborted, failed, and empty assistant records without erasing the journal',async()=>{
+ const [, {WorkingContext}]=await runtime()
+ const rows=[
+  row('u1',user('original request')),
+  row('a1',{...assistant('',[{id:'interrupted-call'}]),stopReason:'aborted'}),
+  row('r1',{role:'toolResult',toolCallId:'interrupted-call',content:[{type:'text',text:'interrupted'}]}),
+  row('u2',user('continue')),
+  row('a2',{...assistant(''),stopReason:'error'}),
+  row('a3',assistant('')),
+  row('u3',user('are you there?')),
+ ]
+ const session={id:'s',journal:rows,transcript:[],messages:[]}
+ const context=new WorkingContext(session,4096,0,async()=>{})
+ assert.deepEqual(context.messages().map((message:{role:string})=>message.role),['user','user','user'])
+ assert.equal(session.journal.length,rows.length)
+ const legacy={id:'old',transcript:[{role:'user',content:'continue'},{role:'assistant',content:''},{role:'user',content:'are you there?'}],messages:[]}
+ assert.deepEqual(new WorkingContext(legacy,4096,0,async()=>{}).messages().map((message:{role:string})=>message.role),['user','user'])
+})
+
 test('checkpoint save failure rolls back the in-memory entry',async()=>{
  const [, {WorkingContext}]=await runtime()
  const session={id:'s',transcript:[{role:'user',content:'old'},{role:'assistant',content:'done'},{role:'user',content:'latest'}],messages:[]}

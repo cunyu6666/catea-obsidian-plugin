@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Icon } from './Icon'
 
 export interface AgentActivityItem {
@@ -13,15 +13,17 @@ interface AgentActivitiesProps {
   preview: string
   autoExpand?: boolean
   thinking: boolean
+  thinkingContent?: string
+  startedAt?: number
   labels: { thinking: string; details: string }
   onOpenDetails: (id: string) => void
 }
 
 // Adapted from Craft Agents' TurnCard activity header and rows.
-export function AgentActivities({ items, preview, autoExpand = false, thinking, labels, onOpenDetails }: AgentActivitiesProps) {
+export function AgentActivities({ items, preview, autoExpand = false, thinking, thinkingContent, startedAt, labels, onOpenDetails }: AgentActivitiesProps) {
   const [manual, setManual] = useState<{phase:boolean;expanded:boolean}|null>(null)
   const expanded = manual?.phase === autoExpand ? manual.expanded : autoExpand
-  if (!items.length) return thinking ? <ThinkingIndicator label={labels.thinking} /> : null
+  if (!items.length) return thinking ? <ThinkingIndicator label={labels.thinking} content={thinkingContent} startedAt={startedAt} /> : null
 
   return <section className="anno-activities" aria-label={preview}>
     <button className="anno-activities__toggle" type="button" aria-expanded={expanded} onClick={() => setManual({phase:autoExpand,expanded:!expanded})}>
@@ -38,11 +40,18 @@ export function AgentActivities({ items, preview, autoExpand = false, thinking, 
         {item.summary && <span className="anno-activities__summary">· {item.summary}</span>}
         {item.status !== 'running' && <Icon name="arrow-up-right" size={12} className="anno-activities__open" />}
       </button>)}
-      {thinking && !items.some(item => item.status === 'running') && <ThinkingIndicator label={labels.thinking} />}
+      {thinking && !items.some(item => item.status === 'running') && <ThinkingIndicator label={labels.thinking} content={thinkingContent} startedAt={startedAt} />}
     </div>}
   </section>
 }
 
-export function ThinkingIndicator({ label }: { label: string }) {
-  return <div className="anno-thinking" role="status" aria-label={label}><span className="anno-thinking__fish" aria-hidden="true" /><span>{label}</span></div>
+export function ThinkingIndicator({ label, content, startedAt }: { label: string; content?: string; startedAt?: number }) {
+  const [now,setNow]=useState(()=>Date.now())
+  useEffect(()=>{
+    if(startedAt===undefined)return
+    const timer=window.setInterval(()=>setNow(Date.now()),1000)
+    return()=>window.clearInterval(timer)
+  },[startedAt])
+  const elapsed=startedAt===undefined?'':` · ${Math.max(0,Math.floor((now-startedAt)/1000))}s`
+  return <div className="anno-thinking"><div className="anno-thinking__heading" role="status"><span className="anno-thinking__fish" aria-hidden="true" /><span>{label}{elapsed}</span></div>{content&&<div className="anno-thinking__content">{content}</div>}</div>
 }

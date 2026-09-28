@@ -10,7 +10,7 @@ import type {ChatAttachment,ModelConfig,ToolEvent,TranscriptItem} from './types'
 import type {RuntimeMessage} from './upstream-stream'
 import type {ModelReply,ToolDefinition} from './providers'
 
-export interface Message {attachmentIds?:string[];id:string;role:'user'|'assistant';text:string;tools:ToolEvent[];status:'complete'|'streaming'|'error'|'stopped';startedAt?:number;error?:string;sources?:Array<{title:string;url:string}>}
+export interface Message {attachmentIds?:string[];id:string;role:'user'|'assistant';text:string;reasoning?:string;tools:ToolEvent[];status:'complete'|'streaming'|'error'|'stopped';startedAt?:number;completedAt?:number;error?:string;sources?:Array<{title:string;url:string}>}
 export type JournalEntry = {id:string;timestamp:string} & (
   {type:'message';message:RuntimeMessage} |
   {type:'compaction';summary:string;firstKeptEntryId:string;tokensBefore:number;details:unknown} |
@@ -35,6 +35,7 @@ export interface ModelRequest {
 export type ModelEvent =
   | {type:'transport';mode:'sse'|'buffered'}
   | {type:'delta';text:string}
+  | {type:'reasoning';text:string}
   | {type:'done';reply:ModelReply}
 export interface ModelClient {
   stream(request:Readonly<ModelRequest>,signal:AbortSignal):AsyncIterable<ModelEvent>

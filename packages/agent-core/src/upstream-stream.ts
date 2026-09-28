@@ -2,7 +2,7 @@
  * [WHO]: Provides RuntimeMessage, emptyUsage, fromTranscript, providerStream, streamSimple, toTranscript
  * [FROM]: Depends on ../upstream/ai/types, ../upstream/ai/events, ./providers, ./contracts, ./types
  * [TO]: Consumed by packages/agent-core/src/context.ts, packages/agent-core/src/index.ts
- * [HERE]: packages/agent-core/src/upstream-stream.ts - converts between the internal transcript and CatUI messages; providerStream retries 3x at 500*2^n ms and records delivery diagnostics
+ * [HERE]: packages/agent-core/src/upstream-stream.ts - converts transcripts and provider reasoning into CatUI events; providerStream retries 3x at 500*2^n ms
  */
 import type {AssistantMessage, UserMessage, ToolResultMessage, Usage, Context, Model, Api, StreamOptions} from '../upstream/ai/types'
 import {AssistantMessageEventStream} from '../upstream/ai/events'
@@ -38,10 +38,18 @@ export function providerStream(config:ModelConfig,attachments:()=>ReadonlyMap<st
      if(event.type==='done'){result=event.reply;continue}
      chunks++;firstDeltaMs??=Date.now()-started
      if(!emitted){stream.push({type:'start',partial:message});emitted=true}
+     if(event.type==='reasoning'){
+      let index=message.content.findIndex(block=>block.type==='thinking')
+      if(index<0){index=message.content.length;message.content.push({type:'thinking',thinking:''});stream.push({type:'thinking_start',contentIndex:index,partial:message})}
+      const block=message.content[index]
+      if(block.type==='thinking')block.thinking+=event.text
+      stream.push({type:'thinking_delta',contentIndex:index,delta:event.text,partial:message})
+      continue
+     }
      const first=message.content[0];if(first.type==='text')first.text+=event.text;stream.push({type:'text_delta',contentIndex:0,delta:event.text,partial:message})
     }
     if(!result)throw new Error('Model stream ended without a final response')
-    message.content=[{type:'text' as const,text:result.text},...result.calls.map(c=>({type:'toolCall' as const,id:c.id,name:c.name,arguments:c.args}))]
+    message.content=[{type:'text' as const,text:result.text},...message.content.filter(block=>block.type==='thinking'),...result.calls.map(c=>({type:'toolCall' as const,id:c.id,name:c.name,arguments:c.args}))]
     message.cateaDelivery={mode:delivery,chunks,firstDeltaMs,totalMs:Date.now()-started}
     message.anthropicContent=result.anthropicContent
     if(result.usage)message.usage={...emptyUsage(),input:result.usage.inputTokens,output:result.usage.outputTokens,cacheRead:result.usage.cachedInputTokens||0,totalTokens:result.usage.inputTokens+result.usage.outputTokens}

@@ -1,6 +1,7 @@
 /* All overrides are reversible and scoped to the plugin's master switch. */
 body.gp-enabled {
   --gp-shell-background:#edf0ed;
+  --gp-body-font-size:14px;--gp-body-line-height:24px;--gp-body-line-height-ratio:1.7142857143;
   --font-interface-theme: -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif;
   --font-text-theme: -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif;
   --background-primary:#fff; --background-primary-alt:#fafafa;
@@ -19,7 +20,7 @@ body.gp-enabled {
   --ribbon-background-collapsed:var(--gp-shell-background); --divider-color:transparent;
   --header-height:56px;
   --file-line-width:760px; --file-margins:48px clamp(32px,6vw,96px);
-  --font-text-size:15px; --line-height-normal:1.625;
+  --font-text-size:var(--gp-body-font-size);--line-height-normal:var(--gp-body-line-height-ratio);
   --p-spacing:8px; --heading-spacing:16px; --list-spacing:2px;
   --h1-size:1.4em; --h2-size:1.2em; --h3-size:1.067em;
   --h1-color:#222824; --h2-color:#222824; --h3-color:#222824;
@@ -52,9 +53,21 @@ body.gp-enabled .inline-title {font-family:var(--font-text-theme);font-size:1.85
 body.gp-enabled .workspace-leaf-content[data-type="markdown"] {
   --blockquote-border-color:rgba(41,45,43,.22);
   --blockquote-color:var(--text-muted);
+  --table-text-size:var(--gp-body-font-size);
+  --table-header-size:var(--gp-body-font-size);
+  --table-line-height:var(--gp-body-line-height);
+  --table-background:var(--background-primary);
+  --table-row-alt-background:var(--background-primary);
+  --table-row-background-hover:var(--background-primary);
+  --table-row-alt-background-hover:var(--background-primary);
+  --table-column-alt-background:transparent;
+  --table-header-background:var(--background-secondary);
+  --table-header-background-hover:var(--background-secondary);
 }
-body.gp-enabled .markdown-rendered {font-size:15px;line-height:1.625;}
-body.gp-enabled .markdown-rendered p {margin:8px 0;line-height:1.625;}
+body.gp-enabled :is(.markdown-rendered,.markdown-source-view.mod-cm6 .cm-content) {
+  font-size:var(--gp-body-font-size);line-height:var(--gp-body-line-height);
+}
+body.gp-enabled .markdown-rendered p {margin:8px 0;line-height:var(--gp-body-line-height);}
 body.gp-enabled .markdown-rendered :is(ul,ol) {margin:8px 0;padding-inline-start:24px;}
 body.gp-enabled .markdown-rendered li {margin:4px 0;}
 body.gp-enabled .markdown-rendered li > p {margin:0;}
@@ -80,19 +93,31 @@ body.gp-enabled .markdown-rendered pre {
 }
 body.gp-enabled .markdown-rendered table {
   width:100%;margin:12px 0;border:1px solid var(--background-modifier-border);
-  border-radius:12px;border-collapse:separate;border-spacing:0;overflow:hidden;
-  font-size:13px;line-height:20px;
+  border-radius:6px;border-collapse:separate;border-spacing:0;overflow:hidden;
+  font-size:var(--gp-body-font-size);line-height:var(--gp-body-line-height);
 }
 body.gp-enabled .markdown-rendered :is(th,td) {
   min-width:90px;padding:10px 16px;border:0;border-bottom:1px solid var(--background-modifier-border);
+  background:var(--background-primary);
+  font-size:var(--gp-body-font-size);line-height:var(--gp-body-line-height);
   text-align:start;vertical-align:top;
 }
-body.gp-enabled .markdown-rendered :is(th,td):not(:last-child) {border-inline-end:1px solid var(--background-modifier-border);}
-body.gp-enabled .markdown-rendered th {padding-block:8px;background:var(--background-secondary);color:var(--text-muted);font-size:12px;font-weight:500;}
-body.gp-enabled .markdown-rendered td {background:var(--background-primary);}
+body.gp-enabled .markdown-rendered thead th {padding-block:8px;background:var(--background-secondary);color:var(--text-muted);font-weight:500;}
 body.gp-enabled .markdown-rendered tr:last-child td {border-bottom:0;}
+/* Live Preview nests a second CodeMirror editor inside the active table cell. */
+body.gp-enabled.gp-enabled .markdown-source-view.mod-cm6 .cm-table-widget :is(th,td) {
+  border-inline:0;background:var(--background-primary);
+  font-size:var(--gp-body-font-size);line-height:var(--gp-body-line-height);
+}
+body.gp-enabled.gp-enabled .markdown-source-view.mod-cm6 .cm-table-widget thead th {
+  background:var(--background-secondary);
+}
+body.gp-enabled.gp-enabled .markdown-source-view.mod-cm6 .cm-table-widget .table-cell-wrapper,
+body.gp-enabled.gp-enabled .markdown-source-view.mod-cm6 .cm-table-widget .table-cell-wrapper :is(.cm-editor,.cm-scroller,.cm-content,.cm-line) {
+  border-inline:0;background:transparent;box-shadow:none;
+  font-size:var(--gp-body-font-size);line-height:var(--gp-body-line-height);
+}
 body.gp-enabled .markdown-rendered img {border-radius:8px;}
-body.gp-enabled .markdown-source-view.mod-cm6 .cm-content {font-size:15px;line-height:1.625;}
 body.gp-enabled .markdown-source-view.mod-cm6 .cm-line.HyperMD-header {line-height:1.4;letter-spacing:-.015em;}
 body.gp-enabled .nav-file-title,body.gp-enabled .nav-folder-title {border-radius:6px;margin-block:1px;padding:var(--nav-item-padding);font-size:12px;position:relative;}
 body.gp-enabled .nav-file-title.is-active {box-shadow:0 1px 3px #26362d09;}
