@@ -1,5 +1,6 @@
 node_modules/
 dist/
+preview-ui/app.js
 .DS_Store
 
 # Runtime data written by the plugin into the vault (sessions, memory, skills).

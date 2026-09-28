@@ -4,7 +4,7 @@
  * [TO]: Consumed by apps/obsidian/src/note-previews.ts, apps/obsidian/src/note-thumbnails.ts,
  *   apps/obsidian/src/obsidian-tools.ts, apps/obsidian/src/panel.tsx,
  *   apps/obsidian/src/selection.ts, apps/obsidian/src/settings.ts
- * [HERE]: apps/obsidian/src/main.tsx - plugin entry: class Catea extends Paper, wiring config, secure secrets, ObsidianTools, Agent, settings tab and the sidebar view; 60 s memory interval
+ * [HERE]: apps/obsidian/src/main.tsx - plugin entry: class Catea extends Paper, wiring config, secure secrets, ObsidianTools, session tabs, settings and sidebar; 60 s memory interval
  */
 import {installNoteThumbnails} from './note-thumbnails'
 import {registerNotePreviews} from './note-previews'
@@ -22,9 +22,19 @@ import {ObsidianTools,obsidianTools} from './obsidian-tools'
 import obsidianSkill from './skills/obsidian.md'
 import {ChangePreview} from 'catea-components'
 import {CateaSettings} from './settings'
-import {createAgent} from './composition'
+import {createAgentFactory} from './composition'
 import {mkdir} from 'node:fs/promises'
 const VIEW='catea-agent'
+const DOCK_ICON_MATCHES:[RegExp,string][]=[
+  [/catea/i,'gemini'],
+  [/quick switch|快速切换/i,'search-2'],
+  [/graph|关系图谱/i,'git-fork'],
+  [/canvas|白板/i,'artboard'],
+  [/daily note|日记/i,'calendar'],
+  [/template|模板/i,'file-copy'],
+  [/command palette|命令面板/i,'command'],
+  [/database|数据库/i,'database-2'],
+]
 interface PaperSurface {
   settings: Record<string, boolean>
   apply(): void
@@ -38,7 +48,7 @@ export default class Catea extends Base {
   agentSettings:Settings & {includeCurrentNote:boolean}={language:"zh",enabled:true,web:true,models:[],modelId:'',personaId:'aria',skills:[],mcp:[],memory:true,shell:true,includeCurrentNote:true,permissionMode:"assist"}
   drafts=new SessionDraftStore()
   refreshThumbnails:()=>void=()=>{}
-  obsidian!:ObsidianTools;agent!:Agent;vaultPath='';private configWrites=new Serial();private listeners=new Set<()=>void>();private dialogs=new Set<Modal>()
+  obsidian!:ObsidianTools;agent!:Agent;tabs:Agent[]=[];vaultPath='';private createTabAgent!:()=>Agent;private configWrites=new Serial();private listeners=new Set<()=>void>();private dialogs=new Set<Modal>()
   async onload(){
     await super.onload()
     if(!(this.app.vault.adapter instanceof FileSystemAdapter)){new Notice(this.t("Catea Agent 需要桌面文件系统"));return}
@@ -62,22 +72,41 @@ export default class Catea extends Base {
     registerNotePreviews(this)
     this.refreshThumbnails=installNoteThumbnails(this)
     this.obsidian=new ObsidianTools(this,(title,detail,signal)=>this.confirm(title,detail,signal))
-    this.agent=createAgent(this.vaultPath,()=>this.agentSettings,{host:{tools:obsidianTools,skill:obsidianSkill,run:(name,args,signal)=>this.obsidian.run(name,args,signal)},change:()=>this.emit(),notice:text=>new Notice(text),approve:(title,detail,signal)=>this.confirm(title,detail,signal),ask:(q,signal)=>this.ask(q,signal)})
+    const create=createAgentFactory(this.vaultPath,()=>this.agentSettings,text=>new Notice(text))
+    this.createTabAgent=()=>{
+      let agent!:Agent
+      agent=create({host:{tools:obsidianTools,skill:obsidianSkill,configDir:this.app.vault.configDir,run:(name,args,signal)=>this.obsidian.run(name,args,signal)},change:()=>this.emit(),notice:text=>new Notice(text),approve:(title,detail,signal)=>this.confirm(title,detail,signal),ask:(q,signal)=>this.ask(agent.session.id,q,signal)})
+      return agent
+    }
+    this.agent=this.createTabAgent();this.agent.session.personaId=this.agentSettings.personaId;this.tabs=[this.agent]
     this.agent.memory.setEnabled(this.agentSettings.enabled&&this.agentSettings.memory)
     this.registerView(VIEW,leaf=>new AgentView(leaf,this));this.addSettingTab(new CateaSettings(this.app,this))
-    this.addRibbonIcon('messages-square','Catea agent',()=>void this.openAgent())
+    const agentRibbon=this.addRibbonIcon('messages-square','Catea agent',()=>void this.openAgent())
+    agentRibbon.addClass('catea-dock-agent')
+    agentRibbon.dataset.cateaDockIcon='gemini'
     this.addCommand({id:'open-agent',name:this.t("打开 Agent"),callback:()=>void this.openAgent()})
     this.addCommand({id:'memory-insights',name:this.t("查看记忆概览"),callback:()=>void this.agent.memory.run('memory_insights',{},this.agentSettings.personaId,this.agentSettings.modelId).then(data=>this.showDetail(this.t("记忆概览"),data)).catch((e:unknown)=>new Notice(e instanceof Error?e.message:String(e)))})
     this.registerInterval(window.setInterval(()=>{if(this.agentSettings.enabled&&this.agentSettings.memory)void this.agent.memory.process()},60000))
   }
   private installRibbonHover(){
     const documents=new Set<Document>()
+    const observers=new Set<MutationObserver>()
     const clear=(doc:Document)=>doc.querySelectorAll('.catea-dock-near,.catea-dock-far').forEach(el=>el.removeClass('catea-dock-near','catea-dock-far'))
+    const decorate=(dock:Element)=>{
+      for(const action of dock.querySelectorAll<HTMLElement>('.side-dock-ribbon-action')){
+        if(action.classList.contains('catea-dock-agent'))continue
+        const label=[action.getAttribute('aria-label'),action.getAttribute('title'),action.getAttribute('data-tooltip')].filter(Boolean).join(' ')
+        action.dataset.cateaDockIcon=DOCK_ICON_MATCHES.find(([pattern])=>pattern.test(label))?.[1]||'apps-2'
+      }
+    }
     const bind=()=>{
       const docs=new Set([document,...this.app.workspace.getLeavesOfType('markdown').map(leaf=>leaf.view.containerEl.ownerDocument)])
       for(const doc of docs){
+        const dock=doc.querySelector('.workspace-ribbon.mod-left .side-dock-actions')
+        if(dock)decorate(dock)
         if(documents.has(doc))continue
         documents.add(doc)
+        if(dock){const observer=new MutationObserver(()=>decorate(dock));observer.observe(dock,{childList:true});observers.add(observer)}
         this.registerDomEvent(doc,'mouseover',event=>{
           if(!doc.defaultView||!(event.target instanceof doc.defaultView.Element))return
           const action=event.target.closest('.side-dock-actions .side-dock-ribbon-action')
@@ -94,7 +123,7 @@ export default class Catea extends Base {
       }
     }
     bind();this.registerEvent(this.app.workspace.on('layout-change',bind))
-    this.register(()=>documents.forEach(clear))
+    this.register(()=>{documents.forEach(clear);observers.forEach(observer=>observer.disconnect())})
   }
   t=(text:string)=>translate(this.agentSettings.language||'zh',text)
   refreshPaperLanguage(){
@@ -104,6 +133,32 @@ export default class Catea extends Base {
   }
   get selections():SelectedQuote[]{return this.drafts.get(this.agent.session.id).quotes}
   set selections(quotes:SelectedQuote[]){this.drafts.update(this.agent.session.id,draft=>({...draft,quotes}))}
+  newTab(){const agent=this.createTabAgent();agent.session.personaId=this.agentSettings.personaId;this.tabs.push(agent);this.agent=agent;this.emit()}
+  async openTab(id:string){
+    const existing=this.tabs.find(tab=>tab.session.id===id)
+    if(existing){this.agent=existing;this.agentSettings.personaId=existing.session.personaId;this.emit();return}
+    const agent=this.createTabAgent()
+    await agent.open(id)
+    this.tabs.push(agent);this.agent=agent;this.emit()
+  }
+  async closeTab(id:string){
+    const index=this.tabs.findIndex(tab=>tab.session.id===id)
+    if(index<0)return
+    const [agent]=this.tabs.splice(index,1)
+    if(this.agent===agent)this.agent=this.tabs[Math.min(index,this.tabs.length-1)]||this.createTabAgent()
+    if(!this.tabs.length)this.tabs.push(this.agent)
+    this.emit();await agent.close(false)
+  }
+  async deleteSession(id:string){
+    const tab=this.tabs.find(item=>item.session.id===id)
+    if(tab?.running)throw new Error(this.t('请先停止当前回复'))
+    const worker=this.createTabAgent()
+    try{await worker.deleteSession(id)}finally{await worker.close(false)}
+    if(tab){await this.closeTab(id)}
+    this.drafts.delete(id)
+    this.emit()
+  }
+  stopAgents(){for(const agent of this.tabs)agent.stop()}
   async addSelection(path:string,text:string){
     if(!text.trim())return
     if(!this.selections.some(s=>s.path===path&&s.text===text))this.selections.push({id:crypto.randomUUID(),path,text})
@@ -148,6 +203,27 @@ export default class Catea extends Base {
     return JSON.stringify(await this.obsidian.context())
   }
   showDetail(title:string,detail:string){const modal=new Modal(this.app);modal.modalEl.addClass('catea-detail-modal');modal.titleEl.setText(title);modal.contentEl.createEl('pre',{text:detail});modal.open()}
+  confirmRevert(plan:{added:string[];changed:string[];removed:string[]}):Promise<boolean>{
+    return new Promise(resolve=>{
+      const modal=new Modal(this.app);let settled=false
+      const done=(value:boolean)=>{if(settled)return;settled=true;this.dialogs.delete(modal);resolve(value);modal.close()}
+      modal.onClose=()=>done(false);modal.modalEl.addClass('catea-revert-modal')
+      modal.titleEl.setText(this.t('回滚到消息发送前'))
+      modal.contentEl.createEl('p',{text:this.t('将恢复知识库文件和对话历史。回滚前会自动保留恢复备份。')})
+      const summary=modal.contentEl.createDiv({cls:'catea-revert-summary'})
+      for(const [label,paths] of [[this.t('删除新增文件'),plan.added],[this.t('恢复修改文件'),plan.changed],[this.t('重建已删文件'),plan.removed]] as const){
+        if(!paths.length)continue
+        const block=summary.createDiv({cls:'catea-revert-summary__block'})
+        block.createEl('strong',{text:`${label} · ${paths.length}`})
+        const list=block.createEl('ul')
+        for(const path of paths.slice(0,12))list.createEl('li',{text:path})
+        if(paths.length>12)list.createEl('li',{text:`+${paths.length-12}`})
+      }
+      if(!plan.added.length&&!plan.changed.length&&!plan.removed.length)summary.createEl('p',{text:this.t('知识库文件没有变化；只回退对话历史。')})
+      new Setting(modal.contentEl).addButton(button=>button.setButtonText(this.t('取消')).onClick(()=>done(false))).addButton(button=>button.setButtonText(this.t('确认回滚')).onClick(()=>done(true)).buttonEl.addClass('catea-revert-confirm'))
+      this.dialogs.add(modal);modal.open()
+    })
+  }
   private confirm(title:string,detail:string,signal:AbortSignal):Promise<boolean>{
     signal.throwIfAborted()
     if(this.agentSettings.permissionMode==='full')return Promise.resolve(true)
@@ -164,23 +240,25 @@ export default class Catea extends Base {
       this.dialogs.add(modal);if(signal.aborted)done(false);else modal.open()
     })
   }
-  question?:{id:string;questions:AskUserQuestion[];answer:(answers:AskUserQuestionAnswer)=>void;dismiss:()=>void}
-  private ask(questions:AskUserQuestion[],signal:AbortSignal):Promise<AskUserQuestionAnswer>{
+  private questions=new Map<string,{id:string;questions:AskUserQuestion[];answer:(answers:AskUserQuestionAnswer)=>void;dismiss:()=>void}>()
+  get question(){return this.questions.get(this.agent.session.id)}
+  hasQuestion(id:string){return this.questions.has(id)}
+  private ask(sessionId:string,questions:AskUserQuestion[],signal:AbortSignal):Promise<AskUserQuestionAnswer>{
     return new Promise((resolve,reject)=>{
       let settled=false
-      const done=(answers?:AskUserQuestionAnswer)=>{if(settled)return;settled=true;signal.removeEventListener('abort',abort);this.question=undefined;this.emit();if(answers)resolve(answers);else reject(new Error(this.t("用户取消回答；不要假定答案或重复询问")))}
+      const done=(answers?:AskUserQuestionAnswer)=>{if(settled)return;settled=true;signal.removeEventListener('abort',abort);this.questions.delete(sessionId);this.emit();if(answers)resolve(answers);else reject(new Error(this.t("用户取消回答；不要假定答案或重复询问")))}
       const abort=()=>done()
-      this.question={id:crypto.randomUUID(),questions,answer:answers=>{for(const q of questions)if(typeof answers[q.question]!=='string'||!answers[q.question].trim())throw new Error(this.t("请回答所有问题"));done(answers)},dismiss:abort}
+      this.questions.set(sessionId,{id:crypto.randomUUID(),questions,answer:answers=>{for(const q of questions)if(typeof answers[q.question]!=='string'||!answers[q.question].trim())throw new Error(this.t("请回答所有问题"));done(answers)},dismiss:abort})
       signal.addEventListener('abort',abort,{once:true});if(signal.aborted)abort();else this.emit()
     })
   }
 
-  onunload(){for(const dialog of this.dialogs)dialog.close();void this.agent?.close();super.onunload()}
+  onunload(){for(const dialog of this.dialogs)dialog.close();for(const agent of this.tabs)void agent.close(agent===this.agent);super.onunload()}
 }
 class AgentView extends ItemView {
   private root?:Root
   constructor(leaf:WorkspaceLeaf,private plugin:Catea){super(leaf)}
   getViewType(){return VIEW}getDisplayText(){return 'Catea'}getIcon(){return 'messages-square'}
-  async onOpen(){this.root=createRoot(this.contentEl);this.root.render(<Panel plugin={this.plugin} agent={this.plugin.agent}/>)}
+  async onOpen(){this.root=createRoot(this.contentEl);this.root.render(<Panel plugin={this.plugin}/>)}
   async onClose(){this.root?.unmount()}
 }

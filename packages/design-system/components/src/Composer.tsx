@@ -1,5 +1,5 @@
 import {ActionMenu} from './ActionMenu'
-import { useId, useLayoutEffect, useRef, useState, type DragEvent, type KeyboardEvent, type ReactNode } from 'react'
+import { useLayoutEffect, useRef, useState, type DragEvent, type KeyboardEvent, type ReactNode } from 'react'
 import { Icon } from './Icon'
 
 interface ComposerProps {
@@ -33,7 +33,6 @@ interface ComposerProps {
 
 export function Composer({ value, onChange, onSubmit, placeholder, mode, inputLabel, submitLabel, running = false, stopLabel = 'Stop', onStop, leading, trailing, attachments, onDropFiles, onPickFiles, onPickFolder, folderLabel, workingDirectory, attachLabel, fileLabel, dropLabel, hasSubmitContent, disabled, busy, autoFocus, className = '' }: ComposerProps) {
   const inputRef = useRef<HTMLTextAreaElement>(null)
-  const inputId = useId()
   const fileInputRef = useRef<HTMLInputElement>(null)
   const dragDepth = useRef(0)
   const [dragging, setDragging] = useState(false)
@@ -83,9 +82,8 @@ export function Composer({ value, onChange, onSubmit, placeholder, mode, inputLa
         onDropFiles?.(event.dataTransfer)
       }}>
       {attachments}
-      <label className="anno-composer__input-label" htmlFor={inputId}>{inputLabel}</label>
       <textarea
-        id={inputId}
+        aria-label={inputLabel}
         ref={inputRef}
         autoFocus={autoFocus}
         value={value}

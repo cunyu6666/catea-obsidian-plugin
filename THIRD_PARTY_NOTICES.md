@@ -4,6 +4,8 @@
 - CatUI mem-core: packages/memory/upstream is a source snapshot; source revision and modification are recorded in packages/memory/UPSTREAM.md. GPL-3.0 license retained at packages/memory/LICENSE and in release output LICENSE. No CatUI process is required.
 - ANNO / Craft Agents UI: Composer, AttachmentCards, ResponseCard and AgentActivities adapted in the design system, vendored here under packages/design-system. Craft Agents upstream attribution is retained in packages/design-system/CRAFT-AGENTS-NOTICE.
 - Tabler Outline 3.48.0: MIT, TABLER-LICENSE.txt.
+- beUI Loader dither variant: adapted in packages/design-system/components/src/DitherLoader.tsx. MIT, packages/design-system/BEUI-LICENSE.txt.
+- Remix Icon 4.8.0: selected line/fill icons in apps/obsidian/remix-dock for the navigation dock. Apache-2.0, REMIX-LICENSE.txt.
 - Runtime dependencies retain their respective licenses: React, react-markdown, remark-gfm, and the official MCP TypeScript SDK.
 
 CatUI link-world: packages/integrations/src/web.ts adapts the native search/reader fallbacks and HTML parsers from extensions/builtin/link-world/index.ts (GPL-3.0, local source d6d110aa645cd5e2305dde42e04040bddafb5e6a). It adds Obsidian transport, cancellation, URL checks, output limits and capability-gated CLI calls.

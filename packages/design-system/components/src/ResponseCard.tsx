@@ -1,6 +1,7 @@
 import { useEffect, useId, useState, type ReactNode } from 'react'
 import { useReducedMotion } from 'motion/react'
 import { Icon } from './Icon'
+import { DitherLoader } from './DitherLoader'
 
 interface ResponseCardProps {
   children: ReactNode
@@ -64,7 +65,7 @@ export function ResponseCard({ children, copyText, streaming, startedAt, hideExp
   return <div className="anno-response-card" data-state={streaming ? 'streaming' : 'complete'} aria-busy={streaming}>
     {!streaming && !hideExpand && <button className="anno-response-card__expand" type="button" aria-label={labels.expand} title={labels.expand} onClick={onExpand}><Icon name="fullscreen" size={14} /></button>}
     <div className="anno-response-card__content anno-auto-scrollbar" aria-live="polite">{children}</div>
-    {streaming && <div className="anno-response-card__footer"><span className="anno-response-card__stream"><Icon name="loading" size={14} className="anno-spin" />{typeof streamingLabels === 'string' ? streamingLabels : streamingLabels[reduceMotion ? 0 : streamingIndex % streamingLabelCount] ?? ''}{startedAt !== undefined && <span className="anno-response-card__elapsed">· {elapsedLabel(Math.max(0, Math.floor((now - startedAt) / 1000)))}</span>}</span></div>}
+    {streaming && <div className="anno-response-card__footer"><span className="anno-response-card__stream"><DitherLoader label={typeof streamingLabels==='string'?streamingLabels:'Loading response'}/>{typeof streamingLabels === 'string' ? streamingLabels : streamingLabels[reduceMotion ? 0 : streamingIndex % streamingLabelCount] ?? ''}{startedAt !== undefined && <span className="anno-response-card__elapsed">· {elapsedLabel(Math.max(0, Math.floor((now - startedAt) / 1000)))}</span>}</span></div>}
     {!streaming && <div className="anno-response-card__completion">
       <div className="anno-response-card__footer">
         <button className="anno-response-card__action" type="button" aria-label={copied ? labels.copied : labels.copy} title={copied ? labels.copied : labels.copy} onClick={() => void copy()}><Icon name={copied ? 'check' : 'copy'} size={12} />{copied ? labels.copied : labels.copy}</button>

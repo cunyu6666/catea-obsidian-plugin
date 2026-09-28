@@ -11,7 +11,7 @@ export function ActionMenu({label,icon,items,disabled=false}:{label:string;icon:
     const rect=trigger.current.getBoundingClientRect(),win=trigger.current.ownerDocument.defaultView!
     const height=menu.current.offsetHeight,width=menu.current.offsetWidth
     setPosition({left:Math.max(8,Math.min(rect.left,win.innerWidth-width-8)),top:rect.top-height-6>=8?rect.top-height-6:Math.min(rect.bottom+6,win.innerHeight-height-8)})
-    menu.current.querySelector<HTMLButtonElement>('button')?.focus()
+    menu.current.querySelector<HTMLButtonElement>('button')?.focus({preventScroll:true})
   },[open])
   useEffect(()=>{
     if(!open)return

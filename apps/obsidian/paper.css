@@ -459,6 +459,7 @@ body.gp-enabled .workspace-ribbon.mod-left {
   --ribbon-width: 48px;
   width: 48px;
   flex-basis: 48px;
+  box-sizing: border-box;
   align-items: center;
   padding: 12px 3px;
 }
@@ -470,6 +471,7 @@ body.gp-enabled .workspace-ribbon.mod-left .side-dock-actions {
   max-height: calc(100vh - 128px);
   min-height: 0;
   width: 42px;
+  box-sizing: border-box;
   margin-block: 0;
   padding: 6px 2px;
   gap: 3px;
@@ -477,10 +479,10 @@ body.gp-enabled .workspace-ribbon.mod-left .side-dock-actions {
   justify-content: flex-start;
   overflow-y: auto;
   scrollbar-width: none;
-  border: 1px solid rgba(74, 96, 83, .1);
+  border: 1px solid rgba(255, 255, 255, .12);
   border-radius: 16px;
-  background: rgba(255, 255, 255, .32);
-  box-shadow: 0 2px 8px rgba(31, 57, 43, .04);
+  background: #111615;
+  box-shadow: 0 10px 28px rgba(12, 24, 18, .22);
 }
 body.gp-enabled .workspace-ribbon.mod-left .side-dock-actions::-webkit-scrollbar { display: none; }
 body.gp-enabled .side-dock-actions .side-dock-ribbon-action {
@@ -489,34 +491,69 @@ body.gp-enabled .side-dock-actions .side-dock-ribbon-action {
   flex: 0 0 var(--dock-size);
   width: var(--dock-size);
   height: var(--dock-size);
+  box-sizing: border-box;
+  align-self: center;
+  margin-inline: auto;
   padding: 5px;
-  border-radius: 10px;
+  border-radius: 50%;
+  position: relative;
+  color: #bdc7c0;
   transition: width 180ms ease-out, height 180ms ease-out, flex-basis 180ms ease-out, background-color 160ms, color 160ms;
 }
-body.gp-enabled .side-dock-actions .side-dock-ribbon-action .svg-icon {
+body.gp-enabled .side-dock-actions .side-dock-ribbon-action > .svg-icon {
   width: var(--dock-icon);
   height: var(--dock-icon);
   transition: width 180ms ease-out, height 180ms ease-out;
 }
+body.gp-enabled .side-dock-actions .side-dock-ribbon-action[data-catea-dock-icon] > .svg-icon { opacity: 0; }
+body.gp-enabled .side-dock-actions .side-dock-ribbon-action[data-catea-dock-icon]::before {
+  content: '';
+  position: absolute;
+  inset: 50% auto auto 50%;
+  width: var(--dock-icon);
+  height: var(--dock-icon);
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  background: #bdc7c0;
+  -webkit-mask: var(--catea-dock-line) center / contain no-repeat;
+  mask: var(--catea-dock-line) center / contain no-repeat;
+}
+body.gp-enabled .side-dock-actions .side-dock-ribbon-action[data-catea-dock-icon]:is(:hover, :focus-visible)::before {
+  -webkit-mask-image: var(--catea-dock-fill);
+  mask-image: var(--catea-dock-fill);
+}
+body.gp-enabled .side-dock-actions .side-dock-ribbon-action[data-catea-dock-icon]:not(.catea-dock-agent):is(:hover, :focus-visible)::before {
+  background: #d5ddd7;
+}
+body.gp-enabled .side-dock-actions .side-dock-ribbon-action.catea-dock-agent::before {
+  background: linear-gradient(135deg, #2b8355 3%, #b8f7a4 97%);
+  filter: drop-shadow(0 0 6px rgba(128, 232, 157, .42));
+}
+body.gp-enabled .side-dock-actions .side-dock-ribbon-action.catea-dock-agent {
+  --dock-icon: 21px;
+  background: rgba(89, 192, 119, .15);
+  box-shadow: inset 0 0 0 1px rgba(139, 231, 160, .13);
+}
 @media (hover: hover) and (prefers-reduced-motion: no-preference) {
   body.gp-enabled .side-dock-actions .side-dock-ribbon-action.catea-dock-far,
   body.gp-enabled .side-dock-actions .side-dock-ribbon-action:hover + .side-dock-ribbon-action + .side-dock-ribbon-action {
-    --dock-size: 32px; --dock-icon: 19px;
+    --dock-size: 31px; --dock-icon: 19px;
   }
   body.gp-enabled .side-dock-actions .side-dock-ribbon-action.catea-dock-near,
   body.gp-enabled .side-dock-actions .side-dock-ribbon-action:hover + .side-dock-ribbon-action {
-    --dock-size: 34px; --dock-icon: 21px;
+    --dock-size: 32px; --dock-icon: 21px;
   }
   body.gp-enabled .side-dock-actions .side-dock-ribbon-action:hover {
-    --dock-size: 36px; --dock-icon: 24px;
+    --dock-size: 34px; --dock-icon: 23px;
   }
 }
 body.gp-enabled .side-dock-actions .side-dock-ribbon-action:is(:hover, :focus-visible) {
-  background: rgba(32, 88, 67, .1);
-  color: #205843;
+  background: rgba(255, 255, 255, .14);
+  color: #d5ddd7;
 }
+body.gp-enabled .side-dock-actions .side-dock-ribbon-action.catea-dock-agent:is(:hover, :focus-visible) { background: rgba(93, 207, 125, .22); }
 body.gp-enabled .side-dock-actions .side-dock-ribbon-action:focus-visible {
-  outline: 2px solid #205843;
+  outline: 2px solid #9fe0ad;
   outline-offset: -2px;
 }
 @media (prefers-reduced-motion: reduce) {
@@ -546,3 +583,35 @@ body.gp-enabled.gp-enabled .gp-duplicate-inline-title .inline-title { display: n
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
+
+/* Synara-inspired grouped settings, adapted to Obsidian's settings host. */
+.catea-settings {max-width:780px;margin:0 auto;padding:8px 16px 48px;color:var(--text-normal)}
+.catea-settings__intro {margin:0 0 26px;padding:0 4px}
+.catea-settings__intro .setting-item-heading {margin:0 0 5px;padding:0;border:0}
+.catea-settings__intro .setting-item-name {font-size:24px;line-height:1.25;font-weight:650;letter-spacing:-.035em}
+.catea-settings__intro p {margin:0;color:var(--text-muted);font-size:13px;line-height:1.55}
+.catea-settings__group {display:flex;flex-direction:column;gap:8px;margin-top:22px}
+.catea-settings__section-title {margin:0;padding:0 8px;border:0}
+.catea-settings__section-title .setting-item-name {color:var(--text-muted);font-size:11px;font-weight:650;line-height:20px;letter-spacing:.02em}
+.catea-settings__card {overflow:hidden;border:1px solid var(--background-modifier-border);border-radius:12px;background:var(--background-secondary)}
+.catea-settings__card > .setting-item {min-height:56px;margin:0;padding:12px 16px;border:0;background:transparent}
+.catea-settings__card > .setting-item + .setting-item {border-top:1px dashed var(--background-modifier-border)}
+.catea-settings__card .setting-item-name {font-size:13px;font-weight:550;line-height:1.45}
+.catea-settings__card .setting-item-description {max-width:540px;margin-top:3px;color:var(--text-muted);font-size:12px;line-height:1.5}
+.catea-settings__card .setting-item-control {gap:7px}
+.catea-settings__card :is(button,select,input,textarea) {border-radius:8px}
+.catea-settings__card .setting-item-control button {min-height:28px;padding:3px 10px;font-size:12px}
+.catea-settings__card .setting-item-control :is(input,select,textarea) {min-height:30px;font-size:12px}
+.catea-settings__card .setting-item-control :is(input,select,textarea):focus-visible,
+.catea-settings__card .setting-item-control button:focus-visible {outline:2px solid var(--interactive-accent);outline-offset:2px}
+@media (max-width:650px) {.catea-settings {padding-inline:8px}.catea-settings__card > .setting-item {align-items:flex-start;gap:10px;padding:12px}.catea-settings__card .setting-item-info {min-width:0}}
+.catea-revert-modal.modal {width:min(500px,calc(100vw - 32px));max-width:calc(100vw - 32px)}
+.catea-revert-modal .modal-content > p {margin:6px 0 14px;color:var(--text-muted);font-size:13px;line-height:1.55}
+.catea-revert-summary {max-height:42vh;overflow:auto;border:1px dashed var(--background-modifier-border);border-radius:10px;background:var(--background-secondary);padding:4px 14px}
+.catea-revert-summary__block {padding:9px 0}
+.catea-revert-summary__block + .catea-revert-summary__block {border-top:1px dashed var(--background-modifier-border)}
+.catea-revert-summary__block strong {font-size:12px;font-weight:600}
+.catea-revert-summary__block ul {margin:7px 0 0;padding-left:16px;color:var(--text-muted);font:11px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;overflow-wrap:anywhere}
+.catea-revert-summary > p {margin:10px 0;color:var(--text-muted);font-size:12px}
+.catea-revert-confirm {background:var(--color-red);color:var(--text-on-accent)}
+.catea-revert-confirm:hover {background:var(--color-red);filter:brightness(.94)}

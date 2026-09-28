@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Catea dock preview</title>
+  <link rel="stylesheet" href="../dist/catea-paper/styles.css">
+  <style>
+    html,body{width:100%;height:100%;margin:0}
+    body.gp-enabled{background:#e9eeea;font-family:-apple-system,BlinkMacSystemFont,"PingFang SC",sans-serif}
+    .workspace-ribbon.mod-left{height:100vh}
+    .side-dock-ribbon-action{display:flex;align-items:center;justify-content:center;cursor:pointer}
+    main{padding:42px 48px 42px 84px;color:#25342a}
+    h1{font-size:19px;margin:0 0 10px}
+    p{font-size:13px;line-height:1.7;color:#69746b;max-width:360px}
+  </style>
+</head>
+<body class="gp-enabled">
+  <div class="workspace-ribbon mod-left">
+    <div class="side-dock-actions">
+      <div class="side-dock-ribbon-action" data-catea-dock-icon="search-2" aria-label="打开快速切换" title="打开快速切换"><svg class="svg-icon"></svg></div>
+      <div class="side-dock-ribbon-action" data-catea-dock-icon="git-fork" aria-label="查看关系图谱" title="查看关系图谱"><svg class="svg-icon"></svg></div>
+      <div class="side-dock-ribbon-action" data-catea-dock-icon="artboard" aria-label="新建白板" title="新建白板"><svg class="svg-icon"></svg></div>
+      <div class="side-dock-ribbon-action" data-catea-dock-icon="calendar" aria-label="打开今天的日记" title="打开今天的日记"><svg class="svg-icon"></svg></div>
+      <div class="side-dock-ribbon-action" data-catea-dock-icon="file-copy" aria-label="插入模板" title="插入模板"><svg class="svg-icon"></svg></div>
+      <div class="side-dock-ribbon-action" data-catea-dock-icon="command" aria-label="打开命令面板" title="打开命令面板"><svg class="svg-icon"></svg></div>
+      <div class="side-dock-ribbon-action" data-catea-dock-icon="database-2" aria-label="新建数据库" title="新建数据库"><svg class="svg-icon"></svg></div>
+      <div class="side-dock-ribbon-action catea-dock-agent" data-catea-dock-icon="gemini" aria-label="Catea agent" title="Catea agent"><svg class="svg-icon"></svg></div>
+    </div>
+  </div>
+  <main><h1>导航 dock</h1><p>此页直接加载插件构建的 styles.css。图标使用 Remix Icon，默认线性、悬停面性；左侧为与 Obsidian 对应的 dock 结构预览。</p></main>
+</body>
+</html>

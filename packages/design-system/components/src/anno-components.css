@@ -7,7 +7,6 @@
 
 .anno-composer { position: relative; border-radius: 12px; background: var(--surface); box-shadow: var(--shadow-middle); overflow: hidden; transition: box-shadow .18s; }
 .anno-composer:focus-within { box-shadow: var(--shadow-middle); }
-.anno-composer__input-label { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 .anno-composer__input.anno-composer__input { display: block; width: 100%; min-height: 88px; max-height: 260px; resize: none; overflow-y: auto; border: 0; outline: 0; background: transparent; padding: 15px 15px 11.25px 18.75px; color: var(--foreground); font-size: 13.125px; line-height: 18.75px; }
 .anno-composer__input::placeholder { color: var(--foreground-soft); opacity: 1; }
 .anno-composer__toolbar { min-height: 42.16px; display: flex; align-items: center; justify-content: space-between; padding: 7.5px; gap: 8px; border-top: 1px solid color-mix(in srgb, var(--border) 50%, transparent); }
@@ -77,6 +76,7 @@
 .anno-response-card__footer { min-height: 35.4px; display: flex; flex-wrap: wrap; align-items: center; gap: 11.25px; padding: 7.5px 9.375px 7.5px 15px; border-top: 1px solid color-mix(in srgb, var(--border) 30%, transparent); background: color-mix(in srgb, var(--foreground) 1%, var(--background)); }
 .anno-response-card__footer button { display: inline-flex; align-items: center; justify-content: center; gap: 5.625px; border: 0; border-radius: 6px; padding: 0; background: transparent; color: var(--foreground-soft); font-size: 13px; line-height: 19.5px; cursor: pointer; }
 .anno-response-card__stream { display: inline-flex; align-items: center; gap: 5.625px; color: var(--foreground-soft); font-size: 13px; line-height: 19.5px; }
+.anno-response-card__elapsed,.anno-thinking__elapsed {font-variant-numeric:tabular-nums;font-feature-settings:"tnum"}
 .anno-response-card__footer button:hover { color: var(--foreground); background: var(--surface-muted); }
 .anno-response-card__footer .anno-response-card__action { gap: 4px; font-size: 12px; line-height: 18px; }
 .anno-response-card__footer .anno-response-card__action:hover { background: transparent; }
@@ -99,25 +99,22 @@
 .anno-response-card:hover .anno-response-card__expand, .anno-response-card__expand:focus-visible { opacity: 1; }
 @keyframes anno-response-complete { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
 @media (prefers-reduced-motion: reduce) { .anno-response-card__completion { animation: none; } .anno-response-card__chevron { transition: none; } }
-.anno-spin { animation: anno-spin 1s linear infinite; }
-@keyframes anno-spin { to { transform: rotate(360deg); } }
+.anno-dither-loader {display:inline-grid;flex:none;place-content:center;line-height:0;color:inherit}
 
 /* Craft Agents' compact activity section sits above each response card. */
 .anno-activities { width: 100%; color: var(--foreground-soft); font-size: 13px; line-height: 20px; user-select: none; }
 .anno-activities__toggle { display: flex; align-items: center; gap: 8px; width: 100%; min-height: 32px; padding: 6px 6px 6px 10px; border: 0; border-radius: 8px; background: transparent; color: inherit; text-align: left; }
 .anno-activities__toggle:hover { background: var(--surface-muted); }
-.anno-activities__indicator { position: relative; display: inline-flex; flex: none; align-items: center; justify-content: center; min-width: 20px; height: 20px; border-radius: 4px; background: var(--background); box-shadow: var(--shadow-soft); }
-.anno-activities__count { padding: 0 4px; color: var(--foreground-soft); font-size: 10px; font-weight: 500; line-height: 20px; text-align: center; font-variant-numeric: tabular-nums; transition: opacity .15s ease-out; }
-.anno-activities__chevron { position: absolute; inset: 0; display: inline-flex; align-items: center; justify-content: center; opacity: 0; transition: opacity .15s ease-out, transform .15s ease-out; }
+.anno-activities__indicator { display: inline-flex; flex: none; align-items: center; justify-content: center; min-width: 20px; height: 20px; border-radius: 4px; background: var(--background); box-shadow: var(--shadow-soft); }
+.anno-activities__count { padding: 0 4px; color: var(--foreground-soft); font-size: 10px; font-weight: 500; line-height: 20px; text-align: center; font-variant-numeric: tabular-nums; }
+.anno-activities__chevron { display: inline-flex; flex: none; align-items: center; justify-content: center; width: 12px; height: 20px; transition: transform .15s ease-out; }
 .anno-activities__chevron.is-expanded { transform: rotate(90deg); }
-.anno-activities__toggle:hover .anno-activities__count, .anno-activities__toggle:focus-visible .anno-activities__count { opacity: 0; }
-.anno-activities__toggle:hover .anno-activities__chevron, .anno-activities__toggle:focus-visible .anno-activities__chevron { opacity: 1; }
 .anno-activities__preview { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.anno-activities__list { max-height: 360px; overflow-y: auto; margin-left: 19px; padding: 0 8px 0 16px; border-left: 2px solid var(--surface-muted); animation: anno-activities-enter .2s ease-out; }
+.anno-activities__list { max-height: 360px; overflow-y: auto; margin-left: 15px; padding: 0 8px 0 16px; border-left: 2px solid var(--surface-muted); animation: anno-activities-enter .2s ease-out; }
 .anno-activities__row { display: flex; align-items: center; gap: 8px; width: 100%; min-height: 24px; padding: 2px 0; border: 0; background: transparent; color: var(--foreground-soft); font-size: 13px; line-height: 20px; text-align: left; }
 .anno-activities__row:not(:disabled):hover .anno-activities__name { color: var(--foreground); text-decoration: underline; }
 .anno-activities__row:disabled { cursor: default; }
-.anno-activities__status { display: inline-flex; flex: none; align-items: center; justify-content: center; width: 12px; height: 12px; }
+.anno-activities__status { display: inline-flex; flex: none; align-items: center; justify-content: center; width: 14px; height: 14px; }
 .anno-activities__status.is-completed { color: oklch(0.56 0.13 155); }
 .anno-activities__status.is-error { color: var(--danger); }
 .anno-activities__name { flex: none; max-width: 45%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

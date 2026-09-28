@@ -17,6 +17,7 @@ import yaml from '@shikijs/langs/yaml'
 import githubDark from '@shikijs/themes/github-dark'
 import githubLight from '@shikijs/themes/github-light'
 import { Icon } from './Icon'
+import { DitherLoader } from './DitherLoader'
 
 // A curated grammar set. Shiki's full registry is roughly 220 grammars plus an
 // inlined Oniguruma WASM, which added about 10 MB to every consumer bundle and
@@ -143,7 +144,7 @@ export function CodeBlock({ code, language = 'text', showHeader = true, streamin
     {showHeader && <div className="anno-code-block__header">
       <span className="anno-code-block__identity"><Icon name="code" size={16} /><span>{resolvedLanguage === 'text' ? labels.plainText : resolvedLanguage}</span></span>
       <span className="anno-code-block__actions">
-        {streaming && <span className="anno-code-block__writing" role="status"><Icon name="loading" size={12} className="anno-spin" />{labels.writing}</span>}
+        {streaming && <span className="anno-code-block__writing" role="status"><DitherLoader label={labels.writing}/>{labels.writing}</span>}
         <button type="button" aria-label={copied ? labels.copied : labels.copy} title={copied ? labels.copied : labels.copy} onClick={() => void copy()}><Icon name={copied ? 'check' : 'copy'} size={16} /></button>
       </span>
     </div>}

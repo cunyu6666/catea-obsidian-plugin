@@ -6,7 +6,7 @@
  */
 import type {ChatAttachment} from '../../../packages/agent-core/src/types'
 
-export interface SelectedQuote {id:string;path:string;text:string}
+export interface SelectedQuote {id:string;path:string;text:string;comment?:string}
 export interface SessionDraft {text:string;attachments:ChatAttachment[];quotes:SelectedQuote[]}
 
 const empty=():SessionDraft=>({text:'',attachments:[],quotes:[]})

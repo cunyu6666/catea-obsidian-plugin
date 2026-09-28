@@ -27,7 +27,7 @@ export function StreamingChatResponse({ content, streaming = false, paused = fal
     const onWheel = (event: WheelEvent) => { if (event.deltaY < 0) followContent.current = false }
     const onScroll = () => {
       if (viewport.scrollTop < lastContentTop.current - 1) followContent.current = false
-      else if (viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight < 16) followContent.current = true
+      else if (viewport.scrollTop > lastContentTop.current + 1 && viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight < 16) followContent.current = true
       lastContentTop.current = viewport.scrollTop
     }
     viewport.addEventListener('wheel', onWheel, { passive: true })

@@ -32,10 +32,16 @@ export class CateaSettings extends PluginSettingTab {
   }
   private renderLegacy(){
     this.containerEl.empty()
+    this.containerEl.addClass('catea-settings')
+    const intro=this.containerEl.createDiv({cls:'catea-settings__intro'})
+    new Setting(intro).setName(this.owner.t('设置')).setHeading()
+    intro.createEl('p',{text:this.owner.t('调整纸张界面、Agent 和连接。设置保存在当前知识库中。')})
     for(const section of this.sections()){
-      if(section.heading)new Setting(this.containerEl).setName(section.heading).setHeading()
+      const group=this.containerEl.createDiv({cls:'catea-settings__group'})
+      if(section.heading)new Setting(group).setName(section.heading).setHeading().settingEl.addClass('catea-settings__section-title')
+      const card=group.createDiv({cls:'catea-settings__card'})
       for(const row of section.rows){
-        const setting=new Setting(this.containerEl).setName(row.name)
+        const setting=new Setting(card).setName(row.name)
         if(row.desc)setting.setDesc(row.desc)
         row.render(setting)
       }
@@ -49,13 +55,14 @@ export class CateaSettings extends PluginSettingTab {
     }
     appearance.push({name:tr('笔记缩略图'),desc:tr('文件树显示真实标题、正文和首张本地图片的缩略预览。'),render:s=>{s.addToggle(t=>t.setValue(c.noteThumbnails!==false).onChange(async value=>{c.noteThumbnails=value;await p.saveAgentSettings();p.refreshThumbnails()}))}})
     const agent:SettingsRow[]=[
-      {name:tr('启用 Agent'),render:s=>{s.addToggle(t=>t.setValue(c.enabled).onChange(async value=>{c.enabled=value;if(!value)p.agent.stop();p.agent.memory.setEnabled(value&&c.memory);await p.saveAgentSettings()}))}},
-      {name:tr('人格'),desc:tr('选择 Agent 的对话风格；从下一条消息开始使用。'),render:s=>{s.addDropdown(d=>{for(const item of personas)d.addOption(item.id,item.name);d.setValue(persona(c.personaId).id).onChange(async value=>{c.personaId=persona(value).id;await p.saveAgentSettings()})})}},
+      {name:tr('启用 Agent'),render:s=>{s.addToggle(t=>t.setValue(c.enabled).onChange(async value=>{c.enabled=value;if(!value)p.stopAgents();p.agent.memory.setEnabled(value&&c.memory);await p.saveAgentSettings()}))}},
+      {name:tr('人格'),desc:tr('选择 Agent 的对话风格；从下一条消息开始使用。'),render:s=>{s.addDropdown(d=>{for(const item of personas)d.addOption(item.id,item.name);d.setValue(persona(c.personaId).id).onChange(async value=>{c.personaId=persona(value).id;p.agent.session.personaId=c.personaId;await p.saveAgentSettings()})})}},
       {name:tr('附带当前笔记'),desc:tr('发送消息时将当前笔记内容加入上下文。默认开启。'),render:s=>{s.addToggle(t=>t.setValue(c.includeCurrentNote!==false).onChange(async value=>{c.includeCurrentNote=value;await p.saveAgentSettings()}))}},
-      {name:tr('网络搜索与网页读取'),desc:tr('网页搜索使用 Exa / Jina / DuckDuckGo；可诊断并经确认调用已安装的 Agent Reach。搜索词和目标 URL 会发送到联网服务。'),render:s=>{s.addToggle(t=>t.setValue(c.web).onChange(async value=>{c.web=value;p.agent.stop();await p.saveAgentSettings()}))}},
-      {name:tr('长期记忆'),desc:tr('自动提取、召回和巩固；保存在当前知识库 .catea/memory。'),render:s=>{s.addToggle(t=>t.setValue(c.memory).onChange(async value=>{c.memory=value;if(!value)p.agent.stop();p.agent.memory.setEnabled(value&&c.enabled);await p.saveAgentSettings()}))}},
-      {name:'Bash',desc:tr('默认开启，命令执行遵循下方权限模式。'),render:s=>{s.addToggle(t=>t.setValue(c.shell).onChange(async value=>{c.shell=value;p.agent.stop();await p.saveAgentSettings()}))}},
-      {name:tr('权限模式'),desc:tr('帮我批准：自动放行 pwd、ls 等简单目录查看，其余操作请求确认。完全访问：跳过 Bash、文件修改、MCP 和记忆更新的审批，命令可访问知识库之外。'),render:s=>{s.addDropdown(d=>d.addOption('assist',tr('帮我批准')).addOption('full',tr('完全访问')).setValue(c.permissionMode||'assist').onChange(async value=>{p.agent.stop();c.permissionMode=value==='full'?'full':'assist';await p.saveAgentSettings()}))}},
+      {name:tr('网络搜索与网页读取'),desc:tr('网页搜索使用 Exa / Jina / DuckDuckGo；可诊断并经确认调用已安装的 Agent Reach。搜索词和目标 URL 会发送到联网服务。'),render:s=>{s.addToggle(t=>t.setValue(c.web).onChange(async value=>{c.web=value;p.stopAgents();await p.saveAgentSettings()}))}},
+      {name:tr('长期记忆'),desc:tr('自动提取、召回和巩固；保存在当前知识库 .catea/memory。'),render:s=>{s.addToggle(t=>t.setValue(c.memory).onChange(async value=>{c.memory=value;if(!value)p.stopAgents();p.agent.memory.setEnabled(value&&c.enabled);await p.saveAgentSettings()}))}},
+      {name:'Bash',desc:tr('默认开启，命令执行遵循下方权限模式。'),render:s=>{s.addToggle(t=>t.setValue(c.shell).onChange(async value=>{c.shell=value;p.stopAgents();await p.saveAgentSettings()}))}},
+      {name:tr('显示 Token 用量'),desc:tr('在每条回复下显示输入、输出和缓存读取的 Token 数。默认关闭。'),render:s=>{s.addToggle(t=>t.setValue(c.showTokenUsage===true).onChange(async value=>{c.showTokenUsage=value;await p.saveAgentSettings()}))}},
+      {name:tr('权限模式'),desc:tr('帮我批准：自动放行 pwd、ls 等简单目录查看，其余操作请求确认。完全访问：跳过 Bash、文件修改、MCP 和记忆更新的审批，命令可访问知识库之外。'),render:s=>{s.addDropdown(d=>d.addOption('assist',tr('帮我批准')).addOption('full',tr('完全访问')).setValue(c.permissionMode||'assist').onChange(async value=>{p.stopAgents();c.permissionMode=value==='full'?'full':'assist';await p.saveAgentSettings()}))}},
     ]
     const models:SettingsRow[]=c.models.map(model=>({name:model.name,desc:`${isOpenRouterModel(model)?'OpenRouter':model.protocol==='openai'?tr('OpenAI 兼容'):tr('Anthropic 兼容')} · ${model.model} · ${model.baseUrl}${model.apiKey?'':tr(' · 请补充 API Key')}`,render:s=>{
       s.addButton(b=>b.setButtonText(tr('编辑')).onClick(()=>(isOpenRouterModel(model)?new OpenRouterModal(p,model,()=>this.refresh()):new ModelModal(p,model,()=>this.refresh())).open()))
@@ -94,7 +101,7 @@ export class CateaSettings extends PluginSettingTab {
       mcp.push({name:tr('移除 MCP'),render:s=>{s.addButton(b=>b.setButtonText(tr('移除 MCP')).onClick(async()=>{c.mcp=c.mcp.filter(item=>item!==server);await p.saveAgentSettings();this.refresh()}))}})
     }
     mcp.push({name:tr('添加 MCP'),render:s=>{s.addButton(b=>b.setButtonText(tr('添加 MCP')).onClick(async()=>{c.mcp.push({id:crypto.randomUUID(),enabled:false,transport:'http',url:''});await p.saveAgentSettings();this.refresh()}))}})
-    return [{rows:appearance},{heading:'Agent',rows:agent},{heading:tr('BYOK 模型'),rows:models},{heading:'Skills',rows:skills},{heading:'MCP',rows:mcp}]
+    return [{heading:tr('外观'),rows:appearance},{heading:'Agent',rows:agent},{heading:tr('BYOK 模型'),rows:models},{heading:'Skills',rows:skills},{heading:'MCP',rows:mcp}]
   }
 }
 

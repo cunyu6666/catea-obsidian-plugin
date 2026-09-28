@@ -21,6 +21,8 @@ model-client.ts: Adapts direct BYOK answer and provider reasoning streams into a
 model-capabilities.ts: Resolves configured and known model capabilities and validates binary attachment support for UI and provider requests.
 permission-policy.ts: Evaluates read, write and execution requests under assist or full mode and gates approvals through one host-neutral function.
 providers.ts: `streamModel` maps transcripts to OpenAI or Anthropic requests and parses answer and available reasoning deltas from SSE or buffered JSON; retries once without usage on 400/422.
+protocol-repair.ts: Places interrupted tool results immediately after their calls in saved transcripts and journals before a session resumes.
+snapshot.ts: Captures vault file checkpoints for user messages, previews differences, and restores files after a validated confirmation with a recovery snapshot.
 transport.ts: `serviceFetch` streams over Node http/https with a 120 s timeout and rejects redirects; falls back to Electron net only on X.509 chain errors, then to buffered requestUrl.
 types.ts: Shared type declarations for models, transcripts, attachments, tools and search configuration; type-only, emits no runtime code, and holds several currently unreferenced interfaces.
 upstream-stream.ts: Defines the RuntimeMessage adapter contract and converts provider answer and reasoning deltas into CatUI messages; `providerStream` retries 3x at 500*2^n ms and records delivery diagnostics; `streamSimple` throws to force host injection.

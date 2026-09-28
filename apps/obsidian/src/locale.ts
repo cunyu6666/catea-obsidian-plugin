@@ -24,6 +24,8 @@ const english:Record<string,string>={
   "返回对话": "Back to conversation",
   "历史对话": "History",
   "新对话": "New conversation",
+  "会话标签": "Conversation tabs",
+  "关闭标签": "Close tab",
   "正在生成": "Generating",
   "设置": "Settings",
   "最近对话": "Recent conversations",
@@ -43,6 +45,23 @@ const english:Record<string,string>={
   "管理笔记": "Manage notes",
   "Catea 设置": "Catea settings",
   "正在思考": "Thinking",
+  "跳到最新消息": "Jump to latest message",
+  "排队中": "Queued",
+  "下次回复接入": "Included in the next reply",
+  "显示 Token 用量": "Show token usage",
+  "在每条回复下显示输入、输出和缓存读取的 Token 数。默认关闭。": "Show input, output, and cache read tokens beneath each response. Off by default.",
+  "调整纸张界面、Agent 和连接。设置保存在当前知识库中。": "Customize the paper workspace, Agent, and connections. Settings are saved in this vault.",
+  "外观": "Appearance",
+  "回滚到消息发送前": "Revert to before this message",
+  "将恢复知识库文件和对话历史。回滚前会自动保留恢复备份。": "This restores vault files and conversation history. A recovery backup is saved first.",
+  "删除新增文件": "Remove added files",
+  "恢复修改文件": "Restore changed files",
+  "重建已删文件": "Recreate deleted files",
+  "知识库文件没有变化；只回退对话历史。": "Vault files are unchanged; only conversation history will be restored.",
+  "确认回滚": "Revert",
+  "消息操作": "Message actions",
+  "从此处分支": "Branch from here",
+  "回滚到发送前": "Revert to before sending",
   "思考过程": "Thinking details",
   "查看操作": "View actions",
   "工具详情": "Tool details",
@@ -162,3 +181,8 @@ Object.assign(english,{
   '请填写 OpenRouter 模型 ID，或选择 Free':'Enter an OpenRouter model ID or choose Free.',
   'OpenRouter 模型 ID 应为 provider/model 格式':'Use a provider/model OpenRouter model ID.'
 })
+
+Object.assign(english,{"请先选中回复中的文字":"Select text in the reply first","回复批注":"Reply annotation","引用选中内容并批注":"Annotate selected text"})
+
+Object.assign(english,{"批注内容":"Annotation","针对这段回复写下你的问题或意见…":"Write a question or comment about this passage…","添加批注":"Add annotation"})
+Object.assign(english,{"请按批注继续":"Please respond to these annotations"})

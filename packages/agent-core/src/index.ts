@@ -1,6 +1,6 @@
 /**
  * [WHO]: Provides Agent, Hooks, Message, Session, Settings
- * [FROM]: Depends on ./i18n, ../upstream/loop/agent-loop, ./context, ./compaction, ./compaction-summary, ./contracts, ./upstream-stream, ./ask-user-question, ./types, ../../integrations/src/web, ./byok, ./model-capabilities, ./permission-policy, ./providers, ../../personas/src, ../../integrations/src/skills, ../../integrations/src/tools, ../../integrations/src/mcp, ../../memory/src/tools
+ * [FROM]: Depends on ./i18n, ../upstream/loop/agent-loop, ./context, ./compaction, ./compaction-summary, ./contracts, ./upstream-stream, ./ask-user-question, ./types, ../../integrations/src/web, ./byok, ./model-capabilities, ./permission-policy, ./providers, ../../personas/src, ../../integrations/src/skills, ../../integrations/src/tools, ../../integrations/src/mcp, ../../memory/src/tools, ./snapshot, ./protocol-repair
  * [TO]: Consumed by apps/obsidian/src/composition.ts, apps/obsidian/src/main.tsx,
  *   apps/obsidian/src/panel.tsx
  * [HERE]: packages/agent-core/src/index.ts - class Agent owns one session: persists it, repairs interrupted tool calls, assembles tools, drives agentLoop and enqueues memory; index capped at 500
@@ -25,10 +25,12 @@ import {loadSkills,readSkillResource} from '../../integrations/src/skills'
 import {VaultTools,fileTools,type Approve} from '../../integrations/src/tools'
 import {McpPool,type McpConfig} from '../../integrations/src/mcp'
 import {memoryTools,memoryReadOnly} from '../../memory/src/tools'
+import {captureVaultSnapshot,previewVaultRestore,restoreVaultSnapshot,type VaultRestorePlan} from './snapshot'
+import {repairToolProtocol} from './protocol-repair'
 
-export interface Settings {noteThumbnails?:boolean;permissionMode?:"assist"|"full";permissionDefaultsVersion?:number;miniMaxPresetsAdded?:boolean;language?:"zh"|"en";enabled:boolean;web:boolean;models:ModelConfig[];modelId:string;personaId:string;skills:string[];mcp:McpConfig[];memory:boolean;shell:boolean}
+export interface Settings {noteThumbnails?:boolean;showTokenUsage?:boolean;permissionMode?:"assist"|"full";permissionDefaultsVersion?:number;miniMaxPresetsAdded?:boolean;language?:"zh"|"en";enabled:boolean;web:boolean;models:ModelConfig[];modelId:string;personaId:string;skills:string[];mcp:McpConfig[];memory:boolean;shell:boolean}
 export type {Message,Session} from './contracts'
-export interface Hooks {change:()=>void;approve:Approve;ask:(questions:AskUserQuestion[],signal:AbortSignal)=>Promise<AskUserQuestionAnswer>;notice:(text:string)=>void;host?:{tools:ToolDefinition[];skill:string;run:(name:string,args:Record<string,unknown>,signal:AbortSignal)=>Promise<string>}}
+export interface Hooks {change:()=>void;approve:Approve;ask:(questions:AskUserQuestion[],signal:AbortSignal)=>Promise<AskUserQuestionAnswer>;notice:(text:string)=>void;host?:{tools:ToolDefinition[];skill:string;configDir?:string;run:(name:string,args:Record<string,unknown>,signal:AbortSignal)=>Promise<string>}}
 type LoopEvent =
  | {type:'message_update'|'message_end';message:RuntimeMessage}
  | {type:'tool_execution_start';toolCallId:string;toolName:string;args:Record<string,unknown>}
@@ -53,7 +55,7 @@ const runLoop=agentLoop as unknown as (prompts:RuntimeMessage[],context:LoopCont
 export class Agent {
   session:Session=this.fresh();running=false;historyBusy=false;private abort?:AbortController
   compaction?:CompactionEvent
-  private steering:RuntimeMessage[]=[];
+  private steering:Array<{message:RuntimeMessage;displayId:string}>=[];
   private pool=new McpPool();private mcpKey='';private mcpTools:ToolDefinition[]=[]
   readonly memory:MemoryPort
   private conversations:ConversationStore
@@ -63,15 +65,21 @@ export class Agent {
     this.memory=ports.memory
     this.modelClient=ports.modelClient
   }
-  private repairJournal(){const rows=this.session.journal;if(!rows)return;const answered=new Set(rows.flatMap(e=>e.type==='message'&&e.message.role==='toolResult'?[e.message.toolCallId]:[]));for(const e of [...rows])if(e.type==='message'&&e.message.role==='assistant')for(const call of e.message.content.filter(b=>b.type==='toolCall'))if(!answered.has(call.id)){rows.push({id:crypto.randomUUID(),type:'message',timestamp:new Date().toISOString(),message:fromTranscript({role:'tool',callId:call.id,name:call.name,content:'Tool execution interrupted.'})});answered.add(call.id)}}
   private fresh():Session{return {id:crypto.randomUUID(),title:'新对话',personaId:'aria',messages:[],transcript:[],updated:Date.now()}}
   async list(){return this.conversations.list()}
   async open(id:string){if(this.historyBusy)return;if(this.running)throw new Error('请先停止当前回复');if(!/^[\w-]+$/.test(id))throw new Error('无效会话');this.historyBusy=true;try{this.session=await this.conversations.load(id)||this.fresh();
     this.settings().personaId=this.session.personaId;
-    const answered=new Set(this.session.transcript.filter(t=>t.role==='tool').map(t=>t.callId));
-    for(const item of [...this.session.transcript])if(item.role==='assistant')for(const call of item.calls||[])if(!answered.has(call.id)){this.session.transcript.push({role:'tool',callId:call.id,name:call.name,content:'Previous session interrupted.'});answered.add(call.id)}
-    for(const m of this.session.messages)if(m.status==='streaming'){m.status='stopped';m.error='上次会话已中断'}
-    this.repairJournal();await this.save();}finally{this.historyBusy=false;this.hooks.change()}}
+    repairToolProtocol(this.session)
+    for(const m of this.session.messages){
+      if(m.status==='streaming'){m.status='stopped';m.error='上次会话已中断'}
+      if(m.delivery==='queued'){
+        m.delivery='deferred'
+        const pending:RuntimeMessage={role:'user',content:m.text,attachmentIds:m.attachmentIds,timestamp:Date.now()}
+        this.session.transcript.push(toTranscript(pending))
+        this.session.journal?.push({id:crypto.randomUUID(),type:'message',timestamp:new Date().toISOString(),message:pending})
+      }
+    }
+    await this.save();}finally{this.historyBusy=false;this.hooks.change()}}
   async newSession(preserveCurrent=false){
     if(this.running||this.historyBusy)return
     if(preserveCurrent){this.historyBusy=true;this.hooks.change();try{await this.save()}finally{this.historyBusy=false;this.hooks.change()}}
@@ -86,26 +94,82 @@ export class Agent {
       if(this.session.id===id){this.session=this.fresh();this.session.personaId=this.settings().personaId}
     }finally{this.historyBusy=false;this.hooks.change()}
   }
+  private prefixBefore(messageId:string){
+    const index=this.session.messages.findIndex(message=>message.id===messageId&&message.role==='user')
+    if(index<0)throw new Error('找不到该消息')
+    const target=this.session.messages[index]
+    if(target.delivery==='queued'||target.delivery==='deferred')throw new Error('尚未接入模型的消息无法从此处分支或回滚')
+    const userOrdinal=this.session.messages.slice(0,index).filter(message=>message.role==='user').length
+    let seen=0,transcriptIndex=this.session.transcript.length
+    for(let i=0;i<this.session.transcript.length;i++)if(this.session.transcript[i].role==='user'&&seen++===userOrdinal){transcriptIndex=i;break}
+    if(transcriptIndex===this.session.transcript.length)throw new Error('会话记录无法定位该消息')
+    let journalIndex=this.session.journal?.length
+    if(this.session.journal){seen=0;for(let i=0;i<this.session.journal.length;i++){const entry=this.session.journal[i];if(entry.type==='message'&&entry.message.role==='user'&&seen++===userOrdinal){journalIndex=i;break}}if(journalIndex===this.session.journal.length)throw new Error('会话日志无法定位该消息')}
+    const truncated:Session={...structuredClone(this.session),messages:structuredClone(this.session.messages.slice(0,index)),transcript:structuredClone(this.session.transcript.slice(0,transcriptIndex)),journal:this.session.journal?.slice(0,journalIndex).map(entry=>structuredClone(entry)),updated:Date.now()}
+    return {target,truncated}
+  }
+  async branchAt(messageId:string){
+    if(this.running||this.historyBusy)throw new Error('请先停止当前回复')
+    const {target,truncated}=this.prefixBefore(messageId)
+    await this.save()
+    for(const message of truncated.messages)if(message.snapshotId&&!message.snapshotSessionId)message.snapshotSessionId=this.session.id
+    truncated.id=crypto.randomUUID();truncated.title=`${this.session.title} · 分支`
+    await this.conversations.save(truncated)
+    return {sessionId:truncated.id,text:target.text,attachments:(this.session.attachments||[]).filter(file=>target.attachmentIds?.includes(file.id))}
+  }
+  async previewRevert(messageId:string){
+    if(this.running||this.historyBusy)throw new Error('请先停止当前回复')
+    const {target}=this.prefixBefore(messageId)
+    if(!target.snapshotId)throw new Error('这条消息发送前没有文件快照，无法安全回滚知识库')
+    return previewVaultRestore(this.vault,target.snapshotSessionId||this.session.id,target.snapshotId,this.hooks.host?.configDir)
+  }
+  async revertAt(messageId:string,expected:VaultRestorePlan){
+    if(this.running||this.historyBusy)throw new Error('请先停止当前回复')
+    const {target,truncated}=this.prefixBefore(messageId)
+    if(!target.snapshotId)throw new Error('这条消息发送前没有文件快照，无法安全回滚知识库')
+    const original=this.session
+    const backup={...structuredClone(this.session),id:crypto.randomUUID(),title:`${this.session.title} · 回滚前备份`}
+    for(const message of backup.messages)if(message.snapshotId&&!message.snapshotSessionId)message.snapshotSessionId=this.session.id
+    truncated.title=truncated.messages.find(message=>message.role==='user')?.text.slice(0,40)||'新对话'
+    this.historyBusy=true;this.hooks.change()
+    let recoveryId:string|undefined
+    try{
+      await this.conversations.save(backup)
+      recoveryId=await restoreVaultSnapshot(this.vault,target.snapshotSessionId||this.session.id,target.snapshotId,expected,this.hooks.host?.configDir)
+      this.session=truncated;await this.save();this.hooks.change()
+      return {backupId:backup.id,recoveryId,text:target.text,attachments:(backup.attachments||[]).filter(file=>target.attachmentIds?.includes(file.id))}
+    }catch(error){
+      this.session=original
+      if(recoveryId){
+        try{const plan=await previewVaultRestore(this.vault,'recovery',recoveryId,this.hooks.host?.configDir);await restoreVaultSnapshot(this.vault,'recovery',recoveryId,plan,this.hooks.host?.configDir);await this.save()}
+        catch(rollbackError){throw new Error(`对话保存失败，自动恢复也未完成；请使用文件备份 ${recoveryId} 和会话备份 ${backup.id}`,{cause:rollbackError})}
+      }
+      throw error
+    }finally{this.historyBusy=false;this.hooks.change()}
+  }
   private save(){
     const snapshot=structuredClone({...this.session,updated:Date.now()})
     return this.conversations.save(snapshot)
   }
-  steer(text:string,noteContext:string,files:ChatAttachment[]=[]){if(!this.running)return this.send(text,noteContext,files);this.addAttachments(files);const content=[text,noteContext].filter(Boolean).join('\n\n');this.session.messages.push({id:crypto.randomUUID(),role:'user',text,attachmentIds:files.map(f=>f.id),tools:[],status:'complete'});this.steering.push({role:'user',content,attachmentIds:files.map(f=>f.id),timestamp:Date.now()});this.hooks.change()}
+  steer(text:string,noteContext:string,files:ChatAttachment[]=[]){if(!this.running)return this.send(text,noteContext,files);this.addAttachments(files);const content=[text,noteContext].filter(Boolean).join('\n\n'),displayId=crypto.randomUUID();this.session.messages.push({id:displayId,role:'user',text,attachmentIds:files.map(f=>f.id),tools:[],status:'complete',delivery:'queued'});this.steering.push({displayId,message:{role:'user',content,attachmentIds:files.map(f=>f.id),timestamp:Date.now()}});this.hooks.change()}
   stop(){this.abort?.abort()}
-  async close(){this.stop();this.memory.close();await this.pool.close()}
+  async close(closeMemory=true){this.stop();if(closeMemory)this.memory.close();await this.pool.close()}
   private addAttachments(files:ChatAttachment[]){
     this.session.attachments=[...new Map([...(this.session.attachments||[]),...files].map(file=>[file.id,file])).values()]
   }
   async send(text:string,noteContext:string,files:ChatAttachment[]=[]){
     if(this.running||this.historyBusy||!text.trim())return
     this.compaction=undefined
-    const config=structuredClone(this.settings());if(!config.enabled)throw new Error('Agent 已关闭');const model=selectedModel(config.models,config.modelId)
+    const config=structuredClone(this.settings());config.personaId=this.session.personaId;if(!config.enabled)throw new Error('Agent 已关闭');const model=selectedModel(config.models,config.modelId)
     if(!model)throw new Error('请先在设置中完成 BYOK 模型配置（包含 API Key）')
+    const userId=crypto.randomUUID()
+    this.historyBusy=true;this.hooks.change()
+    try{await captureVaultSnapshot(this.vault,this.session.id,userId,this.hooks.host?.configDir)}finally{this.historyBusy=false;this.hooks.change()}
     this.addAttachments(files)
     this.running=true;this.abort=new AbortController();const signal=this.abort.signal
-    const reply:Message={id:crypto.randomUUID(),role:'assistant',text:'',tools:[],status:'streaming',startedAt:Date.now()}
+    const reply:Message={id:crypto.randomUUID(),role:'assistant',text:'',tools:[],status:'streaming',startedAt:Date.now(),model:model.name}
     this.session.personaId=config.personaId
-    this.session.messages.push({id:crypto.randomUUID(),role:'user',text,attachmentIds:files.map(f=>f.id),tools:[],status:'complete'},reply)
+    this.session.messages.push({id:userId,role:'user',text,attachmentIds:files.map(f=>f.id),tools:[],status:'complete',snapshotId:userId},reply)
     if(this.session.messages.length===2)this.session.title=text.slice(0,40)
     this.session.transcript.push({role:'user',attachmentIds:files.map(f=>f.id),content:[text,noteContext?`<current-note-context>\n${noteContext}\n</current-note-context>`:''].filter(Boolean).join('\n\n')})
     this.hooks.change()
@@ -178,7 +242,7 @@ export class Agent {
           if(recovered){reply.status='streaming';delete reply.error;reply.text='';delete reply.reasoning;answerPrefix='';reasoningPrefix='';this.hooks.change()}
           return recovered?{action:'retry' as const,messages:recovered}:{action:'stop' as const}
         },maxModelErrorRecoveryAttempts:1,
-        getSteeringMessages:()=>this.steering.splice(0),maxToolConcurrency:4,
+        getSteeringMessages:()=>{const pending=this.steering.splice(0);for(const item of pending){const display=this.session.messages.find(message=>message.id===item.displayId);if(display)display.delivery='delivered'}if(pending.length)this.hooks.change();return pending.map(item=>item.message)},maxToolConcurrency:4,
         loopProgress:{repetitionThreshold:3},
       },signal,providerStream(model,()=>new Map((this.session.attachments||[]).map(file=>[file.id,file])),this.modelClient))
       for await(const event of upstream){
@@ -193,6 +257,11 @@ export class Agent {
           // Complete journal is canonical; transcript remains protocol-neutral for existing sessions.
           if(m.role!=='assistant'||m.stopReason!=='error'&&m.stopReason!=='aborted')this.session.transcript.push(toTranscript(m))
           if(m.role==='assistant'){
+            if(m.usage&&(m.usage.input||m.usage.output||m.usage.cacheRead)){
+              const usage=reply.usage||{input:0,output:0,cacheRead:0}
+              usage.input+=m.usage.input;usage.output+=m.usage.output;usage.cacheRead+=m.usage.cacheRead
+              reply.usage=usage
+            }
             const part=m.content.filter(b=>b.type==='text').map(b=>b.text).join('')
             if(part)answerPrefix+=part+'\n\n'
             const reasoning=m.content.filter(b=>b.type==='thinking').map(b=>b.thinking).join('')
@@ -220,11 +289,9 @@ export class Agent {
     }catch(e:unknown){reply.status=signal.aborted?'stopped':'error';reply.error=signal.aborted?'已停止':e instanceof Error?e.message:String(e)}
     finally{
       // Complete outstanding calls so a cancelled turn cannot poison the next provider request.
-      const answered=new Set(this.session.transcript.filter(t=>t.role==='tool').map(t=>t.callId))
-      for(const item of [...this.session.transcript])if(item.role==='assistant')for(const call of item.calls||[])if(!answered.has(call.id)){this.session.transcript.push({role:'tool',callId:call.id,name:call.name,content:'Tool execution interrupted.'});answered.add(call.id)}
-      this.repairJournal();
+      repairToolProtocol(this.session)
       // Keep steering queued during cancellation as explicit unsent work, never silently drop it.
-      for(const pending of this.steering.splice(0)){this.session.transcript.push(toTranscript(pending));this.session.journal?.push({id:crypto.randomUUID(),type:'message',timestamp:new Date().toISOString(),message:pending})}
+      for(const pending of this.steering.splice(0)){const display=this.session.messages.find(message=>message.id===pending.displayId);if(display)display.delivery='deferred';this.session.transcript.push(toTranscript(pending.message));this.session.journal?.push({id:crypto.randomUUID(),type:'message',timestamp:new Date().toISOString(),message:pending.message})}
       try{await save()}finally{this.running=false;this.hooks.change()}
     }
   }

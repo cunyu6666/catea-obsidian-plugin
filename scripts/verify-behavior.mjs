@@ -223,7 +223,7 @@ async function settingsFixture(){
   let saves=0,stops=0,refreshes=0
   const plugin={app:{},settings:{enabled:true},t:text=>text,vaultPath:'/unused',
     agentSettings:{language:'zh',enabled:true,web:true,memory:true,shell:true,models:[],skills:[],mcp:[],modelId:''},
-    agent:{stop(){stops++},memory:{setEnabled(){}}},async saveAgentSettings(){saves++},refreshPaperLanguage(){},refreshThumbnails(){},async saveData(){},apply(){}}
+    agent:{memory:{setEnabled(){}}},stopAgents(){stops++},async saveAgentSettings(){saves++},refreshPaperLanguage(){},refreshThumbnails(){},async saveData(){},apply(){}}
   const tab=new CateaSettings(plugin.app,plugin)
   return {tab,plugin,stats:()=>({saves,stops,refreshes}),enableModern:()=>{tab.update=()=>{refreshes++}}}
 }
