@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { Icon } from './Icon'
 import { DitherLoader } from './DitherLoader'
 
@@ -12,6 +12,7 @@ export interface AgentActivityItem {
 interface AgentActivitiesProps {
   items: AgentActivityItem[]
   preview: string
+  completed?: boolean
   autoExpand?: boolean
   thinking: boolean
   thinkingContent?: string
@@ -21,15 +22,17 @@ interface AgentActivitiesProps {
 }
 
 // Adapted from Craft Agents' TurnCard activity header and rows.
-export function AgentActivities({ items, preview, autoExpand = false, thinking, thinkingContent, startedAt, labels, onOpenDetails }: AgentActivitiesProps) {
+export function AgentActivities({ items, preview, autoExpand = false, completed = false, thinking, thinkingContent, startedAt, labels, onOpenDetails }: AgentActivitiesProps) {
   const [manual, setManual] = useState<{phase:boolean;expanded:boolean}|null>(null)
   const expanded = manual?.phase === autoExpand ? manual.expanded : autoExpand
-  if (!items.length) return thinking || thinkingContent?.trim() ? <ThinkingIndicator active={thinking} labels={labels} content={thinkingContent} startedAt={startedAt} /> : null
+  if (!items.length) return thinking || thinkingContent?.trim() || completed ? <ThinkingIndicator active={thinking} labels={{...labels,thought:completed?preview:labels.thought}} content={thinkingContent} startedAt={startedAt} /> : null
 
   return <section className="anno-activities" aria-label={preview}>
     <button className="anno-activities__toggle" type="button" aria-expanded={expanded} onClick={() => setManual({phase:autoExpand,expanded:!expanded})}>
-      <span className={`anno-activities__chevron ${expanded ? 'is-expanded' : ''}`} aria-hidden="true"><Icon name="chevron-right" size={12} /></span>
-      <span className="anno-activities__indicator"><span className="anno-activities__count">{items.length + (thinkingContent?.trim() ? 1 : 0)}</span></span>
+      <span className="anno-activities__indicator">
+        <span className="anno-activities__count">{items.length + (thinkingContent?.trim() ? 1 : 0)}</span>
+        <span className={`anno-activities__chevron ${expanded ? 'is-expanded' : ''}`} aria-hidden="true"><Icon name="chevron-right" size={12} /></span>
+      </span>
       <span className="anno-activities__preview">{preview}</span>
     </button>
     {expanded && <div className="anno-activities__list anno-auto-scrollbar">
@@ -52,7 +55,12 @@ function formatElapsed(milliseconds: number) {
 
 export function ThinkingIndicator({ active, labels, content, startedAt }: { active: boolean; labels: { thinking: string; thought: string }; content?: string; startedAt?: number }) {
   const [now,setNow]=useState(()=>Date.now())
-  const [expanded,setExpanded]=useState(false)
+  const [manual,setManual]=useState<{active:boolean;expanded:boolean}|null>(null)
+  const expanded=manual?.active===active?manual.expanded:active
+  const viewport=useRef<HTMLDivElement>(null),follow=useRef(true)
+  useLayoutEffect(()=>{
+    if(expanded&&follow.current&&viewport.current)viewport.current.scrollTop=viewport.current.scrollHeight
+  },[content,expanded])
   useEffect(()=>{
     if(!active||startedAt===undefined)return
     const timer=window.setInterval(()=>setNow(Date.now()),1000)
@@ -60,5 +68,5 @@ export function ThinkingIndicator({ active, labels, content, startedAt }: { acti
   },[active,startedAt])
   const elapsed=active&&startedAt!==undefined?formatElapsed(now-startedAt):''
   const heading=<><span className="anno-thinking__icon">{active?<DitherLoader label={labels.thinking}/>:<Icon name="chat" size={14}/>}</span><span>{active?labels.thinking:labels.thought}{elapsed&&<span className="anno-thinking__elapsed"> · {elapsed}</span>}</span>{content&&<Icon name="chevron-right" size={12} className={`anno-thinking__chevron ${expanded?'is-expanded':''}`}/>}</>
-  return <div className="anno-thinking">{content?<button className="anno-thinking__heading" type="button" aria-expanded={expanded} onClick={()=>setExpanded(value=>!value)}>{heading}</button>:<div className="anno-thinking__heading" role="status">{heading}</div>}{content&&expanded&&<div className="anno-thinking__content anno-auto-scrollbar">{content}</div>}</div>
+  return <div className="anno-thinking">{content?<button className="anno-thinking__heading" type="button" aria-expanded={expanded} onClick={()=>{follow.current=true;setManual({active,expanded:!expanded})}}>{heading}</button>:<div className="anno-thinking__heading" role="status">{heading}</div>}{content&&expanded&&<div ref={viewport} className="anno-thinking__content anno-auto-scrollbar" onWheel={event=>{if(event.deltaY<0)follow.current=false}} onScroll={event=>{const el=event.currentTarget;follow.current=el.scrollHeight-el.scrollTop-el.clientHeight<24}}>{content}</div>}</div>
 }

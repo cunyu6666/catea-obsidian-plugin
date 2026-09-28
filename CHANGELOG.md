@@ -5,6 +5,21 @@ release tag is that same number with no `v` prefix.
 
 ## Unreleased
 
+## 0.3.10
+
+### Changed
+
+- Switch conversations from a dropdown on the top-left icon instead of a horizontal tab strip, retaining separate drafts and background generation.
+- Make reply annotations an opt-in Agent setting, disabled by default, and keep token usage at the far right of the response footer.
+- Remove random pre-response acknowledgements while retaining thinking and tool activity indicators.
+- Auto-expand streaming provider reasoning and follow new content until the user scrolls upward or collapses it.
+- Center the jump-to-bottom button and add a light gray border.
+
+### Fixed
+
+- Restore the bilingual cat total-duration summary after a reply completes, including replies without tool calls.
+- Restore the shared white activity badge: show the step count normally and the collapse arrow on hover or keyboard focus.
+
 ## 0.3.9
 
 ### Changed

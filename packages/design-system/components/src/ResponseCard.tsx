@@ -76,8 +76,8 @@ export function ResponseCard({ children, copyText, streaming, startedAt, hideExp
           <span>{safeSources.length} {labels.sources || 'Sources'}</span>
           <Icon name="chevron-down" size={12} className="anno-response-card__chevron" data-open={sourcesOpen} />
         </button>}
-        {tokenUsage && <span className="anno-response-card__token-usage" title={tokenUsage.title}>{tokenUsage.label}</span>}
         {footerActions && <div className="anno-response-card__footer-actions">{footerActions}</div>}
+        {tokenUsage && <span className="anno-response-card__token-usage" title={tokenUsage.title}>{tokenUsage.label}</span>}
       </div>
       {safeSources.length > 0 && <div id={sourcesId} className="anno-response-card__sources" hidden={!sourcesOpen}>
         <ol>{safeSources.map((source, index) => <li key={source.url}>

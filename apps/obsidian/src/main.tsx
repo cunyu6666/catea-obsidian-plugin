@@ -45,7 +45,7 @@ interface PaperSurface {
 const Base=Paper as unknown as {new(...args: ConstructorParameters<typeof Plugin>): Plugin & PaperSurface}
 export default class Catea extends Base {
   declare settings:Record<string,boolean>
-  agentSettings:Settings & {includeCurrentNote:boolean}={language:"zh",enabled:true,web:true,models:[],modelId:'',personaId:'aria',skills:[],mcp:[],memory:true,shell:true,includeCurrentNote:true,permissionMode:"assist"}
+  agentSettings:Settings & {includeCurrentNote:boolean}={language:"zh",enabled:true,web:true,models:[],modelId:'',personaId:'aria',skills:[],mcp:[],memory:true,shell:true,includeCurrentNote:true,enableReplyAnnotations:false,permissionMode:"assist"}
   drafts=new SessionDraftStore()
   refreshThumbnails:()=>void=()=>{}
   obsidian!:ObsidianTools;agent!:Agent;tabs:Agent[]=[];vaultPath='';private createTabAgent!:()=>Agent;private configWrites=new Serial();private listeners=new Set<()=>void>();private dialogs=new Set<Modal>()

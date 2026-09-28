@@ -10,7 +10,7 @@
 .chat-messages {width:100%;padding:16px 16px 40px}
 .chat-composer-wrap {width:100%;padding:0 12px 12px}
 .catea-panel .chat-composer-wrap {position:relative}
-.catea-jump-bottom {position:absolute;top:-43px;right:22px;z-index:2;display:grid;place-items:center;width:30px;height:30px;padding:0;border:1px solid var(--border);border-radius:50%;background:var(--surface);color:var(--foreground-soft);box-shadow:var(--shadow-soft);cursor:pointer}
+.catea-panel .catea-jump-bottom {position:absolute;top:-43px;left:50%;transform:translateX(-50%);z-index:2;display:grid;place-items:center;width:30px;height:30px;padding:0;border:1px solid #d9d9d9;border-radius:50%;background:var(--surface);color:var(--foreground-soft);box-shadow:var(--shadow-soft);cursor:pointer}
 .catea-jump-bottom:hover {background:var(--surface-muted);color:var(--foreground)}
 .catea-jump-bottom:focus-visible {outline:2px solid var(--accent);outline-offset:2px}
 .catea-panel .catea-welcome-art {flex:1;min-height:0;display:flex;align-items:center;justify-content:center;overflow:hidden}
@@ -175,9 +175,8 @@ button:not(.mod-cta):not(.mod-cta) {box-shadow:none}
 
 /* Override the desktop host's inherited selection lock inside the agent panel. */
 .catea-panel, .catea-panel .chat-message-body, .catea-panel .anno-activities, .catea-panel .anno-attachment {user-select:text;-webkit-user-select:text}
-.anno-response-card__footer-actions {display:flex;align-items:center;margin-left:auto;flex:none}
+.anno-response-card__footer-actions {display:flex;align-items:center;flex:none}
 
-.catea-reply-acknowledgement {padding:4px 0 8px;color:var(--foreground-soft);font-size:14px;line-height:1.6;user-select:text;-webkit-user-select:text}
 
 .catea-panel .chat-header .catea-session-trigger {display:grid;place-items:center;flex:none}
 .catea-panel .chat-header .catea-session-trigger[aria-expanded="true"] {background:var(--surface-muted);color:var(--foreground)}

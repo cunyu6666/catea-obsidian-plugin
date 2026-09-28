@@ -61,6 +61,7 @@ export class CateaSettings extends PluginSettingTab {
       {name:tr('网络搜索与网页读取'),desc:tr('网页搜索使用 Exa / Jina / DuckDuckGo；可诊断并经确认调用已安装的 Agent Reach。搜索词和目标 URL 会发送到联网服务。'),render:s=>{s.addToggle(t=>t.setValue(c.web).onChange(async value=>{c.web=value;p.stopAgents();await p.saveAgentSettings()}))}},
       {name:tr('长期记忆'),desc:tr('自动提取、召回和巩固；保存在当前知识库 .catea/memory。'),render:s=>{s.addToggle(t=>t.setValue(c.memory).onChange(async value=>{c.memory=value;if(!value)p.stopAgents();p.agent.memory.setEnabled(value&&c.enabled);await p.saveAgentSettings()}))}},
       {name:'Bash',desc:tr('默认开启，命令执行遵循下方权限模式。'),render:s=>{s.addToggle(t=>t.setValue(c.shell).onChange(async value=>{c.shell=value;p.stopAgents();await p.saveAgentSettings()}))}},
+      {name:tr('引用批注'),desc:tr('在回复卡片中显示引用批注按钮，可选中文字后添加批注。默认关闭。'),render:s=>{s.addToggle(t=>t.setValue(c.enableReplyAnnotations===true).onChange(async value=>{c.enableReplyAnnotations=value;await p.saveAgentSettings()}))}},
       {name:tr('显示 Token 用量'),desc:tr('在每条回复下显示输入、输出和缓存读取的 Token 数。默认关闭。'),render:s=>{s.addToggle(t=>t.setValue(c.showTokenUsage===true).onChange(async value=>{c.showTokenUsage=value;await p.saveAgentSettings()}))}},
       {name:tr('权限模式'),desc:tr('帮我批准：自动放行 pwd、ls 等简单目录查看，其余操作请求确认。完全访问：跳过 Bash、文件修改、MCP 和记忆更新的审批，命令可访问知识库之外。'),render:s=>{s.addDropdown(d=>d.addOption('assist',tr('帮我批准')).addOption('full',tr('完全访问')).setValue(c.permissionMode||'assist').onChange(async value=>{p.stopAgents();c.permissionMode=value==='full'?'full':'assist';await p.saveAgentSettings()}))}},
     ]

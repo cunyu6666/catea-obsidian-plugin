@@ -13,7 +13,7 @@ composition.ts: Creates shared conversation storage and memory, then injects the
 DiagramDialog.tsx: Portals children into a native `<dialog>` opened with `showModal()`, giving Escape handling, focus trap and focus restore for diagram zoom.
 MermaidDiagram.tsx: Renders Mermaid through Obsidian `loadMermaid` after a 180 ms debounce; zoom clamped to 0.25-4x.
 StreamingChatResponse.tsx: requestAnimationFrame typewriter reveal for streamed text that never splits surrogate pairs; auto-follows scroll within 40 px in a card and 80 px in chat.
-locale.ts: Chinese-keyed English string table exposing `translate()` and `contentLabel()`; returns the key unchanged when a string is unmapped; provides 50 bilingual, message-stable waiting acknowledgements.
+locale.ts: Chinese-keyed English string table exposing `translate()` and `contentLabel()`; returns the key unchanged when a string is unmapped.
 main.tsx: Plugin entry: `class Catea extends Paper`, wiring config, secure secrets, ObsidianTools, parallel session tabs, the settings tab and the sidebar view; 60 s memory interval.
 note-previews.ts: Registers `html` and `svg` code-block previews as sandboxed, script-blocking CSP iframes with Preview, Source and Copy tabs.
 note-thumbnails.ts: Paints 108x144 canvas file-tree thumbnails from title, excerpt and first local raster under 5 MB; 2 MB Markdown cap, 256-entry cache, concurrency 2.
@@ -23,7 +23,7 @@ paper.cjs: Vendored, generated 1.6 MB bundle providing the Paper base class with
 selection.ts: Adds an editor-menu entry and a floating add-to-Catea popup positioned through CodeMirror `coordsAtPos`, rebinding listeners on layout change.
 session-drafts.ts: Keeps composer text, attachments and selected quotes isolated by session ID, including asynchronous restoration after send failure.
 tool-presenters.ts: Registry for tool activity card names, summaries and detail payloads; unknown tools use a fallback presenter.
-settings.ts: Searchable setting definitions for Obsidian 1.13+, with an imperative fallback for older hosts; language, paper, Agent persona and capabilities, BYOK and MCP; OpenRouter quick setup and advanced ModelModal validate through core BYOK helpers.
+settings.ts: Searchable setting definitions for Obsidian 1.13+, with an imperative fallback for older hosts; language, paper, Agent persona and capabilities, optional reply annotations (off by default), BYOK and MCP; OpenRouter quick setup and advanced ModelModal validate through core BYOK helpers.
 
 ## Submodules
 

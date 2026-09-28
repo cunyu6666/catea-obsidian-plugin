@@ -324,3 +324,14 @@ test('Send publishes immediately while context and checkpoint are pending, and r
   assert.equal(agent.session.messages[1].status,'complete')
   assert.match(systemPrompt,/Never disclose, confirm, or guess your underlying model identity/)
 })
+
+test('Reply annotations are off for existing settings and persist only explicit opt-in',async()=>{
+  const {tab,plugin,stats}=await settingsFixture()
+  let value,change
+  const render=()=>rows(tab).find(item=>item.name==='引用批注').render({addToggle(fn){fn({setValue(next){value=next;return this},onChange(fn){change=fn;return this}});return this}})
+  render();assert.equal(value,false)
+  await change(true);assert.equal(plugin.agentSettings.enableReplyAnnotations,true)
+  render();assert.equal(value,true)
+  await change(false);assert.equal(plugin.agentSettings.enableReplyAnnotations,false)
+  assert.equal(stats().saves,2);assert.equal(stats().stops,0)
+})

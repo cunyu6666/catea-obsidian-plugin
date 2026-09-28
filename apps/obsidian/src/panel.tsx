@@ -1,6 +1,6 @@
 /**
  * [WHO]: Provides Panel
- * [FROM]: Depends on ../../../packages/agent-core/src/attachments, ../../../packages/agent-core/src/types, ./StreamingChatResponse, react, ./ChatMarkdown, catea-components, obsidian, ../../../packages/agent-core/src, ../../../packages/agent-core/src/byok, ../../../packages/agent-core/src/model-capabilities, ./session-drafts, ./locale, ./tool-presenters, ../cat-welcome.png, ./main
+ * [FROM]: Depends on ../../../packages/agent-core/src/attachments, ../../../packages/agent-core/src/types, ./StreamingChatResponse, react, ./ChatMarkdown, catea-components, obsidian, ../../../packages/agent-core/src, ../../../packages/agent-core/src/byok, ../../../packages/agent-core/src/model-capabilities, ./session-drafts, ./tool-presenters, ../cat-welcome.png, ./main
  * [TO]: Consumed by apps/obsidian/src/main.tsx
  * [HERE]: apps/obsidian/src/panel.tsx - React sidebar root composing a header session dropdown, history, message list and composer; maps model picker, approvals, quotes and attachments
  */
@@ -15,7 +15,6 @@ import type {Agent} from '../../../packages/agent-core/src'
 import {configuredModels,selectedModel} from '../../../packages/agent-core/src/byok'
 import {unsupportedAttachment} from '../../../packages/agent-core/src/model-capabilities'
 import type {SessionDraft} from './session-drafts'
-import {pendingReplyText} from './locale'
 import {createToolPresenters} from './tool-presenters'
 import catWelcome from '../cat-welcome.png'
 import type Catea from './main'
@@ -23,11 +22,15 @@ import type Catea from './main'
 const toolPresenters=createToolPresenters()
 const catReplyActions=['正在踩奶…','正在舔爪…','正在甩尾巴…','正在扒拉键盘…'] as const
 
-function activityPreview(status:string,tools:ToolEvent[],reasoning:string|undefined,language:string|undefined,t:(key:string)=>string){
+function activityPreview(status:string,tools:ToolEvent[],reasoning:string|undefined,language:string|undefined,t:(key:string)=>string,startedAt?:number,completedAt?:number){
   const visible=tools.filter(tool=>tool.name!=='AskUserQuestion'||tool.result!==undefined||tool.error)
   const running=[...visible].reverse().find(tool=>tool.result===undefined&&!tool.error)
   if(running)return `${toolPresenters.title(running,t)}…`
   if(status==='streaming')return language==='en'?'Preparing response…':'正在整理回复…'
+  if(status==='complete'&&startedAt!==undefined&&completedAt!==undefined&&completedAt>=startedAt){
+    const seconds=Math.floor((completedAt-startedAt)/1000)
+    return t('猫咪奔跑了 {elapsed}').replace('{elapsed}',`${Math.floor(seconds/60)}m${seconds%60}s`)
+  }
   const count=visible.length+(reasoning?.trim()?1:0),errors=visible.filter(tool=>tool.error).length
   return language==='en'?`${count} steps completed${errors?` · ${errors} failed`:''}`:`已完成 ${count} 个步骤${errors?` · ${errors} 个失败`:''}`
 }
@@ -82,7 +85,8 @@ export function Panel({plugin}:{plugin:Catea}){
   useEffect(()=>plugin.subscribe(()=>update(n=>n+1)),[plugin])
   const selectionId=plugin.selections.at(-1)?.id
   const config=plugin.agentSettings,models=configuredModels(config.models),model=selectedModel(config.models,config.modelId),empty=!agent.session.messages.length
-  useEffect(()=>{setAnnotation(null);selectedReply.current=null},[sessionId])
+  useEffect(()=>{setAnnotation(null);selectedReply.current=null},[sessionId,config.enableReplyAnnotations])
+
   useEffect(()=>{if(selectionId)setShowHistory(false)},[selectionId])
   useEffect(()=>{
     const viewport=scroll.current,content=viewport?.firstElementChild
@@ -98,6 +102,7 @@ export function Panel({plugin}:{plugin:Catea}){
   const branch=(messageId:string)=>{void agent.branchAt(messageId).then(async result=>{plugin.drafts.restore(result.sessionId,{text:result.text,attachments:result.attachments,quotes:[]});await plugin.openTab(result.sessionId);setShowHistory(false);follow.current=true;setError('')}).catch((reason:unknown)=>setError(reason instanceof Error?reason.message:String(reason)))}
   const revert=(messageId:string)=>{void agent.previewRevert(messageId).then(async plan=>{if(!await plugin.confirmRevert(plan))return;const result=await agent.revertAt(messageId,plan);plugin.drafts.restore(agent.session.id,{text:result.text,attachments:result.attachments,quotes:[]});follow.current=true;setError('')}).catch((reason:unknown)=>setError(reason instanceof Error?reason.message:String(reason)))}
   const captureReplySelection=()=>{
+    if(config.enableReplyAnnotations!==true)return
     const selection=panelRef.current?.ownerDocument.defaultView?.getSelection()
     if(!selection?.rangeCount||!selection.toString().trim())return
     const ancestor=selection.getRangeAt(0).commonAncestorContainer
@@ -106,6 +111,7 @@ export function Panel({plugin}:{plugin:Catea}){
     if(message&&panelRef.current?.contains(message))selectedReply.current={messageId:message.dataset.messageId||'',quote:selection.toString().trim().slice(0,3000)}
   }
   const annotate=(messageId:string)=>{
+    if(config.enableReplyAnnotations!==true)return
     const selection=panelRef.current?.ownerDocument.defaultView?.getSelection(),root=Array.from(panelRef.current?.querySelectorAll<HTMLElement>('[data-message-id]')||[]).find(node=>node.dataset.messageId===messageId)
     const current=selection?.rangeCount&&root?.contains(selection.getRangeAt(0).commonAncestorContainer)?selection.toString().trim().slice(0,3000):''
     const quote=current||selectedReply.current?.messageId===messageId&&selectedReply.current.quote||''
@@ -141,12 +147,11 @@ export function Panel({plugin}:{plugin:Catea}){
     empty?<><div className="catea-welcome-art" aria-hidden="true"><img src={catWelcome} alt=""/></div><div className="chat-composer-wrap catea-welcome-composer">{composer}</div></>:<>
     <div ref={scroll} className="chat-scroll anno-auto-scrollbar" onWheel={e=>{if(e.deltaY<0)follow.current=false}} onScroll={e=>{const el=e.currentTarget,nearBottom=el.scrollHeight-el.scrollTop-el.clientHeight<24,movedUp=el.scrollTop<lastScrollTop.current-1,movedDown=el.scrollTop>lastScrollTop.current+1;if(movedUp)follow.current=false;else if(movedDown&&nearBottom)follow.current=true;setShowJump(!nearBottom);lastScrollTop.current=el.scrollTop}}><div className="chat-messages" onMouseUp={captureReplySelection} onKeyUp={captureReplySelection}>
       {agent.session.messages.map(m=><div data-message-id={m.id} className={`chat-message ${m.role} ${m.delivery==='queued'||m.delivery==='deferred'?'has-queued-message':''}`} key={m.id}>{m.role==='user'?<div className="chat-user-content">{fileCards((agent.session.attachments||[]).filter(file=>m.attachmentIds?.includes(file.id)))}<div className="chat-message-body">{m.delivery==='queued'||m.delivery==='deferred'?<div className="catea-queued-message" role="status"><Icon name="history" size={12}/><span>{t(m.delivery==='queued'?'排队中':'下次回复接入')}</span></div>:null}<ChatMarkdown content={m.text} streaming={false} language={config.language||'zh'} onOpenNote={openNote}/></div>{m.delivery!=='queued'&&m.delivery!=='deferred'&&<div className="catea-message-actions"><ActionMenu label={t('消息操作')} icon={<span aria-hidden="true">···</span>} disabled={agent.running||agent.historyBusy} items={[{id:'branch',label:t('从此处分支'),icon:<Icon name="arrow-up-right" size={14}/>,onSelect:()=>branch(m.id)},...(m.snapshotId?[{id:'revert',label:t('回滚到发送前'),icon:<Icon name="history" size={14}/>,onSelect:()=>revert(m.id)}]:[])]}/></div>}</div>:<>
-        {m.status==='streaming'&&!m.text.trim()&&!m.error&&!plugin.question&&<div className="catea-reply-acknowledgement" role="status">{pendingReplyText(m.id,config.language)}</div>}
-        <AgentActivities items={m.tools.filter(tool=>tool.name!=='AskUserQuestion'||tool.result!==undefined||tool.error).map(tool=>({id:tool.id,name:toolPresenters.title(tool,t),summary:toolPresenters.summary(tool),status:tool.error?'error':tool.result!==undefined?'completed':'running'}))} preview={activityPreview(m.status,m.tools,m.reasoning,config.language,t)} autoExpand={m.status==='streaming'&&!m.text.trim()} thinking={m.status==='streaming'&&!m.text.trim()&&!plugin.question} thinkingContent={m.reasoning} startedAt={m.startedAt} labels={{thinking:t('正在思考'),thought:t('思考过程'),details:t('查看操作')}} onOpenDetails={id=>{const tool=m.tools.find(item=>item.id===id);if(tool)plugin.showDetail(t('工具详情'),toolPresenters.details(tool))}}/>
+        <AgentActivities completed={m.status==='complete'&&m.startedAt!==undefined&&m.completedAt!==undefined&&m.completedAt>=m.startedAt} items={m.tools.filter(tool=>tool.name!=='AskUserQuestion'||tool.result!==undefined||tool.error).map(tool=>({id:tool.id,name:toolPresenters.title(tool,t),summary:toolPresenters.summary(tool),status:tool.error?'error':tool.result!==undefined?'completed':'running'}))} preview={activityPreview(m.status,m.tools,m.reasoning,config.language,t,m.startedAt,m.completedAt)} autoExpand={m.status==='streaming'&&!m.text.trim()} thinking={m.status==='streaming'&&!m.text.trim()&&!plugin.question} thinkingContent={m.reasoning} startedAt={m.startedAt} labels={{thinking:t('正在思考'),thought:t('思考过程'),details:t('查看操作')}} onOpenDetails={id=>{const tool=m.tools.find(item=>item.id===id);if(tool)plugin.showDetail(t('工具详情'),toolPresenters.details(tool))}}/>
 
 
-        {m.error?<div className="message-error">{m.error}</div>:(m.text||m.status!=='streaming')&&<StreamingChatResponse footerActions={m.status!=='streaming'&&m.text?<button className="anno-response-card__action" type="button" aria-label={t('引用选中内容并批注')} title={t('引用选中内容并批注')} onMouseDown={event=>event.preventDefault()} onClick={()=>annotate(m.id)}><Icon name="quote" size={12}/>{t('引用批注')}</button>:undefined} sources={m.sources} content={m.text} interrupted={m.status==='stopped'} streaming={m.status==='streaming'&&!plugin.question} startedAt={m.startedAt} paused={!!plugin.question} tokenUsage={config.showTokenUsage&&m.usage?{label:`${(m.usage.input+m.usage.output).toLocaleString()} tokens`,title:config.language==='en'?`${m.model||'Model'} · Input ${m.usage.input.toLocaleString()} · Output ${m.usage.output.toLocaleString()} · Cache read ${m.usage.cacheRead.toLocaleString()}`:`${m.model||'模型'} · 输入 ${m.usage.input.toLocaleString()} · 输出 ${m.usage.output.toLocaleString()} · 缓存读取 ${m.usage.cacheRead.toLocaleString()}`}:undefined} onExpand={()=>plugin.showDetail(t('回复'),m.text)} onViewMarkdown={()=>plugin.showDetail('Markdown',m.text)} labels={{copy:t('复制'),copied:t('已复制'),markdown:'Markdown',expand:t('展开'),streaming:catReplyActions.map(t),sources:t('来源')}} render={(displayed,busy)=><ChatMarkdown content={displayed} streaming={busy} language={config.language||'zh'} onOpenNote={openNote}/>}/> }
-        {annotation?.messageId===m.id&&<div className="catea-annotation-editor"><div className="catea-annotation-editor__quote">{annotation.quote}</div><textarea aria-label={t('批注内容')} autoFocus value={annotation.comment} placeholder={t('针对这段回复写下你的问题或意见…')} onChange={event=>setAnnotation(current=>current?{...current,comment:event.target.value}:null)} onKeyDown={event=>{if(event.key==='Enter'&&(event.metaKey||event.ctrlKey)){event.preventDefault();addAnnotation()}if(event.key==='Escape')setAnnotation(null)}}/><div className="catea-annotation-editor__actions"><button type="button" onClick={()=>setAnnotation(null)}>{t('取消')}</button><button type="button" disabled={!annotation.comment.trim()} onClick={addAnnotation}>{t('添加批注')}</button></div></div>}
+        {m.error?<div className="message-error">{m.error}</div>:(m.text||m.status!=='streaming')&&<StreamingChatResponse footerActions={config.enableReplyAnnotations===true&&m.status!=='streaming'&&m.text?<button className="anno-response-card__action" type="button" aria-label={t('引用选中内容并批注')} title={t('引用选中内容并批注')} onMouseDown={event=>event.preventDefault()} onClick={()=>annotate(m.id)}><Icon name="quote" size={12}/>{t('引用批注')}</button>:undefined} sources={m.sources} content={m.text} interrupted={m.status==='stopped'} streaming={m.status==='streaming'&&!plugin.question} startedAt={m.startedAt} paused={!!plugin.question} tokenUsage={config.showTokenUsage&&m.usage?{label:`${(m.usage.input+m.usage.output).toLocaleString()} tokens`,title:config.language==='en'?`${m.model||'Model'} · Input ${m.usage.input.toLocaleString()} · Output ${m.usage.output.toLocaleString()} · Cache read ${m.usage.cacheRead.toLocaleString()}`:`${m.model||'模型'} · 输入 ${m.usage.input.toLocaleString()} · 输出 ${m.usage.output.toLocaleString()} · 缓存读取 ${m.usage.cacheRead.toLocaleString()}`}:undefined} onExpand={()=>plugin.showDetail(t('回复'),m.text)} onViewMarkdown={()=>plugin.showDetail('Markdown',m.text)} labels={{copy:t('复制'),copied:t('已复制'),markdown:'Markdown',expand:t('展开'),streaming:catReplyActions.map(t),sources:t('来源')}} render={(displayed,busy)=><ChatMarkdown content={displayed} streaming={busy} language={config.language||'zh'} onOpenNote={openNote}/>}/> }
+        {config.enableReplyAnnotations===true&&annotation?.messageId===m.id&&<div className="catea-annotation-editor"><div className="catea-annotation-editor__quote">{annotation.quote}</div><textarea aria-label={t('批注内容')} autoFocus value={annotation.comment} placeholder={t('针对这段回复写下你的问题或意见…')} onChange={event=>setAnnotation(current=>current?{...current,comment:event.target.value}:null)} onKeyDown={event=>{if(event.key==='Enter'&&(event.metaKey||event.ctrlKey)){event.preventDefault();addAnnotation()}if(event.key==='Escape')setAnnotation(null)}}/><div className="catea-annotation-editor__actions"><button type="button" onClick={()=>setAnnotation(null)}>{t('取消')}</button><button type="button" disabled={!annotation.comment.trim()} onClick={addAnnotation}>{t('添加批注')}</button></div></div>}
       </>}</div>)}
         {plugin.question&&<ApprovalCard key={plugin.question.id} questions={plugin.question.questions.map((q,i)=>({id:String(i),title:q.question,options:q.options.map(o=>({value:o.label,...o})),multiple:q.multiSelect,allowCustom:true,customPlaceholder:t('填写其他回答')}))} onSubmit={answers=>{const q=plugin.question;if(q)q.answer(Object.fromEntries(q.questions.map((item,i)=>{const answer=answers[String(i)];return [item.question,[...(answer?.selected||[]),answer?.custom?.trim()].filter(Boolean).join(', ')]})))}} onDismiss={()=>plugin.question?.dismiss()} submitLabel={t("提交回答")} nextLabel={t("下一题")} previousLabel={t("上一题")} dismissLabel={t("取消回答")} previewLabel={t("预览")}/>}
     </div></div><div className="chat-composer-wrap">{showJump&&<button className="catea-jump-bottom" type="button" onClick={()=>{const viewport=scroll.current;if(!viewport)return;follow.current=true;viewport.scrollTo({top:viewport.scrollHeight,behavior:window.matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'});setShowJump(false)}} aria-label={t('跳到最新消息')} title={t('跳到最新消息')}><Icon name="chevron-down" size={16}/></button>}{composer}</div></>}

@@ -28,7 +28,7 @@ import {memoryTools,memoryReadOnly} from '../../memory/src/tools'
 import {captureVaultSnapshot,previewVaultRestore,restoreVaultSnapshot,type VaultRestorePlan} from './snapshot'
 import {repairToolProtocol} from './protocol-repair'
 
-export interface Settings {noteThumbnails?:boolean;showTokenUsage?:boolean;permissionMode?:"assist"|"full";permissionDefaultsVersion?:number;miniMaxPresetsAdded?:boolean;language?:"zh"|"en";enabled:boolean;web:boolean;models:ModelConfig[];modelId:string;personaId:string;skills:string[];mcp:McpConfig[];memory:boolean;shell:boolean}
+export interface Settings {noteThumbnails?:boolean;showTokenUsage?:boolean;enableReplyAnnotations?:boolean;permissionMode?:"assist"|"full";permissionDefaultsVersion?:number;miniMaxPresetsAdded?:boolean;language?:"zh"|"en";enabled:boolean;web:boolean;models:ModelConfig[];modelId:string;personaId:string;skills:string[];mcp:McpConfig[];memory:boolean;shell:boolean}
 export type {Message,Session} from './contracts'
 export interface Hooks {change:()=>void;approve:Approve;ask:(questions:AskUserQuestion[],signal:AbortSignal)=>Promise<AskUserQuestionAnswer>;notice:(text:string)=>void;host?:{tools:ToolDefinition[];skill:string;configDir?:string;run:(name:string,args:Record<string,unknown>,signal:AbortSignal)=>Promise<string>}}
 type LoopEvent =
