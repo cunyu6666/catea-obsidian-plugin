@@ -5,16 +5,30 @@ release tag is that same number with no `v` prefix.
 
 ## Unreleased
 
+## 0.3.6
+
+### Added
+
+- Stream model reasoning separately from final answers and keep completed thought
+  details available in a compact, expandable activity row.
+- Add richer attachment handling, session drafts, tool presentation, and focused
+  behavior coverage for model streaming, permissions, context handoff, and storage.
+
 ### Changed
 
 - Split conversation persistence, model streaming, memory access, and context compaction behind host-owned interfaces while keeping the vendored agent loop byte-verified.
 - Move persona and current-note controls to Agent settings, and expand tool activity while a reply is pending.
 - Refine the paper shell, sidebar, composer, icons, note previews, and CSS scope without changing Obsidian's native UI contracts.
+- Apply Synara-inspired Markdown hierarchy and spacing to Obsidian note reading
+  and Live Preview while preserving the 14px table typography, gray headers,
+  rounded corners, and border treatment.
 
 ### Fixed
 
 - Preserve completed tool results across concurrent batches and stop approval-dependent calls from racing through the upstream patch layer.
 - Keep the explorer's action buttons square and the paper shadow within its existing gutter.
+- Exclude aborted, failed, and empty assistant records when rebuilding resumable
+  model context without deleting the durable conversation journal.
 
 ## 0.3.5
 
