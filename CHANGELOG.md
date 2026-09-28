@@ -5,6 +5,23 @@ release tag is that same number with no `v` prefix.
 
 ## Unreleased
 
+## 0.3.7
+
+### Added
+
+- Run multiple Agent conversations in parallel with switchable, horizontally scrolling session tabs and separate drafts.
+- Add message branching, reply annotations, queued steering, optional token usage, and vault restore previews with recovery snapshots.
+- Add a dither loading indicator and Remix Icon line/fill pairs for the left navigation dock.
+
+### Changed
+
+- Give the dock a dark surface, muted gray icons, circular controls, and a green Gemini glyph for Catea.
+- Refine activity summaries, settings layout, and chat scrolling behavior.
+
+### Fixed
+
+- Repair interrupted tool-call results next to their calls when reopening a session.
+
 ## 0.3.6
 
 ### Added
