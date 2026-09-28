@@ -1,0 +1,9 @@
+/* Restore ANNO's baseline inside the Obsidian host only. */
+* {box-sizing:border-box}
+button,input,textarea,select {font:inherit;color:inherit}
+button {height:auto;padding:0;border:0;box-shadow:none;background:transparent;cursor:pointer}
+button:disabled {cursor:not-allowed}
+button:focus-visible,input:focus-visible,textarea:focus-visible {outline:2px solid var(--accent);outline-offset:3px}
+textarea {box-shadow:none;border-radius:0}
+svg {display:block;flex-shrink:0}
+h1,h2,h3,p {padding:0;border:0}

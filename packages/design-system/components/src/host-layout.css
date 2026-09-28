@@ -1,0 +1,164 @@
+/* Only host sizing/side-panel adaptation; component geometry stays ANNO's. */
+.catea-panel {display:flex;flex-direction:column;height:100%;min-height:0;min-width:0;container-type:inline-size;background:var(--conversation-canvas);font-family:var(--font-sans);font-size:15px;line-height:1.5;-webkit-font-smoothing:antialiased}
+.chat-main,.ai-start-page {min-height:0;height:100%;background:var(--conversation-canvas)}
+.chat-header,.ai-start-top {padding-inline:12px;flex-shrink:0}
+.chat-header-actions {gap:2px}
+.header-leading {flex:1}
+.chat-header-title {min-width:0}
+.chat-header-title>span {overflow:hidden;text-overflow:ellipsis}
+.chat-messages {width:100%;padding:16px 16px 40px}
+.chat-composer-wrap {width:100%;padding:0 12px 12px}
+.ai-start-center {width:calc(100% - 28px);transform:none}
+.ai-start-center h1 {font-size:24px}
+.ai-start-center>p {line-height:1.6;margin-bottom:24px}
+.chat-message.user .chat-message-body {white-space:pre-wrap}
+.chat-message-body {font-family:var(--font-sans)}
+.anno-composer__toolbar-group:first-child {flex:1;overflow:hidden}
+.model-trigger {max-width:150px!important;min-width:0;overflow:hidden;box-shadow:none!important}
+.model-trigger>span:first-child {overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.persona-trigger {padding:0 6px!important;min-height:26.25px!important;height:26.25px;background:transparent!important;border:0!important;gap:4px;font-size:12px!important;box-shadow:none!important}
+.anno-composer__folder[data-active=true] {color:var(--accent);background:var(--surface-muted)}
+.catea-history {flex:1;min-height:0;overflow:auto;padding:16px 12px}
+.catea-history h2 {font-size:11px;color:var(--foreground-soft);font-weight:500;margin:0 8px 12px}
+.catea-history .anno-sidebar-item {margin-bottom:4px}
+.catea-history .anno-sidebar-item__main {padding:10px}
+.catea-portal {position:relative;z-index:10000;height:0;font-family:var(--font-sans)}
+.catea-change {height:auto;background:var(--background);padding:16px;border-radius:8px}
+.catea-change pre {max-height:55vh;overflow:auto;white-space:pre-wrap}
+.catea-change__removed {color:var(--danger)}
+.catea-change__added {color:var(--accent)}
+@container(max-width:360px){.chat-header-actions {gap:0}.chat-messages{padding-inline:12px}.anno-composer__folder span{display:none}.model-trigger{max-width:125px!important}}
+
+/* Obsidian theme button rules must not add chrome to ANNO controls. */
+button:not(.mod-cta) {box-shadow:none!important}
+.chat-header button {border:0!important;background:transparent!important}
+.chat-header button:hover {background:var(--surface-muted)!important}
+.anno-activities__toggle,.anno-activities__row {justify-content:flex-start;border:0!important;box-shadow:none!important}
+.anno-activities__toggle {background:transparent!important}
+.anno-activities__toggle:hover {background:var(--surface-muted)!important}
+.ai-emblem {font-family:Arial,sans-serif;font-variant-emoji:text}
+
+.catea-ui .catea-note-toggle {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 30px; height: 30px; padding: 0; border: 1px solid transparent;
+  border-radius: 8px; background: #eceeed; color: #909794;
+  box-shadow: none; cursor: pointer;
+}
+.catea-ui .catea-note-toggle[data-active="true"] {
+  color: #fff; background: #205843; border-color: #174632;
+}
+.catea-ui .catea-note-toggle:focus-visible { outline: 2px solid #205843; outline-offset: 2px; }
+
+.catea-quotes { display: grid; gap: 6px; margin: 10px 10px 0; max-height: 180px; overflow: auto; }
+.catea-quote { display: flex; align-items: flex-start; gap: 8px; padding: 8px 10px; border-radius: 8px; background: var(--background-secondary, #edf2ef); font-size: 12px; }
+.catea-quote > div { min-width: 0; flex: 1; }
+.catea-quote strong { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.catea-quote blockquote { margin: 4px 0 0; padding-left: 8px; border-left: 2px solid #205843; white-space: pre-wrap; max-height: 70px; overflow: auto; opacity: .8; }
+
+/* Compact question surface, aligned with the conversation cards. */
+.catea-panel .anno-approval-card {
+  box-sizing: border-box; flex-shrink: 0; width: 100%; margin: 0;
+  padding: 12px; gap: 8px; border: 1px solid var(--border);
+  border-radius: 12px; background: var(--surface); color: var(--foreground);
+  font-family: var(--font-sans); font-size: 13px; line-height: 1.5;
+}
+.catea-panel .anno-approval-card__icon { width: 18px; height: 20px; color: var(--accent); }
+.catea-panel .anno-approval-card__top { align-items: center; gap: 8px; }
+.catea-panel .anno-approval-card__top h3 { font-family: inherit; font-size: 13px; line-height: 20px; font-weight: 600; letter-spacing: 0; }
+.catea-panel .anno-approval-card__top > span { font-size: 11px; }
+.catea-panel .anno-approval-card__top > button { width: 24px; height: 24px; border-radius: 6px; box-shadow: none; }
+.catea-panel .anno-approval-card__options { margin-top: 8px; gap: 4px; }
+.catea-panel .anno-approval-card__option label { min-height: 32px; gap: 8px; padding: 6px 8px; font-size: 13px; line-height: 20px; }
+.catea-panel .anno-approval-card__option label:has(input:checked) { background: color-mix(in srgb, var(--accent) 9%, transparent); }
+.catea-panel .anno-approval-card__option label > span { white-space: normal; overflow-wrap: anywhere; }
+.catea-panel .anno-approval-card__option input { width: 16px; height: 16px; border-width: 1.5px; align-self: flex-start; margin-top: 2px; }
+.catea-panel .anno-approval-card__option input:checked { background: var(--accent); border-color: var(--accent); box-shadow: inset 0 0 0 3px var(--surface); }
+.catea-panel .anno-approval-card__option input[type=checkbox] { border-radius: 4px; }
+.catea-panel .anno-approval-card__custom { height: 32px; padding: 0 9px; border: 1px solid var(--border); border-radius: 7px; background: var(--background); font-family: inherit; font-size: 12px; }
+.catea-panel .anno-approval-card__footer { margin-top: 10px; gap: 8px; }
+.catea-panel .anno-approval-card__next,
+.catea-panel .anno-approval-card__next.is-final { height: 28px; min-width: 28px; padding: 0 10px; gap: 6px; border-radius: 7px; background: var(--accent); color: #fff; font-size: 12px; font-weight: 500; box-shadow: none; }
+.catea-panel .anno-approval-card__next:hover:not(:disabled) { background: color-mix(in srgb, var(--accent) 88%, black); transform: none; }
+.catea-panel .anno-approval-card__next:disabled { background: var(--surface-muted); color: var(--foreground-soft); opacity: .65; cursor: default; }
+.catea-panel .anno-approval-card :is(button,input):focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.catea-panel .running-dot[data-waiting=true] { background: var(--foreground-soft); box-shadow: none; }
+
+/* One continuous composer surface, unchanged while hovering or typing. */
+.catea-panel .anno-composer,
+.catea-panel .anno-composer:hover,
+.catea-panel .anno-composer:focus-within {
+  background: var(--surface);
+  box-shadow: var(--shadow-middle);
+  transition: none;
+}
+.catea-panel .anno-composer__toolbar {
+  border-top: 0;
+  background: transparent;
+}
+.catea-panel textarea.anno-composer__input,
+.catea-panel textarea.anno-composer__input:hover,
+.catea-panel textarea.anno-composer__input:focus,
+.catea-panel textarea.anno-composer__input:focus-visible {
+  background: transparent !important;
+  border: 0 !important;
+  border-radius: 0;
+  box-shadow: none !important;
+  outline: none !important;
+  transition: none;
+}
+
+/* History shares one left edge; trailing actions do not shift short titles. */
+.catea-panel .catea-history .anno-sidebar-item { display: flex; align-items: center; width: 100%; }
+.catea-panel .catea-history .anno-sidebar-item__main { display: flex; flex: 1; min-width: 0; justify-content: flex-start; text-align: left; gap: 8px; padding: 8px 10px; }
+.catea-panel .catea-history .anno-sidebar-item__text { flex: 1; min-width: 0; text-align: left; }
+.catea-panel .catea-history .anno-sidebar-item__text strong { display: block; font-size: 13px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.catea-panel .catea-history .anno-sidebar-item__trailing { display: flex; flex: none; margin-left: auto; padding-right: 4px; }
+.catea-panel .catea-history .anno-sidebar-item__trailing button { height: 26px; min-width: 26px; padding: 0 6px; font-size: 12px; }
+.catea-panel .catea-history-confirm { display: flex; align-items: center; gap: 2px; }
+.catea-panel .catea-history-confirm > button:first-child { color: var(--danger); }
+.catea-panel .catea-history-delete { opacity: 0; }
+.catea-panel .anno-sidebar-item:hover .catea-history-delete,
+.catea-panel .anno-sidebar-item:focus-within .catea-history-delete { opacity: 1; }
+@media (hover: none) { .catea-panel .catea-history-delete { opacity: 1; } }
+.catea-panel .chat-header { height: 44px; min-height: 44px; padding: 0 10px; }
+.catea-panel .chat-header .header-leading { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.catea-panel .chat-header .chat-header-actions { display: flex; gap: 2px; }
+.catea-panel .chat-header button { width: 26px; min-width: 26px; height: 26px; padding: 0; border-radius: 6px; }
+.catea-panel .chat-header button svg { width: 15px; height: 15px; }
+.catea-panel .chat-header-title { font-size: 13px; }
+.catea-panel .catea-history .anno-sidebar-item__trailing:has(.catea-history-confirm) { opacity: 1; pointer-events: auto; }
+@media (hover: none) { .catea-panel .catea-history .anno-sidebar-item__trailing { opacity: 1; pointer-events: auto; } }
+
+.catea-panel :is(.chat-scroll, .catea-history, .anno-code-block__content, .anno-response-card__content) {
+  mask-image: linear-gradient(to bottom,
+    transparent 0,
+    #000 var(--scroll-fade-top, 0px),
+    #000 calc(100% - var(--scroll-fade-bottom, 0px)),
+    transparent 100%);
+  mask-repeat: no-repeat;
+}
+.catea-panel .catea-attachments { display: flex; flex-wrap: wrap; gap: 6px; padding: 8px; max-height: 180px; overflow: auto; }
+.catea-panel .catea-attachments:empty { display: none; }
+.catea-panel .catea-attachment { display: flex; align-items: center; gap: 7px; padding: 6px 8px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface-muted); min-width: 0; max-width: 100%; }
+.catea-panel .catea-attachment img { width: 40px; height: 40px; object-fit: cover; border-radius: 4px; }
+.catea-panel .catea-attachment > span { min-width: 0; }
+.catea-panel .catea-attachment strong { display: block; max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; font-weight: 500; }
+.catea-panel .catea-attachment small { font-size: 10px; color: var(--foreground-soft); }
+.catea-panel .catea-attachment button { width: 22px; height: 22px; padding: 0; }
+
+
+/* Shared menu surface for attachments and contextual selection actions. */
+.catea-action-menu {
+  position: fixed; z-index: 10000; min-width: 180px; padding: 4px;
+  border: 1px solid #dfe3e0; border-radius: 9px; background: #fff;
+  color: #303a35; box-shadow: 0 4px 16px #142f2414;
+}
+.catea-action-menu .catea-action-menu__item {
+  display: flex; align-items: center; justify-content: flex-start; gap: 8px;
+  width: 100%; min-height: 32px; padding: 6px 9px; border: 0; border-radius: 5px;
+  background: transparent; box-shadow: none; color: inherit;
+  font-family: var(--font-sans); font-size: 12px; line-height: 20px; text-align: left;
+}
+.catea-action-menu .catea-action-menu__item:hover,
+.catea-action-menu .catea-action-menu__item:focus-visible { background: #f0f3f1; outline: none; }
+.catea-action-menu__item svg { width: 15px; height: 15px; color: #66746c; }

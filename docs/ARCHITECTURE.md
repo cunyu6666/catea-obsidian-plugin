@@ -8,10 +8,10 @@ exit 0 and produced `dist/catea-paper/` (main.js, styles.css, manifest.json at
 assertions; the 2026-09-27 hands-on acceptance record below was observed in a
 running Obsidian instance.
 
-**Not verified**: `npx tsc --noEmit` exits 2 with 88 pre-existing errors — 84 in the
-vendored `packages/*/upstream/**` snapshot, which omits sibling modules and so
-cannot typecheck standalone; 3 in the external `catea-design-system` components;
-and 1 in this repository's own source, `packages/integrations/src/web.ts:43`.
+**Not verified**: raw `npx tsc --noEmit` still reports 84 diagnostics, all of them in
+the vendored `packages/*/upstream/**` snapshot, which omits sibling modules and so
+cannot typecheck standalone. `npm run typecheck` is green: it fails on owned code
+and reports that snapshot as a count.
 Loading the built plugin inside Obsidian is also unverified here, because that
 needs a live Obsidian instance and a test vault.
 
@@ -26,7 +26,7 @@ needs a live Obsidian instance and a test vault.
 | Skills / MCP | Explicit enablement and resource reads from `.catea/skills`; MCP SDK over HTTP and stdio with tool discovery, session reuse and shutdown |
 | Personas | Vex, Aria, Pencil, sourced from ANNO. The user's "arial" refers to the existing Aria |
 | Full memory core | Complete CatUI mem-core source snapshot: layered recall, working/episodic/semantic/procedural memory, linking, reinforcement, forgetting, archive restore, conflict resolution, consolidation and insights |
-| UI / design system | Standalone `catea-design-system` workspace with tokens, components and showcase; ANNO Composer / StreamingChatResponse / AgentActivities / ApprovalCard; Tabler icons |
+| UI / design system | Tokens and components vendored under `packages/design-system`; ANNO Composer / StreamingChatResponse / AgentActivities / ApprovalCard; Tabler icons |
 
 ---
 
@@ -66,6 +66,11 @@ so its licence and provenance are retained. This is not a migration of an existi
 ---
 
 ## ADR 003: Standalone Design-System Monorepo
+
+**Status**: superseded in part on 2026-09-28. The workspace still keeps its own
+package boundaries, but it is vendored into this repository under
+`packages/design-system` because Obsidian's release build verification builds a
+clean checkout, and an out-of-tree sibling directory cannot be obtained there.
 
 `catea-design-system` has its own `package.json` and workspaces: `packages/tokens`,
 `packages/components`, `apps/showcase`. The main repository consumes the component

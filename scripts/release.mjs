@@ -10,9 +10,9 @@
 // touching the network. Pass --publish to actually create the release (which also
 // creates the tag). Requires GH_TOKEN or GITHUB_TOKEN with repo write access.
 //
-// This exists because `npm run build` needs the sibling ../catea-design-system
-// workspace, which is not a git repository and therefore cannot be fetched by a
-// CI runner. Releases are cut from a machine where that workspace exists.
+// It is the local counterpart of .github/workflows/release.yml: both validate the
+// same gates, publish the same three assets, and refuse to re-release a version
+// that users already have.
 
 import {execFileSync} from 'node:child_process'
 import {readFileSync, existsSync, statSync} from 'node:fs'

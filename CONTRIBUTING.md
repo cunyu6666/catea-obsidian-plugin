@@ -7,18 +7,10 @@ enforce, so a change can be checked before it is proposed.
 
 - **Node 24 or newer.** `npm test` runs on Node's built-in test runner and relies
   on native TypeScript type stripping. Verified on v24.21.0.
-- **The design system, for building only.** `npm run build` imports its Tailwind
-  compiler and aliases `catea-components` to its source, from a sibling directory:
-
-  ```
-  <parent>/
-    catea/                    # this repository
-    catea-design-system/      # tokens, components, Tailwind compiler
-  ```
-
-  Without that sibling, `npm install`, `npm test` and `npm run typecheck` all still
-  work — `catea-components` and `catea-tokens` are published to npm — but
-  `npm run build` cannot run.
+- **Nothing else.** The design system is vendored under `packages/design-system` and
+  linked through npm workspaces, so `npm ci && npm run build` works from a clean
+  checkout of this repository alone. That is the same thing Obsidian's release build
+  verification runs, and it is why the build lives in CI.
 
 ## Commands
 

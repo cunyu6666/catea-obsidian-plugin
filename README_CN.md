@@ -1,3 +1,5 @@
+# Catea Paper
+
 <div align="center">
 
 <pre>
@@ -8,12 +10,11 @@
     |_______________________________|
 </pre>
 
-<h1>Catea Paper</h1>
 
 <p><strong>世界一流的 Obsidian 插件，让你的 Obsidian 焕然一新。</strong></p>
 
 <p>
-  <img src="https://img.shields.io/badge/version-0.3.3-blue?style=flat-square" alt="version">
+  <img src="https://img.shields.io/badge/version-0.3.4-blue?style=flat-square" alt="version">
   <img src="https://img.shields.io/badge/Obsidian-1.8.0%2B-7C3AED?style=flat-square&logo=obsidian&logoColor=white" alt="Obsidian">
   <img src="https://img.shields.io/badge/TypeScript-5.9-3178C6?style=flat-square&logo=typescript&logoColor=white" alt="TypeScript">
   <img src="https://img.shields.io/badge/React-18-61DAFB?style=flat-square&logo=react&logoColor=black" alt="React">
@@ -77,7 +78,7 @@ Catea Paper 不是又一个挂在 Obsidian 旁边的聊天框。它是一个**�
 
 - **Obsidian 桌面版** ≥ 1.8.0 —— Catea Paper 仅支持桌面端（`isDesktopOnly: true`）
 - **Node.js 18+**，支持 npm workspaces
-- 相邻的 **`catea-design-system`** 检出——构建会从 `../catea-design-system` 引入 tokens、组件与 Tailwind 样式管线
+- 无需其他仓库。设计系统已随本仓库一起提供（`packages/design-system`），克隆即可完成构建。
 
 ### 构建插件
 
@@ -85,10 +86,7 @@ Catea Paper 不是又一个挂在 Obsidian 旁边的聊天框。它是一个**�
 git clone https://github.com/cunyu6666/catea-obsidian-plugin.git catea
 cd catea
 
-# 构建期望的目录结构：
-#   <parent>/
-#   ├── catea-design-system/   ← 构建时必需
-#   └── catea/                 ← 本仓库
+# 设计系统已内置于 packages/design-system，本仓库克隆即为完整构建输入。
 
 npm install
 npm run build
@@ -137,7 +135,7 @@ catea/
 └── scripts/build.mjs      # esbuild 构建管线 → dist/catea-paper
 ```
 
-设计组件与 Token 来自相邻的 `catea-design-system` workspace，通过相对 `file` 依赖引用——不含本地绝对路径，也不依赖本地 ANNO 或 CatUI 检出。
+设计组件与 Token 位于本仓库的 `packages/design-system`，通过 npm workspaces 关联——不含本地绝对路径，也不依赖本地 ANNO 或 CatUI 检出。
 
 更深入的设计说明：[docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md)。
 

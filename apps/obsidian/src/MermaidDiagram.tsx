@@ -1,12 +1,11 @@
 /**
  * [WHO]: Provides MermaidDiagram
- * [FROM]: Depends on beautiful-mermaid, obsidian, catea-components, react, ./DiagramDialog
+ * [FROM]: Depends on obsidian, catea-components, react, ./DiagramDialog
  * [TO]: Consumed by apps/obsidian/src/ChatMarkdown.tsx
- * [HERE]: apps/obsidian/src/MermaidDiagram.tsx - renders Mermaid through beautiful-mermaid with an Obsidian loadMermaid fallback after a 180 ms debounce; zoom clamped to 0.25-4x
+ * [HERE]: apps/obsidian/src/MermaidDiagram.tsx - renders Mermaid through the Obsidian loadMermaid runtime after a 180 ms debounce; zoom clamped to 0.25-4x
  */
 import {loadMermaid} from 'obsidian'
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
-import { renderMermaidSVG } from 'beautiful-mermaid'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { CodeBlock, Icon as RemixIcon } from 'catea-components'
 import { DiagramDialog } from './DiagramDialog'
 
@@ -39,21 +38,8 @@ export function MermaidDiagram({ code, showExpandButton = true, t }: { code: str
   const [dragging, setDragging] = useState(false)
   const [presetsOpen, setPresetsOpen] = useState(false)
 
-  const primary = useMemo(() => {
-    try {
-      return { svg: renderMermaidSVG(normalizeSource(code), {
-        bg: 'var(--background)', fg: 'var(--foreground)', accent: 'var(--accent)',
-        line: 'var(--foreground-30)', muted: 'var(--foreground-soft)',
-        surface: 'var(--surface-muted)', border: 'var(--border)',
-        transparent: true, interactive: true,
-      }), error: false }
-    } catch { return { svg: '', error: true } }
-  }, [code])
-
-
-  const [fallback,setFallback]=useState<{code:string;svg:string}>()
+  const [render,setRender]=useState<{code:string;svg:string;failed:boolean}>()
   useEffect(()=>{
-    if(!primary.error)return
     let cancelled=false
     // Debounce incomplete streaming fences; ignore stale async results.
     const timer=window.setTimeout(()=>{
@@ -62,15 +48,15 @@ export function MermaidDiagram({ code, showExpandButton = true, t }: { code: str
         const id=`catea-mermaid-${crypto.randomUUID()}`
         try{
           const result=await mermaid.render(id,normalizeSource(code))
-          if(!cancelled)setFallback({code,svg:result.svg})
-        }catch{if(!cancelled)setFallback({code,svg:''})}
+          if(!cancelled)setRender({code,svg:result.svg,failed:false})
+        }catch{if(!cancelled)setRender({code,svg:'',failed:true})}
         finally{document.getElementById(id)?.remove();document.getElementById(`d${id}`)?.remove()}
-      }).catch(()=>{if(!cancelled)setFallback({code,svg:''})})
+      }).catch(()=>{if(!cancelled)setRender({code,svg:'',failed:true})})
     },180)
     return()=>{cancelled=true;window.clearTimeout(timer)}
-  },[code,primary.error])
-  const svg=primary.svg||(fallback?.code===code?fallback.svg:'')
-  const error=primary.error&&fallback?.code===code&&!fallback.svg
+  },[code])
+  const svg=render?.code===code?render.svg:''
+  const error=render?.code===code&&render.failed
 
   useLayoutEffect(() => {
     const element = scrollRef.current

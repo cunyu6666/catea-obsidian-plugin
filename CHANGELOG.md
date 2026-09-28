@@ -3,6 +3,34 @@
 Notable changes per release. The version is the one in `manifest.json`; the GitHub
 release tag is that same number with no `v` prefix.
 
+## 0.3.4
+
+### Changed
+
+- The design system is vendored into this repository under
+  `packages/design-system` and linked through npm workspaces, replacing the
+  `../catea-design-system` sibling checkout that `npm run build` required. A clean
+  clone can now install, test, typecheck and build, which is exactly what
+  Obsidian's release build verification does; its scan of `0.3.3` reported
+  `Build verification failed while running the build script`.
+- `.github/workflows/ci.yml` builds on every push and pull request and asserts the
+  three release assets and the 5 MB size limit. `.github/workflows/release.yml` no
+  longer needs the `DESIGN_SYSTEM_REPO` variable and now attests the provenance of
+  the built `main.js` and `styles.css`, clearing the review's remaining
+  recommendation.
+- Mermaid diagrams render through Obsidian's own `loadMermaid` runtime instead of
+  bundling a second renderer, and the vendored `CodeBlock` keeps 13 Shiki grammars
+  rather than 23. `main.js` went from 6.5 MB to 3.9 MB, under the Obsidian Sync
+  Standard threshold.
+
+### Fixed
+
+- `README.md` and `README_CN.md` now open with a `# Catea Paper` heading. The
+  checker reads a Markdown ATX heading, so the previous `<h1>` edit did not clear
+  the `README title does not match the manifest name` warning.
+- The vendored `Composer` measures its textarea through `removeProperty` plus one
+  dynamic height write, and its IME check reads `event.nativeEvent.isComposing`, so
+  the file typechecks as owned code.
 ## 0.3.3
 
 ### Fixed

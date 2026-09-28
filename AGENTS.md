@@ -97,6 +97,7 @@ packages/memory/src/         # MemoryService adapter (excluded upstream alongsid
 packages/memory/upstream/    # Vendored CatUI mem-core, GPL-3.0 (excluded)
 packages/personas/           # Persona definitions and registry
 packages/personas/src/       # Persona prompt documents plus index.ts
+packages/design-system/      # Vendored design system: tokens, components, Tailwind compiler
 docs/                        # Design rationale and specs
 docs/specs/                  # Approved design specifications
 .github/                     # CI, the release workflow, and issue and PR templates
@@ -109,14 +110,12 @@ tests/                       # DIP harness: contract parser, verify gate, govern
 ## Build & Run Commands
 
 ```bash
-# Prerequisite — NOT optional and NOT part of this repository.
-# The design system (tokens + components + Tailwind compiler) lives in a sibling
-# directory and must be installed first:
-#     ../catea-design-system   -> run its own dependency install
-#
-# Then, from this repository root:
+# The design system (tokens + components + Tailwind compiler) is vendored under
+# packages/design-system and linked through npm workspaces, so this clone is the
+# entire build input. That is what lets CI build a release and what Obsidian's
+# own build verification runs against a clean checkout.
 
-npm install        # workspace install; also needs the sibling design system present
+npm install        # workspace install, including the vendored design system
 npm run build      # esbuild bundle -> dist/catea-paper/
 npm test           # node --test; requires no dependencies at all
 npm run typecheck  # scoped tsc over owned code only
@@ -128,24 +127,24 @@ directory: `main.js`, `styles.css`, `manifest.json`, `LICENSE`,
 files. It does not install the plugin; copying it into
 `<vault>/.obsidian/plugins/catea-paper/` is a separate, manual step.
 
-**Verification status — measured on 2026-09-28 in a complete workspace, on the 0.3.3 build.** The
-sibling `../catea-design-system` workspace was present with its own dependencies
-installed, and this repository's `node_modules` was installed.
+**Verification status — measured on 2026-09-28 with this repository's `node_modules`
+installed, on the 0.3.4 build.**
 
 | Command | Result |
 |---------|--------|
-| `npm run build` | **exit 0** — wrote `dist/catea-paper/`: `main.js` (6.5 MB, minified), `styles.css` (125 KB), `manifest.json` (version 0.3.3), `LICENSE`, `THIRD_PARTY_NOTICES.md`, `TABLER-LICENSE.txt` and the two design-system licence files |
+| `npm run build` | **exit 0** — wrote `dist/catea-paper/`: `main.js` (3.9 MB, minified), `styles.css` (124 KB), `manifest.json` (version 0.3.4), `LICENSE`, `THIRD_PARTY_NOTICES.md`, `TABLER-LICENSE.txt` and the two design-system licence files |
 | `npm test` | **exit 0** — 183 assertions, 183 passing |
-| `npm run typecheck` | **exit 0** — a scoped gate over `apps/*/src`, `packages/*/src` and `tests/`. Raw `tsc` still reports 87 diagnostics that cannot be fixed from this repository: 84 in vendored `packages/*/upstream/**` (the snapshot omits sibling modules such as `@catui/agent-core`) and 3 in the external `catea-design-system` components, so `scripts/typecheck.mjs` reports those as counts and fails only on owned code. Narrowing tsconfig `exclude` does **not** work: it replaces the built-in `node_modules` exclusion and made the count worse (measured 87 → 129) |
+| `npm run typecheck` | **exit 0** — a scoped gate over `apps/*/src`, `packages/*/src`, `packages/design-system` and `tests/`. Raw `tsc` still reports 84 diagnostics, all in vendored `packages/*/upstream/**` (the snapshot omits sibling modules such as `@catui/agent-core`), so `scripts/typecheck.mjs` reports those as counts and fails only on owned code. Narrowing tsconfig `exclude` does **not** work: it replaces the built-in `node_modules` exclusion and makes the count worse |
 
 Loading the built plugin inside Obsidian has **not** been verified here; that
 needs a running Obsidian instance and a test vault.
 
-The bundle size is a joint property of this repository and the design system:
-`../catea-design-system/packages/components/src/CodeBlock.tsx` loads a curated
-Shiki grammar set through `shiki/core`. Reverting that to `import { bundledLanguages }
-from 'shiki'` adds roughly 10 MB back and pushes the release past Obsidian's 5 MB
-sync threshold.
+Two decisions keep `main.js` under Obsidian's 5 MB sync threshold, and both are
+load-bearing: `packages/design-system/components/src/CodeBlock.tsx` loads a curated
+Shiki grammar set through `shiki/core` (the full registry plus an inlined Oniguruma
+WASM added about 10 MB), and Mermaid renders through the Obsidian runtime that is
+already loaded rather than a bundled second renderer. `.github/workflows/ci.yml`
+asserts the size on every build.
 
 **Runtime requirement.** `npm test` runs on Node's built-in test runner and relies
 on native TypeScript type stripping, so Node 24 or newer is expected (verified on
@@ -274,20 +273,20 @@ version literal — the drift that had left `0.3.0` in two files is now a test f
 Publishing an update requires a GitHub **Release** whose tag is the version with no
 `v` prefix, with `main.js`, `manifest.json` and `styles.css` attached. A tag alone
 never reaches users, and a version that was already published is ignored. Releases
-are cut with `node scripts/release.mjs` (dry run by default) or, once the design
-system has a repository, `.github/workflows/release.yml`.
+are cut with `node scripts/release.mjs` (dry run by default) or through the manual
+`.github/workflows/release.yml`, which builds on a runner and attests the built
+assets so users can verify their provenance.
 
 Two constraints are structural, not incidental:
 
-- `npm run build` needs the sibling `../catea-design-system` workspace, which is
-  **not a git repository** and therefore cannot be obtained by a CI runner. The CI
-  and release build jobs are gated on the `DESIGN_SYSTEM_REPO` repository variable
-  and stay inactive until it exists.
+- The design system is vendored rather than referenced from a sibling checkout,
+  because a clean checkout is what both CI and Obsidian's build verification use.
 - The build must be re-run before every release: the governance gate compares the
   built `dist/catea-paper/manifest.json` against the repository version.
 
-`.github/workflows/ci.yml` runs `npm ci`, `npm test` and `npm run typecheck` on every
-push to `main` and every pull request. See [CONTRIBUTING.md](./CONTRIBUTING.md) for
+`.github/workflows/ci.yml` runs `npm ci`, `npm test`, `npm run typecheck` and
+`npm run build`, and asserts the three release assets and the 5 MB size limit, on
+every push to `main` and every pull request. See [CONTRIBUTING.md](./CONTRIBUTING.md) for
 the contributor-facing procedure and [SECURITY.md](./SECURITY.md) for the threat model.
 
 ---
@@ -321,6 +320,9 @@ Three deliberate exclusions:
    the concurrent marketplace work that edits that file.
 3. **Tests** — files under `__tests__/` are out of scope, since a contract test
    for a contract test is circular.
+4. **The vendored design system** — `packages/design-system/**` sits outside the
+   `apps/*/src` and `packages/*/src` scope rule, so it carries no P3 headers. It is
+   our own code, edited here directly, and `npm run typecheck` does cover it.
 
 ### Related Documents
 

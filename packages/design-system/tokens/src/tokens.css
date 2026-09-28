@@ -1,0 +1,34 @@
+/* Scoped tokens: importing the design system never changes its host theme. */
+.catea-ui {
+  --catea-canvas:#edf0ed;--catea-paper:#fff;--catea-ink:#292d2b;
+  --catea-muted:#737e76;--catea-accent:#164b38;--catea-accent-hover:#103b2c;
+  --catea-border:rgba(22,75,56,.12);--catea-selected:rgba(22,75,56,.08);
+  --catea-danger:#ab4138;--catea-radius-sm:6px;--catea-radius-md:10px;--catea-radius-lg:14px;
+  --catea-space-1:4px;--catea-space-2:8px;--catea-space-3:12px;--catea-space-4:16px;--catea-space-6:24px;
+  --catea-shadow-sm:0 1px 3px #182d2010;--catea-shadow-md:0 3px 12px #182d2014;
+  --catea-font: -apple-system,BlinkMacSystemFont,'PingFang SC',sans-serif;
+  font-family:var(--catea-font);color:var(--catea-ink);font-size:14px;line-height:1.6;
+}
+
+.catea-ui {
+color-scheme: light;
+  --background: oklch(0.98 0.003 265);
+  --surface: var(--background);
+  --conversation-canvas: color-mix(in srgb, var(--foreground) 2%, var(--background));
+  --surface-muted: oklch(from var(--foreground) l c h / 0.05);
+  --foreground: oklch(0.185 0.01 270);
+  --foreground-soft: color-mix(in srgb, var(--foreground) 50%, var(--background));
+  --foreground-30: color-mix(in srgb, var(--foreground) 30%, transparent);
+  --foreground-rgb: 38, 36, 42;
+  --shadow-blur-opacity: .06;
+  --accent: oklch(0.62 0.13 293);
+  --border: oklch(from var(--foreground) l c h / 0.05);
+  --scrollbar-thumb: color-mix(in srgb, var(--foreground) 16%, transparent);
+  --scrollbar-thumb-hover: color-mix(in srgb, var(--foreground) 28%, transparent);
+  --danger: oklch(0.58 0.23 28);
+  --shadow-soft: rgba(var(--foreground-rgb), .06) 0 0 0 1px, rgba(0, 0, 0, var(--shadow-blur-opacity)) 0 1px 1px -.5px, rgba(0, 0, 0, var(--shadow-blur-opacity)) 0 3px 3px -1.5px;
+  --shadow-middle: rgba(var(--foreground-rgb), .06) 0 0 0 1px, rgba(0, 0, 0, var(--shadow-blur-opacity)) 0 1px 1px -.5px, rgba(0, 0, 0, var(--shadow-blur-opacity)) 0 3px 3px -1.5px, rgba(0, 0, 0, var(--shadow-blur-opacity)) 0 6px 6px -3px;
+  --shadow-popover: rgba(var(--foreground-rgb), .10) 0 0 0 1px, 0 12px 30px rgba(0, 0, 0, .12);
+  --font-sans: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+--background:#f9faf9;--surface:var(--background);--conversation-canvas:#edf0ed;--accent:#164b38;--foreground:#292d2b;--foreground-rgb:41,45,43;
+}

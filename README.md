@@ -1,3 +1,5 @@
+# Catea Paper
+
 <div align="center">
 
 <pre>
@@ -8,12 +10,11 @@
     |_______________________________|
 </pre>
 
-<h1>Catea Paper</h1>
 
 <p><strong>The world-class Obsidian plugin that gives your vault a mind.</strong></p>
 
 <p>
-  <img src="https://img.shields.io/badge/version-0.3.3-blue?style=flat-square" alt="version">
+  <img src="https://img.shields.io/badge/version-0.3.4-blue?style=flat-square" alt="version">
   <img src="https://img.shields.io/badge/Obsidian-1.8.0%2B-7C3AED?style=flat-square&logo=obsidian&logoColor=white" alt="Obsidian">
   <img src="https://img.shields.io/badge/TypeScript-5.9-3178C6?style=flat-square&logo=typescript&logoColor=white" alt="TypeScript">
   <img src="https://img.shields.io/badge/React-18-61DAFB?style=flat-square&logo=react&logoColor=black" alt="React">
@@ -77,7 +78,7 @@ Catea Paper is not another chat sidebar bolted onto Obsidian. It is a **Paper wo
 
 - **Obsidian desktop** ≥ 1.8.0 — Catea Paper is desktop-only (`isDesktopOnly: true`)
 - **Node.js 18+** with npm workspaces
-- A sibling checkout of **`catea-design-system`** — the build pulls tokens, components, and the Tailwind style pipeline from `../catea-design-system`
+- Nothing else. The design system is vendored under `packages/design-system`, so a clone of this repository is the whole build input.
 
 ### Build the Plugin
 
@@ -85,10 +86,8 @@ Catea Paper is not another chat sidebar bolted onto Obsidian. It is a **Paper wo
 git clone https://github.com/cunyu6666/catea-obsidian-plugin.git catea
 cd catea
 
-# layout expected by the build:
-#   <parent>/
-#   ├── catea-design-system/   ← required at build time
-#   └── catea/                 ← this repo
+# the design system is vendored under packages/design-system,
+# so this clone is the entire build input.
 
 npm install
 npm run build
@@ -137,7 +136,7 @@ catea/
 └── scripts/build.mjs      # esbuild pipeline → dist/catea-paper
 ```
 
-Design components and tokens come from the sibling `catea-design-system` workspace, referenced through relative `file` dependencies — no absolute local paths, and no dependency on a local ANNO or CatUI checkout.
+Design components and tokens live in this repository under `packages/design-system`, linked through npm workspaces — no absolute local paths, and no dependency on a local ANNO or CatUI checkout.
 
 Deeper design notes: [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md).
 

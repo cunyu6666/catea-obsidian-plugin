@@ -1,0 +1,23 @@
+{
+  "name": "catea-components",
+  "version": "0.1.0",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./styles.css": "./src/styles.css"
+  },
+  "peerDependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "dependencies": {
+    "catea-tokens": "^0.1.0",
+    "@radix-ui/react-select": "^2.2.0",
+    "@radix-ui/react-slot": "^1.2.0",
+    "class-variance-authority": "^0.7.0",
+    "clsx": "^2.0.0",
+    "motion": "^12.43.0",
+    "tailwind-merge": "^3.0.0",
+    "shiki": "^3.21.0"
+  }
+}

@@ -1,10 +1,9 @@
 {
   "name": "catea-obsidian",
-  "version": "0.3.3",
+  "version": "0.3.4",
   "type": "module",
   "dependencies": {
     "catea-components": "^0.1.0",
-    "beautiful-mermaid": "^1.1.3",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-markdown": "^10.1.0",

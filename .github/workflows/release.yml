@@ -6,10 +6,9 @@ name: Release
 # never reaches users.
 #
 # This workflow is manual on purpose: a release is a publishing decision, not a
-# side effect of a push. It cannot run until the design system has a repository —
-# see the first step, which fails with instructions if DESIGN_SYSTEM_REPO is unset.
-# Until then, cut releases from a machine that has ../catea-design-system:
-#     npm run build && node scripts/release.mjs --publish
+# side effect of a push. The design system is vendored under
+# packages/design-system, so the runner can build from this repository alone.
+# scripts/release.mjs remains the local path to the same result.
 
 on:
   workflow_dispatch:
@@ -21,42 +20,22 @@ on:
 
 permissions:
   contents: write
+  id-token: write
+  attestations: write
 
 jobs:
   release:
     name: Build and publish
     runs-on: ubuntu-latest
     steps:
-      # Both repositories are checked out as siblings so that scripts/build.mjs
-      # resolves its `../catea-design-system` reference correctly.
       - uses: actions/checkout@v4
-        with:
-          path: catea
 
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
           cache: npm
-          cache-dependency-path: catea/package-lock.json
-
-      - name: Require the design system to be reachable
-        run: |
-          set -eu
-          if [ -z "${{ vars.DESIGN_SYSTEM_REPO }}" ]; then
-            echo "::error::DESIGN_SYSTEM_REPO is not set, so this workflow cannot build the plugin."
-            echo "The design system is a separate workspace that is not a git repository, so a runner cannot obtain it."
-            echo "Set the repository variable DESIGN_SYSTEM_REPO, or cut the release locally:"
-            echo "  npm run build && node scripts/release.mjs --publish"
-            exit 1
-          fi
-
-      - uses: actions/checkout@v4
-        with:
-          repository: ${{ vars.DESIGN_SYSTEM_REPO }}
-          path: catea-design-system
 
       - name: The requested version must match manifest.json
-        working-directory: catea
         run: |
           set -eu
           manifest=$(node -p "require('./manifest.json').version")
@@ -66,26 +45,18 @@ jobs:
             exit 1
           fi
 
-      - name: Install the design system
-        working-directory: catea-design-system
-        run: npm ci
-
-      - name: Install this plugin
-        working-directory: catea
+      - name: Install
         run: npm ci
 
       - name: Contracts, governance and typecheck
-        working-directory: catea
         run: |
           npm test
           npm run typecheck
 
       - name: Build
-        working-directory: catea
         run: npm run build
 
       - name: Assert the three release assets exist
-        working-directory: catea
         run: |
           set -eu
           for asset in main.js manifest.json styles.css; do
@@ -93,7 +64,6 @@ jobs:
           done
 
       - name: Publish the release
-        working-directory: catea
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -105,3 +75,14 @@ jobs:
             dist/catea-paper/styles.css \
             --title "$version" \
             --generate-notes
+
+      # Provenance lets a user cryptographically verify that the main.js and
+      # styles.css they downloaded were built by this workflow run, which is what
+      # Obsidian's release review recommends. Only the two built artifacts are
+      # attested; manifest.json is copied from the repository unchanged.
+      - name: Attest the built release assets
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: |
+            dist/catea-paper/main.js
+            dist/catea-paper/styles.css
