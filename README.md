@@ -13,7 +13,7 @@
 <p><strong>The world-class Obsidian plugin that gives your vault a mind.</strong></p>
 
 <p>
-  <img src="https://img.shields.io/badge/version-0.3.2-blue?style=flat-square" alt="version">
+  <img src="https://img.shields.io/badge/version-0.3.3-blue?style=flat-square" alt="version">
   <img src="https://img.shields.io/badge/Obsidian-1.8.0%2B-7C3AED?style=flat-square&logo=obsidian&logoColor=white" alt="Obsidian">
   <img src="https://img.shields.io/badge/TypeScript-5.9-3178C6?style=flat-square&logo=typescript&logoColor=white" alt="TypeScript">
   <img src="https://img.shields.io/badge/React-18-61DAFB?style=flat-square&logo=react&logoColor=black" alt="React">

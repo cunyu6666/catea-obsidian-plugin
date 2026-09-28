@@ -3,6 +3,17 @@
 Notable changes per release. The version is the one in `manifest.json`; the GitHub
 release tag is that same number with no `v` prefix.
 
+## 0.3.3
+
+### Fixed
+
+- The settings tab no longer opens with a plugin-name heading. Obsidian's review of
+`0.3.2` flagged `Avoid including the plugin name in settings headings`: the tab is already
+titled by `manifest.json`, and the replacement heading added in `0.3.2` to satisfy the
+`setHeading()` rule repeated the name.
+- `README.md` and `README_CN.md` title the document `Catea Paper`, matching the manifest
+name, instead of carrying a decorative glyph.
+
 ## 0.3.2
 
 ### Added

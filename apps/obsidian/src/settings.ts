@@ -13,7 +13,7 @@ import {listSkills} from '../../../packages/integrations/src/skills'
 export class CateaSettings extends PluginSettingTab {
   constructor(app:App,private owner:Catea){super(app,owner)}
   display(){
-    const p=this.owner,tr=p.t,c=p.agentSettings,el=this.containerEl;el.empty();new Setting(el).setName('Catea Paper').setHeading()
+    const p=this.owner,tr=p.t,c=p.agentSettings,el=this.containerEl;el.empty()
     new Setting(el).setName(tr('语言 / Language')).addDropdown(d=>d.addOption('zh',tr('简体中文')).addOption('en','English').setValue(c.language||'zh').onChange(async value=>{c.language=value as 'zh'|'en';await p.saveAgentSettings();p.refreshPaperLanguage();this.display()}))
     const shell=p as any
     for(const [key,name] of [['enabled',tr('启用纸张界面')],['toolbar',tr('格式工具栏')],['tablerIcons',tr('Tabler 图标')],['hideProperties',tr('隐藏正文属性')],['hideRibbon',tr('隐藏导航栏')],['hideStatus',tr('隐藏状态栏')]])new Setting(el).setName(tr(name)).addToggle(t=>t.setValue(shell.settings[key]).onChange(async v=>{shell.settings[key]=v;await p.saveData(shell.settings);shell.apply()}))
