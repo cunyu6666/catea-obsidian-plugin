@@ -8,7 +8,7 @@
     |_______________________________|
 </pre>
 
-<h1>✎ Catea Paper</h1>
+<h1>Catea Paper</h1>
 
 <p><strong>世界一流的 Obsidian 插件，让你的 Obsidian 焕然一新。</strong></p>
 

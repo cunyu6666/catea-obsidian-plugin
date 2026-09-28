@@ -8,7 +8,7 @@
     |_______________________________|
 </pre>
 
-<h1>✎ Catea Paper</h1>
+<h1>Catea Paper</h1>
 
 <p><strong>The world-class Obsidian plugin that gives your vault a mind.</strong></p>
 
