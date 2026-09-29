@@ -28,8 +28,8 @@
 .chat-message.user .chat-message-body :is(p,ul,ol)+:is(p,ul,ol) {margin-top:.6em}
 .catea-message-actions {height:18px;margin-top:-9px;opacity:0;transition:opacity .15s}
 .chat-message:hover .catea-message-actions,.chat-message:focus-within .catea-message-actions {opacity:1}
-.catea-message-actions .anno-composer__attach {display:grid;place-items:center;width:25px;height:18px;padding:0;border:0;border-radius:5px;background:transparent;color:var(--foreground-soft);font-size:18px;line-height:1}
-.catea-message-actions .anno-composer__attach:hover {background:var(--surface-muted);color:var(--foreground)}
+.catea-message-actions .catea-message-copy {display:grid;place-items:center;width:25px;height:18px;padding:0;border:0;border-radius:5px;background:transparent;color:var(--foreground-soft);font-size:18px;line-height:1}
+.catea-message-actions .catea-message-copy:hover {background:var(--surface-muted);color:var(--foreground)}
 @media (hover:none) {.catea-message-actions {opacity:1}}
 .chat-message-body {font-family:var(--font-sans)}
 .anno-composer__toolbar-group:first-child {flex:1;overflow:hidden}
@@ -189,8 +189,6 @@ button:not(.mod-cta):not(.mod-cta) {box-shadow:none}
 .catea-action-menu__check {flex:none;color:var(--accent)}
 .catea-action-menu__separator {height:1px;margin:5px 4px;background:var(--border)}
 .anno-response-card__footer-actions {display:flex;align-items:center;margin-left:auto;flex:none}
-
-.catea-reply-acknowledgement {padding:4px 0 8px;color:var(--foreground-soft);font-size:14px;line-height:1.6;user-select:text;-webkit-user-select:text}
 
 .catea-panel .catea-update-banner {
   display:flex;align-items:center;gap:7px;flex:none;margin:8px 10px 0;padding:8px 9px;

@@ -36,7 +36,7 @@ import type { Agent, Message } from '../../../packages/agent-core/src'
 import { configuredModels, selectedModel } from '../../../packages/agent-core/src/byok'
 import { unsupportedAttachment } from '../../../packages/agent-core/src/model-capabilities'
 import type { SessionDraft } from './session-drafts'
-import { humanizeError, pendingReplyText, type Language } from './locale'
+import { humanizeError, type Language } from './locale'
 import { createToolPresenters } from './tool-presenters'
 import { collectFileChanges, showStandaloneFileReview } from './turn-review'
 import catWelcome from '../cat-welcome.png'
@@ -44,6 +44,37 @@ import type Catea from './main'
 
 const toolPresenters = createToolPresenters()
 const catReplyActions = ['正在踩奶…', '正在舔爪…', '正在甩尾巴…', '正在扒拉键盘…'] as const
+
+function MessageCopyButton({
+  text,
+  t,
+  onError,
+}: {
+  text: string
+  t: (key: string) => string
+  onError: (message: string) => void
+}) {
+  const [copied, setCopied] = useState(false)
+  useEffect(() => {
+    if (!copied) return
+    const timer = window.setTimeout(() => setCopied(false), 1500)
+    return () => window.clearTimeout(timer)
+  }, [copied])
+  return (
+    <IconButton
+      className="catea-message-copy"
+      label={t(copied ? '已复制' : '复制')}
+      onClick={() => {
+        void navigator.clipboard.writeText(text).then(
+          () => setCopied(true),
+          (reason: unknown) => onError(reason instanceof Error ? reason.message : String(reason)),
+        )
+      }}
+    >
+      <Icon name={copied ? 'check' : 'copy'} size={14} />
+    </IconButton>
+  )
+}
 
 function MessageError({
   raw,
@@ -145,7 +176,7 @@ function activityPreview(
   )
   const running = [...visible].reverse().find((tool) => tool.result === undefined && !tool.error)
   if (running) return `${toolPresenters.title(running, t)}…`
-  if (status === 'streaming') return language === 'en' ? 'Preparing response…' : '正在整理回复…'
+  if (status === 'streaming') return ''
   if (status === 'complete' && startedAt !== undefined && completedAt !== undefined) {
     const seconds = Math.max(0, Math.floor((completedAt - startedAt) / 1000))
     return t('猫咪奔跑了 {elapsed}').replace(
@@ -356,24 +387,6 @@ export function Panel({ plugin }: { plugin: Catea }) {
     void plugin
       .saveAgentSettings()
       .catch((e: unknown) => setError(e instanceof Error ? e.message : String(e)))
-  const branch = (messageId: string) => {
-    void agent
-      .branchAt(messageId)
-      .then(async (result) => {
-        plugin.drafts.restore(result.sessionId, {
-          text: result.text,
-          attachments: result.attachments,
-          quotes: [],
-        })
-        await plugin.openTab(result.sessionId)
-        setShowHistory(false)
-        follow.current = true
-        setError('')
-      })
-      .catch((reason: unknown) =>
-        setError(reason instanceof Error ? reason.message : String(reason)),
-      )
-  }
   const captureReplySelection = () => {
     if (config.enableReplyAnnotations !== true) return
     const selection = panelRef.current?.ownerDocument.defaultView?.getSelection()
@@ -851,32 +864,12 @@ export function Panel({ plugin }: { plugin: Catea }) {
                         </div>
                         {m.delivery !== 'queued' && m.delivery !== 'deferred' && (
                           <div className="catea-message-actions">
-                            <ActionMenu
-                              label={t('消息操作')}
-                              icon={<span aria-hidden="true">···</span>}
-                              disabled={agent.running || agent.historyBusy}
-                              items={[
-                                {
-                                  id: 'branch',
-                                  label: t('从此处分支'),
-                                  icon: <Icon name="arrow-up-right" size={14} />,
-                                  onSelect: () => branch(m.id),
-                                },
-                              ]}
-                            />
+                            <MessageCopyButton text={m.text} t={t} onError={setError} />
                           </div>
                         )}
                       </div>
                     ) : (
                       <>
-                        {m.status === 'streaming' &&
-                          !m.text.trim() &&
-                          !m.error &&
-                          !plugin.question && (
-                            <div className="catea-reply-acknowledgement" role="status">
-                              {pendingReplyText(m.id, config.language)}
-                            </div>
-                          )}
                         <AgentActivities
                           items={activityItems(m, t, config.language)}
                           preview={activityPreview(
