@@ -1,5 +1,5 @@
 import {ActionMenu} from './ActionMenu'
-import { useLayoutEffect, useRef, useState, type DragEvent, type KeyboardEvent, type ReactNode } from 'react'
+import { useId, useLayoutEffect, useRef, useState, type DragEvent, type KeyboardEvent, type ReactNode } from 'react'
 import { Icon } from './Icon'
 
 interface ComposerProps {
@@ -32,6 +32,7 @@ interface ComposerProps {
 }
 
 export function Composer({ value, onChange, onSubmit, placeholder, mode, inputLabel, submitLabel, running = false, stopLabel = 'Stop', onStop, leading, trailing, attachments, onDropFiles, onPickFiles, onPickFolder, folderLabel, workingDirectory, attachLabel, fileLabel, dropLabel, hasSubmitContent, disabled, busy, autoFocus, className = '' }: ComposerProps) {
+  const inputLabelId = useId()
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const dragDepth = useRef(0)
@@ -82,8 +83,10 @@ export function Composer({ value, onChange, onSubmit, placeholder, mode, inputLa
         onDropFiles?.(event.dataTransfer)
       }}>
       {attachments}
+      {/* Obsidian turns aria-label into a hover tooltip; a referenced label preserves the accessible name without it. */}
+      <span id={inputLabelId} hidden>{inputLabel}</span>
       <textarea
-        aria-label={inputLabel}
+        aria-labelledby={inputLabelId}
         ref={inputRef}
         autoFocus={autoFocus}
         value={value}
@@ -108,13 +111,11 @@ export function Composer({ value, onChange, onSubmit, placeholder, mode, inputLa
         <div className="anno-composer__toolbar-group">{trailing}
           <button
             type="button"
-            aria-label={stopping ? stopLabel : submitLabel}
-            title={stopping ? stopLabel : submitLabel}
             data-state={stopping ? 'stop' : 'submit'}
             disabled={stopping ? disabled : (!value.trim() && !hasSubmitContent) || disabled || busy}
             onClick={stopping ? onStop : onSubmit}
             className="anno-composer__send"
-          ><Icon name={stopping ? 'stop' : mode === 'search' ? 'search' : 'arrow-up'} size={stopping ? 14 : 16} /></button>
+          ><span className="catea-sr-only">{stopping ? stopLabel : submitLabel}</span><Icon name={stopping ? 'stop' : mode === 'search' ? 'search' : 'arrow-up'} size={stopping ? 14 : 16} /></button>
         </div>
       </div>
       {dragging && <div className="anno-composer__drop-overlay" role="status"><Icon name="upload" size={18} />{dropLabel}</div>}

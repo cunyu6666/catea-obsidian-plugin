@@ -1,18 +1,19 @@
 /**
  * [WHO]: Provides Catea, default
- * [FROM]: Depends on ./note-thumbnails, ./note-previews, ./locale, ./selection, ./session-drafts, ../../../packages/agent-core/src/types, obsidian, react-dom/client, ./paper.cjs, ../../../packages/agent-core/src, ../../../packages/integrations/src/storage, ./panel, ./obsidian-tools, ./skills/obsidian.md, catea-components, ./settings, ./composition, node:fs/promises
+ * [FROM]: Depends on ./GitHistoryPanel, ./note-thumbnails, ./note-previews, ./locale, ./selection, ./session-drafts, ../../../packages/agent-core/src/types, obsidian, react-dom/client, ./paper.cjs, ../../../packages/agent-core/src, ../../../packages/integrations/src/storage, ./panel, ./obsidian-tools, ./skills/obsidian.md, catea-components, ./settings, ./composition, node:fs/promises
  * [TO]: Consumed by apps/obsidian/src/note-previews.ts, apps/obsidian/src/note-thumbnails.ts,
  *   apps/obsidian/src/obsidian-tools.ts, apps/obsidian/src/panel.tsx,
- *   apps/obsidian/src/selection.ts, apps/obsidian/src/settings.ts
+ *   apps/obsidian/src/selection.ts, apps/obsidian/src/settings.ts, apps/obsidian/src/GitHistoryPanel.tsx
  * [HERE]: apps/obsidian/src/main.tsx - plugin entry: class Catea extends Paper, wiring config, secure secrets, ObsidianTools, session tabs, settings and sidebar; 60 s memory interval
  */
+import {GitHistoryPanel} from './GitHistoryPanel'
 import {installNoteThumbnails} from './note-thumbnails'
 import {registerNotePreviews} from './note-previews'
 import {translate} from './locale'
 import {installSelectionAction} from './selection'
 import {SessionDraftStore,type SelectedQuote} from './session-drafts'
 import type {AskUserQuestion,AskUserQuestionAnswer} from '../../../packages/agent-core/src/types'
-import {Plugin,ItemView,Modal,Setting,FileSystemAdapter,Notice,WorkspaceLeaf} from 'obsidian'
+import {Plugin,ItemView,Modal,Setting,FileSystemAdapter,Notice,WorkspaceLeaf,MarkdownView,setIcon} from 'obsidian'
 import {createRoot,type Root} from 'react-dom/client'
 import Paper from './paper.cjs'
 import type {Agent,Settings} from '../../../packages/agent-core/src'
@@ -25,6 +26,7 @@ import {CateaSettings} from './settings'
 import {createAgentFactory} from './composition'
 import {mkdir} from 'node:fs/promises'
 const VIEW='catea-agent'
+const GIT_VIEW='catea-git-history'
 const DOCK_ICON_MATCHES:[RegExp,string][]=[
   [/catea/i,'gemini'],
   [/quick switch|快速切换/i,'search-2'],
@@ -38,19 +40,21 @@ const DOCK_ICON_MATCHES:[RegExp,string][]=[
 interface PaperSurface {
   settings: Record<string, boolean>
   apply(): void
-  bars?: Map<string, HTMLElement>
+  bars?: Map<MarkdownView, HTMLElement>
   explorerMenus?: Map<string, {button: HTMLElement}>
   sync?(): void
 }
 const Base=Paper as unknown as {new(...args: ConstructorParameters<typeof Plugin>): Plugin & PaperSurface}
 export default class Catea extends Base {
   declare settings:Record<string,boolean>
-  agentSettings:Settings & {includeCurrentNote:boolean}={language:"zh",enabled:true,web:true,models:[],modelId:'',personaId:'aria',skills:[],mcp:[],memory:true,shell:true,includeCurrentNote:true,enableReplyAnnotations:false,permissionMode:"assist"}
+  agentSettings:Settings & {includeCurrentNote:boolean}={language:"zh",enabled:true,web:true,models:[],modelId:'',personaId:'aria',skills:[],mcp:[],memory:true,shell:true,includeCurrentNote:true,gitHistory:false,enableReplyAnnotations:false,permissionMode:"assist"}
+  private editorZoom=new Map<MarkdownView,{scale:number;restore:()=>void}>()
   drafts=new SessionDraftStore()
   refreshThumbnails:()=>void=()=>{}
   obsidian!:ObsidianTools;agent!:Agent;tabs:Agent[]=[];vaultPath='';private createTabAgent!:()=>Agent;private configWrites=new Serial();private listeners=new Set<()=>void>();private dialogs=new Set<Modal>()
   async onload(){
     await super.onload()
+    this.register(()=>{for(const state of this.editorZoom.values())state.restore();this.editorZoom.clear()})
     if(!(this.app.vault.adapter instanceof FileSystemAdapter)){new Notice(this.t("Catea Agent 需要桌面文件系统"));return}
     this.vaultPath=this.app.vault.adapter.getBasePath()
     const directory=await within(this.vaultPath,'.catea');await mkdir(directory,{recursive:true})
@@ -80,6 +84,9 @@ export default class Catea extends Base {
     }
     this.agent=this.createTabAgent();this.agent.session.personaId=this.agentSettings.personaId;this.tabs=[this.agent]
     this.agent.memory.setEnabled(this.agentSettings.enabled&&this.agentSettings.memory)
+    this.registerView(GIT_VIEW,leaf=>new GitHistoryView(leaf,this))
+    this.app.workspace.onLayoutReady(()=>{void this.syncGitHistory()})
+    this.addCommand({id:'open-git-history',name:this.t('打开 Git 历史'),checkCallback:checking=>{if(!this.agentSettings.gitHistory)return false;if(!checking)void this.syncGitHistory(true);return true}})
     this.registerView(VIEW,leaf=>new AgentView(leaf,this));this.addSettingTab(new CateaSettings(this.app,this))
     const agentRibbon=this.addRibbonIcon('messages-square','Catea agent',()=>void this.openAgent())
     agentRibbon.addClass('catea-dock-agent')
@@ -87,6 +94,54 @@ export default class Catea extends Base {
     this.addCommand({id:'open-agent',name:this.t("打开 Agent"),callback:()=>void this.openAgent()})
     this.addCommand({id:'memory-insights',name:this.t("查看记忆概览"),callback:()=>void this.agent.memory.run('memory_insights',{},this.agentSettings.personaId,this.agentSettings.modelId).then(data=>this.showDetail(this.t("记忆概览"),data)).catch((e:unknown)=>new Notice(e instanceof Error?e.message:String(e)))})
     this.registerInterval(window.setInterval(()=>{if(this.agentSettings.enabled&&this.agentSettings.memory)void this.agent.memory.process()},60000))
+  }
+  sync(){
+    super.sync?.()
+    const views=new Set(this.app.workspace.getLeavesOfType('markdown').map(leaf=>leaf.view))
+    for(const [view,state] of this.editorZoom){
+      if(!views.has(view)){state.restore();this.editorZoom.delete(view)}
+    }
+    for(const [view,bar] of this.bars||[]){
+      if(bar.querySelector('.catea-editor-zoom'))continue
+      const group=bar.createDiv({cls:'catea-editor-zoom'})
+      const button=(label:string,icon:string,action:()=>void)=>{
+        const control=group.createEl('button',{cls:'gp-tool',attr:{type:'button'}})
+        if(icon)setIcon(control,icon)
+        control.createSpan({cls:'catea-editor-zoom-label',text:label})
+        control.addEventListener('mousedown',event=>event.preventDefault())
+        control.addEventListener('click',action)
+        return control
+      }
+      const update=(scale:number)=>{
+        let state=this.editorZoom.get(view)
+        if(!state){
+          const element=view.contentEl
+          const properties=['--gp-body-font-size','--gp-body-line-height','--font-text-size']
+          const previous=properties.map(name=>[name,element.style.getPropertyValue(name),element.style.getPropertyPriority(name)])
+          state={scale:1,restore:()=>{for(const [name,value,priority] of previous){if(value)element.style.setProperty(name,value,priority);else element.style.removeProperty(name)}}}
+          this.editorZoom.set(view,state)
+        }
+        state.restore()
+        state.scale=Math.max(.5,Math.min(2,Math.round(scale*10)/10))
+        if(state.scale!==1){
+          const style=view.contentEl.ownerDocument.defaultView!.getComputedStyle(view.contentEl)
+          const font=parseFloat(style.getPropertyValue('--gp-body-font-size'))||14
+          const line=parseFloat(style.getPropertyValue('--gp-body-line-height'))||24
+          view.contentEl.style.setProperty('--gp-body-font-size',`${font*state.scale}px`)
+          view.contentEl.style.setProperty('--gp-body-line-height',`${line*state.scale}px`)
+          view.contentEl.style.setProperty('--font-text-size',`${font*state.scale}px`)
+        }
+        render()
+        // Font changes affect CodeMirror line wrapping and measured cursor positions.
+        view.editor.refresh()
+      }
+      const smaller=button(this.t('缩小编辑器文字'),'zoom-out',()=>update((this.editorZoom.get(view)?.scale||1)-.1))
+      const reset=button(this.t('恢复编辑器文字大小'),'',()=>update(1))
+      const value=reset.createSpan({attr:{'aria-hidden':'true'}})
+      const larger=button(this.t('放大编辑器文字'),'zoom-in',()=>update((this.editorZoom.get(view)?.scale||1)+.1))
+      const render=()=>{const scale=this.editorZoom.get(view)?.scale||1;value.textContent=`${Math.round(scale*100)}%`;smaller.disabled=scale<=.5;larger.disabled=scale>=2}
+      render()
+    }
   }
   private installRibbonHover(){
     const documents=new Set<Document>()
@@ -129,7 +184,16 @@ export default class Catea extends Base {
   refreshPaperLanguage(){
     for(const bar of this.bars?.values()||[])bar.remove()
     this.bars?.clear();this.sync?.()
-    for(const state of this.explorerMenus?.values()||[])state.button.setAttribute('aria-label',this.t('更多文件操作'))
+    let labelIndex=0
+    for(const state of this.explorerMenus?.values()||[]){
+      state.button.removeAttribute('aria-label')
+      state.button.removeAttribute('title')
+      const label=state.button.querySelector('.catea-sr-only')||state.button.createSpan({cls:'catea-sr-only'})
+      label.id=`catea-explorer-actions-${labelIndex++}`
+      label.setAttribute('hidden','')
+      state.button.setAttribute('aria-labelledby',label.id)
+      label.textContent=this.t('更多文件操作')
+    }
   }
   get selections():SelectedQuote[]{return this.drafts.get(this.agent.session.id).quotes}
   set selections(quotes:SelectedQuote[]){this.drafts.update(this.agent.session.id,draft=>({...draft,quotes}))}
@@ -196,6 +260,18 @@ export default class Catea extends Base {
   }
   subscribe(fn:()=>void){this.listeners.add(fn);return()=>{this.listeners.delete(fn)}}
   emit(){for(const fn of this.listeners)fn()}
+  async syncGitHistory(reveal=false){
+    if(!this.agentSettings.gitHistory){this.app.workspace.detachLeavesOfType(GIT_VIEW);return}
+    let leaf=this.app.workspace.getLeavesOfType(GIT_VIEW)[0]
+    if(!leaf){
+      const created=this.app.workspace.getRightLeaf(false)
+      if(!created)return
+      leaf=created
+      await leaf.setViewState({type:GIT_VIEW,active:reveal})
+    }
+    if(!this.agentSettings.gitHistory){leaf.detach();return}
+    if(reveal)await this.app.workspace.revealLeaf(leaf)
+  }
   async openAgent(){let leaf=this.app.workspace.getLeavesOfType(VIEW)[0];if(!leaf){leaf=this.app.workspace.getRightLeaf(false)!;await leaf.setViewState({type:VIEW,active:true})}await this.app.workspace.revealLeaf(leaf)}
   openAgentSettings(){const settings=(this.app as typeof this.app & {setting?: {open():void;openTabById(id:string):void}}).setting;settings?.open();settings?.openTabById(this.manifest.id)}
   async noteContext(enabled:boolean){
@@ -260,5 +336,15 @@ class AgentView extends ItemView {
   constructor(leaf:WorkspaceLeaf,private plugin:Catea){super(leaf)}
   getViewType(){return VIEW}getDisplayText(){return 'Catea'}getIcon(){return 'messages-square'}
   async onOpen(){this.root=createRoot(this.contentEl);this.root.render(<Panel plugin={this.plugin}/>)}
+  async onClose(){this.root?.unmount()}
+}
+
+class GitHistoryView extends ItemView {
+  private root?:Root
+  constructor(leaf:WorkspaceLeaf,private plugin:Catea){super(leaf)}
+  getViewType(){return GIT_VIEW}
+  getDisplayText(){return this.plugin.t('Git 历史')}
+  getIcon(){return 'git-branch'}
+  async onOpen(){this.contentEl.addClass('catea-git-view');this.root=createRoot(this.contentEl);this.root.render(<GitHistoryPanel plugin={this.plugin}/>)}
   async onClose(){this.root?.unmount()}
 }

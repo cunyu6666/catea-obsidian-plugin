@@ -615,3 +615,39 @@ body.gp-enabled.gp-enabled .gp-duplicate-inline-title .inline-title { display: n
 .catea-revert-summary > p {margin:10px 0;color:var(--text-muted);font-size:12px}
 .catea-revert-confirm {background:var(--color-red);color:var(--text-on-accent)}
 .catea-revert-confirm:hover {background:var(--color-red);filter:brightness(.94)}
+
+/* Per-editor text zoom controls; the toolbar itself keeps its normal size. */
+body.gp-enabled .catea-editor-zoom { display: flex; align-items: center; gap: 2px; margin-left: 8px; padding-left: 8px; border-left: 1px solid var(--background-modifier-border); flex-shrink: 0; }
+body.gp-enabled .catea-editor-zoom .gp-tool:disabled { opacity: .35; cursor: default; }
+body.gp-enabled .catea-editor-zoom-label { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
+
+/* Local Git history uses the same paper surfaces and quiet green accents. */
+.catea-git-view { padding: 0; overflow: hidden; }
+.catea-git-panel { display: flex; flex-direction: column; height: 100%; min-height: 0; padding: 14px 12px; color: var(--text-normal); background: var(--background-secondary); font-size: 12px; }
+.catea-git-header { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 0 6px 10px; }
+.catea-git-header h2 { margin: 0; font-size: 14px; font-weight: 600; }
+.catea-git-header p { margin: 5px 0 0; font-size: 11px; color: var(--text-muted); overflow-wrap: anywhere; }
+.catea-git-panel button { box-shadow: none; }
+.catea-git-detail button,.catea-git-more { border: 1px solid var(--background-modifier-border); background: var(--background-primary); border-radius: 8px; font-size: 12px; }
+.catea-git-empty { padding: 24px 12px; text-align: center; line-height: 1.7; color: var(--text-muted); }
+.catea-git-scroll { overflow: auto; flex: 1; min-height: 0; padding: 0 4px 12px; }
+.catea-git-panel .catea-git-graph { height: auto; align-items: flex-start; }
+.catea-git-panel .catea-git-table { flex: 1; min-width: 0; }
+.catea-git-rows { flex: 1; min-width: 0; padding-top: 12px; }
+.catea-git-panel .catea-git-row { display: flex; flex-direction: column; align-items: stretch; justify-content: center; gap: 3px; width: 100%; height: 48px; min-height: 48px; padding: 6px; border: 0; border-radius: 0; background: transparent; color: var(--text-normal); text-align: left; white-space: normal; cursor: pointer; }
+.catea-git-panel .catea-git-row:hover,.catea-git-panel .catea-git-row[data-selected="true"] { background: color-mix(in srgb, #7f9988 8%, transparent); }
+.catea-git-row:focus-visible { outline: 2px solid #5b806d; outline-offset: -2px; }
+.catea-git-subject { display: block; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: 12px; line-height: 16px; }
+.catea-git-meta { display: flex; gap: 6px; font-size: 10px; line-height: 14px; color: var(--text-muted); white-space: nowrap; }
+.catea-git-meta > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.catea-git-meta code { margin-left: auto; font-size: 10px; background: transparent; padding: 0; }
+.catea-git-detail { flex-shrink: 0; margin: 0 4px 12px; padding: 12px 6px; border: 0; border-bottom: 1px solid var(--background-modifier-border); border-radius: 0; background: transparent; }
+.catea-git-detail > div { display: flex; align-items: center; justify-content: space-between; }
+.catea-git-detail pre { max-height: 24vh; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; font-size: 11px; background: transparent; margin: 10px 0 0; }
+.catea-git-more { display: block; margin: 18px auto 0; }
+.catea-git-panel .catea-git-graph > :last-child { min-width: 0; flex: 1; }
+/* React Git Log's 2px border strokes are positioned using content-box geometry.
+   Keep host border-box rules from shifting straight lines away from node centers. */
+.catea-git-panel .catea-git-graph [data-testid*="-line"] { box-sizing: content-box; transform: translateY(-1px); }
+
+.catea-git-node { position: absolute; top: 50%; left: 50%; width: 7px; height: 7px; border-radius: 50%; transform: translate(-50%, -50%); z-index: 1; pointer-events: none; }

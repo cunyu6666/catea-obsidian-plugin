@@ -1,6 +1,6 @@
 {
   "name": "catea-source",
-  "version": "0.3.10",
+  "version": "0.3.11",
   "type": "module",
   "workspaces": [
     "apps/*",
@@ -19,16 +19,16 @@
     "@sinclair/typebox": "^0.34.52",
     "catea-components": "^0.1.0",
     "catea-tokens": "^0.1.0",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0",
     "react-markdown": "^10.1.0",
     "remark-gfm": "^4.0.1"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.1.0",
     "@types/node": "^22.0.0",
-    "@types/react": "^18.3.0",
-    "@types/react-dom": "^18.3.0",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
     "esbuild": "^0.25.0",
     "eslint": "^9.39.5",
     "eslint-plugin-obsidianmd": "^0.4.2",

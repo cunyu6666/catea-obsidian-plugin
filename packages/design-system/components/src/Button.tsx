@@ -13,5 +13,5 @@ interface IconButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 export function IconButton({ label, className = '', children, ...props }: IconButtonProps) {
-  return <ShadcnButton aria-label={label} title={label} size="icon" variant="ghost" className={className} {...props}>{children}</ShadcnButton>
+  return <ShadcnButton size="icon" variant="ghost" className={className} {...props}><span className="catea-sr-only">{label}</span>{children}</ShadcnButton>
 }

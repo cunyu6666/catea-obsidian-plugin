@@ -14,7 +14,7 @@ is aspirational.
 ## Project Overview
 
 Catea is a desktop-only Obsidian plugin that pairs a paper-style workspace
-with a fully local, bring-your-own-key agent. Built with TypeScript, React 18, and
+with a fully local, bring-your-own-key agent. Built with TypeScript, React 19, and
 esbuild, it provides a right-sidebar agent that can read and edit the vault, search
 the web, call MCP servers, and keep a long-term memory of the user's notes.
 

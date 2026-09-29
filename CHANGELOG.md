@@ -3,7 +3,21 @@
 Notable changes per release. The version is the one in `manifest.json`; the GitHub
 release tag is that same number with no `v` prefix.
 
-## Unreleased
+## 0.3.11
+
+### Added
+
+- An opt-in Git history tab in the right sidebar, disabled by default, with local branching history, earlier commits, scoped commit details and automatic updates while visible.
+- Independent editor text zoom controls in the formatting toolbar.
+
+### Changed
+
+- Use compact, aligned Git timelines with solid nodes and no manual refresh button.
+- Upgrade React and React DOM to 19.3 and use React Git Log for the themed history graph.
+- Show input, output and cache-hit token counts directly in the reply footer.
+- Remove automatic accessibility-label tooltips from custom controls while retaining accessible text.
+- Leave persona identity to the persona prompt and add Git-aware vault operation guidance.
+
 
 ## 0.3.10
 

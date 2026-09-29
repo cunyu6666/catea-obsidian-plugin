@@ -40,7 +40,7 @@ export function installSelectionAction(plugin:Catea){
       if(!anchor)return
       // Styles are scoped to .catea-ui; the floating control needs its own host.
       surface=doc.body.createDiv({cls:'catea-ui catea-selection-surface'})
-      const menu=surface.createDiv({cls:'catea-action-menu',attr:{role:'menu','aria-label':plugin.t('选区操作')}})
+      const menu=surface.createDiv({cls:'catea-action-menu',attr:{role:'menu'}})
       menu.style.left=`${Math.max(8,Math.min(anchor.left,win.innerWidth-196))}px`
       menu.style.top=`${Math.max(8,Math.min(anchor.bottom+6,win.innerHeight-52))}px`
       const actions=[{label:plugin.t('添加到 Catea'),icon:'messages-square',run:()=>void plugin.addSelection(selected.path,selected.text)}]

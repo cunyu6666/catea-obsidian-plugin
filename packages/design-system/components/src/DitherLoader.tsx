@@ -10,7 +10,7 @@ export function DitherLoader({label='Loading'}:{label?:string}){
   const reduce=useReducedMotion()??false
   const gap=Math.max(1,size*0.05)
   const cell=(size-gap*3)/4
-  return <span className="anno-dither-loader" role="status" aria-label={label} style={{width:size,height:size,gap,gridTemplateColumns:`repeat(4, ${cell}px)`}}>
+  return <span className="anno-dither-loader" role="status"  style={{width:size,height:size,gap,gridTemplateColumns:`repeat(4, ${cell}px)`}}><span className="catea-sr-only">{label}</span>
     {BAYER_4.map((order,index)=><motion.span key={index} aria-hidden="true" style={{width:cell,height:cell,backgroundColor:'currentColor'}} animate={{opacity:reduce?[0.3,1,0.3]:[0.1,1,0.1]}} transition={{duration:reduce?1.4:1,ease:'easeInOut',repeat:Infinity,delay:order/16}}/>)}
   </span>
 }

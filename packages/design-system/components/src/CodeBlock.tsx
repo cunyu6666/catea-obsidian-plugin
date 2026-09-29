@@ -145,7 +145,7 @@ export function CodeBlock({ code, language = 'text', showHeader = true, streamin
       <span className="anno-code-block__identity"><Icon name="code" size={16} /><span>{resolvedLanguage === 'text' ? labels.plainText : resolvedLanguage}</span></span>
       <span className="anno-code-block__actions">
         {streaming && <span className="anno-code-block__writing" role="status"><DitherLoader label={labels.writing}/>{labels.writing}</span>}
-        <button type="button" aria-label={copied ? labels.copied : labels.copy} title={copied ? labels.copied : labels.copy} onClick={() => void copy()}><Icon name={copied ? 'check' : 'copy'} size={16} /></button>
+        <button type="button" onClick={() => void copy()}><span className="catea-sr-only">{copied ? labels.copied : labels.copy}</span><Icon name={copied ? 'check' : 'copy'} size={16} /></button>
       </span>
     </div>}
     <div ref={viewportRef} className="anno-code-block__content anno-auto-scrollbar" style={{ maxHeight }} role={streaming ? 'log' : undefined} aria-live={streaming ? 'polite' : undefined} onWheel={event=>{if(event.deltaY<0)followCode.current=false}} onScroll={event=>{const viewport=event.currentTarget;if(viewport.scrollTop<lastCodeTop.current-1)followCode.current=false;else if(viewport.scrollHeight-viewport.scrollTop-viewport.clientHeight<16)followCode.current=true;lastCodeTop.current=viewport.scrollTop}}>

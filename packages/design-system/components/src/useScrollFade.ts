@@ -1,7 +1,7 @@
 import {useEffect,type RefObject} from 'react'
 
 /** Fade only edges with more content; observes streaming text and resizing. */
-export function useScrollFade(root:RefObject<HTMLElement>,height=12){
+export function useScrollFade(root:RefObject<HTMLElement | null>,height=12){
   useEffect(()=>{
     const container=root.current;if(!container)return
     const win=container.ownerDocument.defaultView??window

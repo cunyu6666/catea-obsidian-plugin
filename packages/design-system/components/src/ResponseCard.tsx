@@ -11,7 +11,7 @@ interface ResponseCardProps {
   hideExpand?: boolean
   sources?: Array<{ title: string; url: string }>
   footerActions?: ReactNode
-  tokenUsage?: { label: string; title: string }
+  tokenUsage?: { input: number; output: number; cacheRead: number; labels: { input: string; output: string; cacheRead: string } }
   onExpand: () => void
   onViewMarkdown: () => void
   labels: { copy: string; copied: string; markdown: string; expand: string; streaming: string | readonly string[]; sources?: string }
@@ -64,20 +64,24 @@ export function ResponseCard({ children, copyText, streaming, startedAt, hideExp
   }
 
   return <div className="anno-response-card" data-state={streaming ? 'streaming' : 'complete'} aria-busy={streaming}>
-    {!streaming && !hideExpand && <button className="anno-response-card__expand" type="button" aria-label={labels.expand} title={labels.expand} onClick={onExpand}><Icon name="fullscreen" size={14} /></button>}
+    {!streaming && !hideExpand && <button className="anno-response-card__expand" type="button" onClick={onExpand}><span className="catea-sr-only">{labels.expand}</span><Icon name="fullscreen" size={14} /></button>}
     <div className="anno-response-card__content anno-auto-scrollbar" aria-live="polite">{children}</div>
     {streaming && <div className="anno-response-card__footer"><span className="anno-response-card__stream"><DitherLoader label={typeof streamingLabels==='string'?streamingLabels:'Loading response'}/>{typeof streamingLabels === 'string' ? streamingLabels : streamingLabels[reduceMotion ? 0 : streamingIndex % streamingLabelCount] ?? ''}{startedAt !== undefined && <span className="anno-response-card__elapsed">· {elapsedLabel(Math.max(0, Math.floor((now - startedAt) / 1000)))}</span>}</span></div>}
     {!streaming && <div className="anno-response-card__completion">
       <div className="anno-response-card__footer">
-        <button className="anno-response-card__action" type="button" aria-label={copied ? labels.copied : labels.copy} title={copied ? labels.copied : labels.copy} onClick={() => void copy()}><Icon name={copied ? 'check' : 'copy'} size={12} />{copied ? labels.copied : labels.copy}</button>
-        <button className="anno-response-card__action" type="button" aria-label={labels.markdown} title={labels.markdown} onClick={onViewMarkdown}><Icon name="markdown" size={12} />{labels.markdown}</button>
+        <button className="anno-response-card__action" type="button" onClick={() => void copy()}><Icon name={copied ? 'check' : 'copy'} size={12} />{copied ? labels.copied : labels.copy}</button>
+        <button className="anno-response-card__action" type="button" onClick={onViewMarkdown}><Icon name="markdown" size={12} />{labels.markdown}</button>
         {safeSources.length > 0 && <button className="anno-response-card__action anno-response-card__sources-toggle" type="button" aria-expanded={sourcesOpen} aria-controls={sourcesId} onClick={() => setSourcesOpen(open => !open)}>
           <span className="anno-response-card__source-stack" aria-hidden="true">{safeSources.slice(0, 3).map(source => <span key={source.url}>{sourceDomain(source.url).charAt(0).toUpperCase()}</span>)}</span>
           <span>{safeSources.length} {labels.sources || 'Sources'}</span>
           <Icon name="chevron-down" size={12} className="anno-response-card__chevron" data-open={sourcesOpen} />
         </button>}
         {footerActions && <div className="anno-response-card__footer-actions">{footerActions}</div>}
-        {tokenUsage && <span className="anno-response-card__token-usage" title={tokenUsage.title}>{tokenUsage.label}</span>}
+        {tokenUsage && <span className="anno-response-card__token-usage">
+          <span><span aria-hidden="true">↑</span><span className="catea-sr-only">{tokenUsage.labels.input} </span>{tokenUsage.input.toLocaleString()}</span>
+          <span><span aria-hidden="true">↓</span><span className="catea-sr-only">{tokenUsage.labels.output} </span>{tokenUsage.output.toLocaleString()}</span>
+          <span>{tokenUsage.labels.cacheRead} {tokenUsage.cacheRead.toLocaleString()}</span>
+        </span>}
       </div>
       {safeSources.length > 0 && <div id={sourcesId} className="anno-response-card__sources" hidden={!sourcesOpen}>
         <ol>{safeSources.map((source, index) => <li key={source.url}>

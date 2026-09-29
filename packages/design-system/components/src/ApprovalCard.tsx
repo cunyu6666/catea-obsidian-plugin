@@ -51,13 +51,13 @@ export function ApprovalCard({ questions, onSubmit, onDismiss, status = 'pending
     }
   }
 
-  return <section className="anno-approval-card" data-state={status} aria-busy={status === 'submitting'} aria-label={status === 'answered' ? result : question.title}>
+  return <section className="anno-approval-card" data-state={status} aria-busy={status === 'submitting'} ><span className="catea-sr-only">{status === 'answered' ? result : question.title}</span>
     <span className="anno-approval-card__icon" aria-hidden="true"><Icon name={status === 'answered' ? 'check' : 'question'} size={16} /></span>
     <div className="anno-approval-card__body">
       <div className="anno-approval-card__top">
         <h3>{status === 'answered' ? result : question.title}</h3>
         {status !== 'answered' && questions.length > 1 && <span>{step + 1}/{questions.length}</span>}
-        {onDismiss && status === 'pending' && <button type="button" aria-label={dismissLabel} title={dismissLabel} onClick={onDismiss}><Icon name="close" size={15} /></button>}
+        {onDismiss && status === 'pending' && <button type="button" onClick={onDismiss}><span className="catea-sr-only">{dismissLabel}</span><Icon name="close" size={15} /></button>}
       </div>
       {status !== 'answered' && <>
         <AnimatePresence initial={false} mode="wait">
@@ -68,16 +68,16 @@ export function ApprovalCard({ questions, onSubmit, onDismiss, status = 'pending
                   <input type={question.multiple ? 'checkbox' : 'radio'} name={`approval-${question.id}`} checked={answer.selected.includes(option.value)} disabled={status === 'submitting'} onChange={() => choose(option.value)} />
                   <span>{option.label}</span>
                 </label>
-                {option.preview && <button type="button" aria-label={`${previewLabel} ${option.label}`} onClick={() => setPreview(current => current === option.value ? null : option.value)}>{previewLabel}</button>}
+                {option.preview && <button type="button" onClick={() => setPreview(current => current === option.value ? null : option.value)}>{previewLabel}<span className="catea-sr-only">{` ${option.label}`}</span></button>}
               </div>)}
               {preview && <pre className="anno-approval-card__preview">{question.options.find(option => option.value === preview)?.preview}</pre>}
-              {question.allowCustom && <input className="anno-approval-card__custom" value={answer.custom} disabled={status === 'submitting'} onChange={event => update({ selected: question.multiple ? answer.selected : [], custom: event.target.value })} placeholder={question.customPlaceholder || 'Add another response…'} aria-label={question.customPlaceholder || 'Add another response'} />}
+              {question.allowCustom && <label className="catea-field-label"><span className="catea-sr-only">{question.customPlaceholder || 'Add another response'}</span><input className="anno-approval-card__custom" value={answer.custom} disabled={status === 'submitting'} onChange={event => update({ selected: question.multiple ? answer.selected : [], custom: event.target.value })} placeholder={question.customPlaceholder || 'Add another response…'}  /></label>}
             </div>
           </motion.div>
         </AnimatePresence>
         <div className="anno-approval-card__footer">
-          {questions.length > 1 && <><button type="button" className="anno-approval-card__previous" disabled={step === 0 || status === 'submitting'} onClick={() => move(step - 1)} aria-label={previousLabel}><Icon name="arrow-left" size={15} /></button><span className="anno-approval-card__dots" aria-label={progressLabel?.(step + 1, questions.length) || `Question ${step + 1} of ${questions.length}`}>{questions.map((item, index) => <i key={item.id} className={index === step ? 'is-active' : ''} />)}</span></>}
-          <button type="button" className={`anno-approval-card__next ${step === questions.length - 1 ? 'is-final' : ''}`} disabled={!valid || status === 'submitting'} onClick={continueQuestion} aria-label={step === questions.length - 1 ? submitLabel : nextLabel}>{step === questions.length - 1 && <span>{submitLabel}</span>}<Icon name="arrow-right" size={16} /></button>
+          {questions.length > 1 && <><button type="button" className="anno-approval-card__previous" disabled={step === 0 || status === 'submitting'} onClick={() => move(step - 1)} ><span className="catea-sr-only">{previousLabel}</span><Icon name="arrow-left" size={15} /></button><span className="anno-approval-card__dots" ><span className="catea-sr-only">{progressLabel?.(step + 1, questions.length) || `Question ${step + 1} of ${questions.length}`}</span>{questions.map((item, index) => <i key={item.id} className={index === step ? 'is-active' : ''} />)}</span></>}
+          <button type="button" className={`anno-approval-card__next ${step === questions.length - 1 ? 'is-final' : ''}`} disabled={!valid || status === 'submitting'} onClick={continueQuestion} >{step !== questions.length - 1 && <span className="catea-sr-only">{nextLabel}</span>}{step === questions.length - 1 && <span>{submitLabel}</span>}<Icon name="arrow-right" size={16} /></button>
         </div>
       </>}
     </div>

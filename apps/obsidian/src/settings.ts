@@ -54,6 +54,7 @@ export class CateaSettings extends PluginSettingTab {
       appearance.push({name:tr(label),render:s=>{s.addToggle(t=>t.setValue(p.settings[key]).onChange(async value=>{p.settings[key]=value;await p.saveData(p.settings);p.apply()}))}})
     }
     appearance.push({name:tr('笔记缩略图'),desc:tr('文件树显示真实标题、正文和首张本地图片的缩略预览。'),render:s=>{s.addToggle(t=>t.setValue(c.noteThumbnails!==false).onChange(async value=>{c.noteThumbnails=value;await p.saveAgentSettings();p.refreshThumbnails()}))}})
+    appearance.push({name:tr('Git 历史'),desc:tr('在右侧栏显示知识库的本地 Git 时间线。默认关闭，不执行提交或同步。'),render:s=>{s.addToggle(t=>t.setValue(c.gitHistory===true).onChange(async value=>{c.gitHistory=value;await p.saveAgentSettings();await p.syncGitHistory(value)}))}})
     const agent:SettingsRow[]=[
       {name:tr('启用 Agent'),render:s=>{s.addToggle(t=>t.setValue(c.enabled).onChange(async value=>{c.enabled=value;if(!value)p.stopAgents();p.agent.memory.setEnabled(value&&c.memory);await p.saveAgentSettings()}))}},
       {name:tr('人格'),desc:tr('选择 Agent 的对话风格；从下一条消息开始使用。'),render:s=>{s.addDropdown(d=>{for(const item of personas)d.addOption(item.id,item.name);d.setValue(persona(c.personaId).id).onChange(async value=>{c.personaId=persona(value).id;p.agent.session.personaId=c.personaId;await p.saveAgentSettings()})})}},
@@ -62,7 +63,7 @@ export class CateaSettings extends PluginSettingTab {
       {name:tr('长期记忆'),desc:tr('自动提取、召回和巩固；保存在当前知识库 .catea/memory。'),render:s=>{s.addToggle(t=>t.setValue(c.memory).onChange(async value=>{c.memory=value;if(!value)p.stopAgents();p.agent.memory.setEnabled(value&&c.enabled);await p.saveAgentSettings()}))}},
       {name:'Bash',desc:tr('默认开启，命令执行遵循下方权限模式。'),render:s=>{s.addToggle(t=>t.setValue(c.shell).onChange(async value=>{c.shell=value;p.stopAgents();await p.saveAgentSettings()}))}},
       {name:tr('引用批注'),desc:tr('在回复卡片中显示引用批注按钮，可选中文字后添加批注。默认关闭。'),render:s=>{s.addToggle(t=>t.setValue(c.enableReplyAnnotations===true).onChange(async value=>{c.enableReplyAnnotations=value;await p.saveAgentSettings()}))}},
-      {name:tr('显示 Token 用量'),desc:tr('在每条回复下显示输入、输出和缓存读取的 Token 数。默认关闭。'),render:s=>{s.addToggle(t=>t.setValue(c.showTokenUsage===true).onChange(async value=>{c.showTokenUsage=value;await p.saveAgentSettings()}))}},
+      {name:tr('显示 Token 用量'),desc:tr('在每条回复下显示输入、输出和缓存命中的 Token 数。默认关闭。'),render:s=>{s.addToggle(t=>t.setValue(c.showTokenUsage===true).onChange(async value=>{c.showTokenUsage=value;await p.saveAgentSettings()}))}},
       {name:tr('权限模式'),desc:tr('帮我批准：自动放行 pwd、ls 等简单目录查看，其余操作请求确认。完全访问：跳过 Bash、文件修改、MCP 和记忆更新的审批，命令可访问知识库之外。'),render:s=>{s.addDropdown(d=>d.addOption('assist',tr('帮我批准')).addOption('full',tr('完全访问')).setValue(c.permissionMode||'assist').onChange(async value=>{p.stopAgents();c.permissionMode=value==='full'?'full':'assist';await p.saveAgentSettings()}))}},
     ]
     const models:SettingsRow[]=c.models.map(model=>({name:model.name,desc:`${isOpenRouterModel(model)?'OpenRouter':model.protocol==='openai'?tr('OpenAI 兼容'):tr('Anthropic 兼容')} · ${model.model} · ${model.baseUrl}${model.apiKey?'':tr(' · 请补充 API Key')}`,render:s=>{

@@ -14,3 +14,14 @@ CatUI standard agent loop, context-window controller and context-management tool
 ANNO AskUserQuestion parser/schema, StreamingChatResponse and ApprovalCard are reused in the real Obsidian chat. ApprovalCard's BeUI MIT attribution is retained in its source. Motion runtime is used for the original card transitions and reduced-motion behavior.
 
 ANNO CodeBlock and MermaidDiagram: adapted from packages/design-system/src/components/CodeBlock.tsx and apps/extension/src/MermaidDiagram.tsx. Shiki and beautiful-mermaid retain their MIT licenses. File-type icons use the existing Tabler set; fullscreen uses the native Obsidian/Electron dialog surface.
+
+
+## React Git Log
+
+The optional Git history sidebar uses `@tomplum/react-git-log` 3.5.1 by Thomas
+Plumpton, licensed under Apache-2.0. Source: https://github.com/TomPlum/react-git-log.
+Its license and those of its bundled dependencies (`@uidotdev/usehooks`,
+`classnames`, `dayjs`, `fastpriorityqueue`, and `react-tiny-popover`) are included
+as `REACT-GIT-LOG-LICENSE.txt` in the built distribution.
+The component is styled for Catea; repository access is implemented separately
+using bounded, local, read-only Git commands.

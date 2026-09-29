@@ -94,11 +94,11 @@ export function MermaidDiagram({ code, showExpandButton = true, t }: { code: str
 
   return <>
     <div className="chat-mermaid">
-      {showExpandButton && <button type="button" className="chat-mermaid__expand" aria-label={t('viewDiagramFullscreen')} title={t('viewDiagramFullscreen')} onClick={() => setOpen(true)}><Icon name="fullscreen" size={14} /></button>}
+      {showExpandButton && <button type="button" className="chat-mermaid__expand"   onClick={() => setOpen(true)}><span className="catea-sr-only">{t('viewDiagramFullscreen')}</span><Icon name="fullscreen" size={14} /></button>}
       <div ref={scrollRef} className="chat-mermaid__scroller anno-auto-scrollbar" onScroll={updateFade} style={{
         maskImage: `linear-gradient(to right, ${scroll.left ? 'transparent 0, #000 32px' : '#000 0'}, #000 ${scroll.right ? 'calc(100% - 32px), transparent 100%' : '100%'})`,
       }}>
-        <div className="chat-mermaid__sizing" style={{ width: scaledWidth, height: scaledHeight, marginInline: scaledWidth && scaledWidth < width ? 'auto' : undefined }} onClick={() => setOpen(true)} role="button" aria-label={t('viewDiagramFullscreen')} tabIndex={0} onKeyDown={event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); setOpen(true) } }}>
+        <div className="chat-mermaid__sizing" style={{ width: scaledWidth, height: scaledHeight, marginInline: scaledWidth && scaledWidth < width ? 'auto' : undefined }} onClick={() => setOpen(true)} role="button"  tabIndex={0} onKeyDown={event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); setOpen(true) } }}><span className="catea-sr-only">{t('viewDiagramFullscreen')}</span>
           <div dangerouslySetInnerHTML={{ __html: svg }} style={{ transform: inlineScale !== 1 ? `scale(${inlineScale})` : undefined, transformOrigin: 'top left' }} />
         </div>
       </div>
@@ -110,20 +110,20 @@ export function MermaidDiagram({ code, showExpandButton = true, t }: { code: str
           <span className="chat-mermaid-preview__title">{t('mermaidDiagram')}</span>
           <div className="chat-mermaid-preview__actions">
             <div className="chat-mermaid-preview__zoom">
-              <button type="button" aria-label={t('zoomOut')} title={t('zoomOut')} disabled={scale <= .25} onClick={() => setScale(current => Math.max(.25, current / 1.25))}>−</button>
+              <button type="button" disabled={scale <= .25} onClick={() => setScale(current => Math.max(.25, current / 1.25))}><span className="catea-sr-only">{t('zoomOut')}</span>−</button>
               <div className="chat-mermaid-preview__zoom-menu">
-                <button type="button" aria-label={t('zoomPresets')} title={t('zoomPresets')} aria-expanded={presetsOpen} onClick={() => setPresetsOpen(value => !value)}>{Math.round(scale * 100)}%</button>
+                <button type="button" aria-expanded={presetsOpen} onClick={() => setPresetsOpen(value => !value)}><span className="catea-sr-only">{t('zoomPresets')}</span>{Math.round(scale * 100)}%</button>
                 {presetsOpen && <div className="chat-mermaid-preview__presets">
                   <button type="button" onClick={zoomToFit}>{t('zoomToFit')}</button>
                   <div className="chat-mermaid-preview__divider" />
                   {[25, 50, 75, 100, 150, 200, 400].map(percent => <button type="button" key={percent} onClick={() => { setScale(percent / 100); setPresetsOpen(false) }}><span>{Math.round(scale * 100) === percent ? '✓' : ''}</span>{percent}%</button>)}
                 </div>}
               </div>
-              <button type="button" aria-label={t('zoomIn')} title={t('zoomIn')} disabled={scale >= 4} onClick={() => setScale(current => Math.min(4, current * 1.25))}>+</button>
+              <button type="button" disabled={scale >= 4} onClick={() => setScale(current => Math.min(4, current * 1.25))}><span className="catea-sr-only">{t('zoomIn')}</span>+</button>
             </div>
-            <button type="button" aria-label={t('resetZoom')} title={t('resetZoom')} disabled={scale === 1 && position.x === 0 && position.y === 0} onClick={() => { setScale(1); setPosition({ x: 0, y: 0 }) }}><Icon name="loading" size={15} /></button>
-            <button type="button" aria-label={t('copyDiagramSource')} title={t('copyDiagramSource')} onClick={() => void navigator.clipboard.writeText(code)}><Icon name="copy" size={15} /></button>
-            <button type="button" aria-label={t('closeDialog')} title={t('closeDialog')} onClick={() => setOpen(false)}><Icon name="close" size={16} /></button>
+            <button type="button" disabled={scale === 1 && position.x === 0 && position.y === 0} onClick={() => { setScale(1); setPosition({ x: 0, y: 0 }) }}><span className="catea-sr-only">{t('resetZoom')}</span><Icon name="loading" size={15} /></button>
+            <button type="button" onClick={() => void navigator.clipboard.writeText(code)}><span className="catea-sr-only">{t('copyDiagramSource')}</span><Icon name="copy" size={15} /></button>
+            <button type="button" onClick={() => setOpen(false)}><span className="catea-sr-only">{t('closeDialog')}</span><Icon name="close" size={16} /></button>
           </div>
         </header>
         <div className={`chat-mermaid-preview__stage ${dragging ? 'is-dragging' : ''}`} onWheel={event => {

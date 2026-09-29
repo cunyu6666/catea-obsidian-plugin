@@ -27,7 +27,7 @@ export function AgentActivities({ items, preview, autoExpand = false, completed 
   const expanded = manual?.phase === autoExpand ? manual.expanded : autoExpand
   if (!items.length) return thinking || thinkingContent?.trim() || completed ? <ThinkingIndicator active={thinking} labels={{...labels,thought:completed?preview:labels.thought}} content={thinkingContent} startedAt={startedAt} /> : null
 
-  return <section className="anno-activities" aria-label={preview}>
+  return <section className="anno-activities" ><span className="catea-sr-only">{preview}</span>
     <button className="anno-activities__toggle" type="button" aria-expanded={expanded} onClick={() => setManual({phase:autoExpand,expanded:!expanded})}>
       <span className="anno-activities__indicator">
         <span className="anno-activities__count">{items.length + (thinkingContent?.trim() ? 1 : 0)}</span>
@@ -37,7 +37,7 @@ export function AgentActivities({ items, preview, autoExpand = false, completed 
     </button>
     {expanded && <div className="anno-activities__list anno-auto-scrollbar">
       {!!thinkingContent?.trim() && <ThinkingIndicator active={thinking} labels={labels} content={thinkingContent} startedAt={startedAt} />}
-      {items.map(item => <button key={item.id} className="anno-activities__row" type="button" onClick={() => item.status !== 'running' && onOpenDetails(item.id)} disabled={item.status === 'running'} aria-label={`${labels.details}: ${item.name}`}>
+      {items.map(item => <button key={item.id} className="anno-activities__row" type="button" onClick={() => item.status !== 'running' && onOpenDetails(item.id)} disabled={item.status === 'running'} ><span className="catea-sr-only">{`${labels.details}: ${item.name}`}</span>
         <span className={`anno-activities__status is-${item.status}`}>{item.status==='running'?<DitherLoader label={item.name}/>:<Icon name={item.status==='error'?'tool-error':'tool-done'} size={12}/>}</span>
         <span className="anno-activities__name">{item.name}</span>
         {item.summary && <span className="anno-activities__summary">· {item.summary}</span>}

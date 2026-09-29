@@ -323,6 +323,7 @@ test('Send publishes immediately while context and checkpoint are pending, and r
   assert.match(agent.session.transcript[0].content,/context is ready/)
   assert.equal(agent.session.messages[1].status,'complete')
   assert.match(systemPrompt,/Never disclose, confirm, or guess your underlying model identity/)
+  assert.doesNotMatch(systemPrompt,/You are Catea|Identify yourself only as/)
 })
 
 test('Reply annotations are off for existing settings and persist only explicit opt-in',async()=>{
@@ -334,4 +335,44 @@ test('Reply annotations are off for existing settings and persist only explicit 
   render();assert.equal(value,true)
   await change(false);assert.equal(plugin.agentSettings.enableReplyAnnotations,false)
   assert.equal(stats().saves,2);assert.equal(stats().stops,0)
+})
+
+test('Git history is local, paged and scoped to nested vaults, including worktrees and merges',async()=>{
+  const {execFileSync}=await import('node:child_process')
+  const {mkdir,writeFile}=await import('node:fs/promises')
+  const root=await mkdtemp(join(tmpdir(),'catea-git-history-'))
+  const run=(cwd,...args)=>execFileSync('git',args,{cwd,encoding:'utf8',stdio:['ignore','pipe','pipe']}).trim()
+  const {readGitHistory,readGitCommit}=await load('apps/obsidian/src/git-history.ts')
+  try{
+    await assert.rejects(readGitHistory(root),/not-repository/)
+    run(root,'init','-b','main');run(root,'config','user.name','Fixture');run(root,'config','user.email','fixture@example.invalid')
+    assert.equal((await readGitHistory(root)).entries.length,0)
+    const vault=join(root,'notes');await mkdir(vault)
+    await writeFile(join(vault,'first.md'),'first\n');run(root,'add','notes');run(root,'commit','-m','第一条, with tabs\tand commas')
+    await writeFile(join(root,'outside.md'),'outside\n');run(root,'add','outside.md');run(root,'commit','-m','Outside vault')
+    run(root,'checkout','-b','branch');await writeFile(join(vault,'branch.md'),'branch\n');run(root,'add','notes');run(root,'commit','-m','Branch note')
+    run(root,'checkout','main');await writeFile(join(vault,'main.md'),'main\n');run(root,'add','notes');run(root,'commit','-m','Main note');run(root,'merge','--no-ff','branch','-m','Merge notes')
+    const before=run(root,'status','--porcelain=v1')
+    const history=await readGitHistory(vault,100)
+    assert.equal(history.branch,'main');assert(history.entries.some(e=>e.parents.length===2));assert(!history.entries.some(e=>e.message==='Outside vault'))
+    assert(history.entries.some(e=>e.message.includes('第一条, with tabs\tand commas')))
+    const page=await readGitHistory(vault,2);assert.equal(page.entries.length,2);assert.equal(page.hasMore,true)
+    const outside=run(root,'rev-list','--all','--','outside.md')
+    const detail=await readGitCommit(vault,outside);assert(!detail.includes('outside.md'))
+    await assert.rejects(readGitCommit(vault,'--output=bad'),/git-failed/)
+    const worktree=join(root,'linked');run(root,'worktree','add','--detach',worktree,'HEAD')
+    assert((await readGitHistory(join(worktree,'notes'))).entries.length>0)
+    assert.equal(run(root,'status','--porcelain=v1'),before+'?? linked/')
+    const controller=new AbortController();controller.abort();await assert.rejects(readGitHistory(vault,100,controller.signal))
+  }finally{await rm(root,{recursive:true,force:true})}
+})
+
+test('Git history is disabled by default and settings open or detach the sidebar explicitly',async()=>{
+  const {tab,plugin}=await settingsFixture()
+  let current,change;const opened=[]
+  plugin.syncGitHistory=async reveal=>opened.push(reveal)
+  const render=()=>rows(tab).find(item=>item.name==='Git 历史').render({addToggle(fn){fn({setValue(value){current=value;return this},onChange(fn){change=fn;return this}});return this}})
+  render();assert.equal(current,false)
+  await change(true);assert.equal(plugin.agentSettings.gitHistory,true);assert.deepEqual(opened,[true])
+  await change(false);assert.equal(plugin.agentSettings.gitHistory,false);assert.deepEqual(opened,[true,false])
 })
