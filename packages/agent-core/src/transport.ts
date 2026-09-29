@@ -61,12 +61,17 @@ export async function serviceFetch(
   try {
     return await nodeFetch(input, init)
   } catch (error) {
+    const code =
+      typeof error === 'object' && error !== null && 'code' in error
+        ? (error as { code?: unknown }).code
+        : undefined
     if (
+      typeof code !== 'string' ||
       ![
         'SELF_SIGNED_CERT_IN_CHAIN',
         'UNABLE_TO_GET_ISSUER_CERT_LOCALLY',
         'UNABLE_TO_VERIFY_LEAF_SIGNATURE',
-      ].includes((error as NodeJS.ErrnoException).code || '')
+      ].includes(code)
     )
       throw error
     init.signal?.throwIfAborted()

@@ -8,6 +8,15 @@ import { mkdir, readFile, rename, writeFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 import type { ModelConfig } from '../../../packages/agent-core/src/types'
 
+// Structural narrowing instead of an ErrnoException cast. Kept file-local
+// because this module is imported directly by Node's type-stripping test
+// runtime, where an extensionless cross-package import would not resolve.
+function errnoCode(error: unknown): string | undefined {
+  if (typeof error !== 'object' || error === null || !('code' in error)) return undefined
+  const code = (error as { code?: unknown }).code
+  return typeof code === 'string' ? code : undefined
+}
+
 interface Cipher {
   isEncryptionAvailable(): boolean
   encryptString(value: string): Buffer
@@ -72,18 +81,18 @@ export class GlobalByokStore {
     try {
       raw = await readFile(this.path, 'utf8')
     } catch (error) {
-      if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+      if (errnoCode(error) === 'ENOENT') {
         this.revision = null
         return null
       }
       throw error
     }
-    const envelope = JSON.parse(raw) as { version?: number; ciphertext?: string }
+    const envelope = JSON.parse(raw) as unknown as { version?: number; ciphertext?: string }
     if (envelope.version !== 1 || typeof envelope.ciphertext !== 'string')
       throw new Error('Unsupported global BYOK data')
     const profile = JSON.parse(
       this.cipher.decryptString(Buffer.from(envelope.ciphertext, 'base64')),
-    ) as ByokProfile
+    ) as unknown as ByokProfile
     if (!Array.isArray(profile.models) || !Array.isArray(profile.deletedIds))
       throw new Error('Invalid global BYOK data')
     this.revision = raw
@@ -97,7 +106,7 @@ export class GlobalByokStore {
     try {
       current = await readFile(this.path, 'utf8')
     } catch (error) {
-      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error
+      if (errnoCode(error) !== 'ENOENT') throw error
       current = null
     }
     if (current !== this.revision)

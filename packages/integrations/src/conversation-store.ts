@@ -6,7 +6,7 @@
  */
 import { readdir, unlink } from 'node:fs/promises'
 import type { ConversationStore, Session, SessionSummary } from '../../agent-core/src/contracts'
-import { Serial, readJson, writeJson, within } from './storage'
+import { Serial, errnoCode, readJson, writeJson, within } from './storage'
 
 export class VaultConversationStore implements ConversationStore {
   private writes = new Serial()
@@ -47,7 +47,7 @@ export class VaultConversationStore implements ConversationStore {
         try {
           await unlink(await this.sessionPath(id))
         } catch (error: unknown) {
-          if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error
+          if (errnoCode(error) !== 'ENOENT') throw error
         }
       }
     })
@@ -66,7 +66,7 @@ export class VaultConversationStore implements ConversationStore {
       try {
         await unlink(file)
       } catch (error: unknown) {
-        if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
+        if (errnoCode(error) !== 'ENOENT') {
           await writeJson(path, index)
           throw error
         }

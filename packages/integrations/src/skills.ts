@@ -6,7 +6,7 @@
  * [HERE]: packages/integrations/src/skills.ts - loads enabled .catea/skills/<id>/SKILL.md packages and reads path-guarded resources; content capped at 48000 chars, traversal rejected
  */
 import { readdir, readFile } from 'node:fs/promises'
-import { within } from './storage'
+import { errnoCode, within } from './storage'
 export interface Skill {
   id: string
   description: string
@@ -30,7 +30,7 @@ export async function listSkills(vault: string) {
       .filter((d) => d.isDirectory())
       .map((d) => d.name)
   } catch (e: unknown) {
-    if ((e as NodeJS.ErrnoException).code === 'ENOENT') return []
+    if (errnoCode(e) === 'ENOENT') return []
     throw e
   }
 }

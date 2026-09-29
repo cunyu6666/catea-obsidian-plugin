@@ -10,7 +10,7 @@ import { requirePermission } from '../../agent-core/src/permission-policy'
 import { readFile, readdir, stat, mkdir, writeFile } from 'node:fs/promises'
 import { dirname } from 'node:path'
 import { spawn } from 'node:child_process'
-import { within } from './storage'
+import { errnoCode, within } from './storage'
 import type { ToolDefinition } from '../../agent-core/src/providers'
 import type { FileChange } from '../../agent-core/src/types'
 export type Approve = (title: string, detail: string, signal: AbortSignal) => Promise<boolean>
@@ -156,7 +156,7 @@ export class VaultTools {
       try {
         before = await this.text(path)
       } catch (e: unknown) {
-        if ((e as NodeJS.ErrnoException).code !== 'ENOENT') throw e
+        if (errnoCode(e) !== 'ENOENT') throw e
       }
       let after = textValue(a.content ?? '')
       if (name === 'edit') {
@@ -181,7 +181,7 @@ export class VaultTools {
       try {
         current = await this.text(path)
       } catch (e: unknown) {
-        if ((e as NodeJS.ErrnoException).code !== 'ENOENT') throw e
+        if (errnoCode(e) !== 'ENOENT') throw e
       }
       if (current !== before) throw new Error('文件在确认期间发生变化，请重新读取')
       await mkdir(dirname(target), { recursive: true })
@@ -257,7 +257,7 @@ export class VaultTools {
         }
         child.on('error', (e) => {
           cleanup()
-          reject(e)
+          reject(e instanceof Error ? e : new Error(String(e)))
         })
         child.on('close', (code) => {
           cleanup()

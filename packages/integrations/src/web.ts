@@ -1,7 +1,7 @@
 // Adapted from CatUI link-world/index.ts (GPL-3.0); see THIRD_PARTY_NOTICES.md.
 /**
  * [WHO]: Provides runWeb, runLinkWorld, webSources, webTools, linkWorldTools
- * [FROM]: Depends on ../../agent-core/src/i18n, @modelcontextprotocol/sdk/client/index.js, @modelcontextprotocol/sdk/client/streamableHttp.js, node:child_process, node:util, node:path, ../../agent-core/src/transport, ../../agent-core/src/providers, ../../agent-core/src/version
+ * [FROM]: Depends on ../../agent-core/src/i18n, @modelcontextprotocol/sdk/client/index.js, @modelcontextprotocol/sdk/client/streamableHttp.js, node:child_process, node:util, node:path, ../../agent-core/src/transport, ../../agent-core/src/providers, ../../agent-core/src/version, ./storage
  * [TO]: Consumed by packages/agent-core/src/index.ts
  * [HERE]: packages/integrations/src/web.ts - web_search and web_fetch via Exa MCP, Jina, DuckDuckGo or direct fetch; link-world diagnostics and approved agent-reach CLI execution; blocks local and private hosts
  */
@@ -14,6 +14,7 @@ import { join } from 'node:path'
 import { serviceFetch } from '../../agent-core/src/transport'
 import type { ToolDefinition } from '../../agent-core/src/providers'
 import { PLUGIN_VERSION } from '../../agent-core/src/version'
+import { errnoCode } from './storage'
 const exec = promisify(execFile)
 const JINA_READER_BASE = 'https://r.jina.ai',
   JINA_SEARCH_BASE = 'https://s.jina.ai',
@@ -118,7 +119,7 @@ async function agentReachCommand(signal: AbortSignal): Promise<string | undefine
       return command
     } catch (error) {
       signal.throwIfAborted()
-      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') continue
+      if (errnoCode(error) !== 'ENOENT') continue
     }
   }
   return undefined

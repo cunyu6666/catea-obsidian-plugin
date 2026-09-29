@@ -1,14 +1,24 @@
 /**
- * [WHO]: Provides Serial, readJson, within, writeJson
+ * [WHO]: Provides Serial, errnoCode, readJson, within, writeJson
  * [FROM]: Depends on node:fs/promises, node:path
- * [TO]: Consumed by apps/obsidian/src/main.tsx, packages/integrations/src/conversation-store.ts,
+ * [TO]: Consumed by apps/obsidian/src/main.tsx,
+ *   packages/integrations/src/conversation-store.ts,
  *   packages/integrations/src/legacy-snapshots.ts,
  *   packages/integrations/src/index.ts, packages/integrations/src/skills.ts,
- *   packages/integrations/src/tools.ts, packages/memory/src/index.ts
+ *   packages/integrations/src/tools.ts, packages/integrations/src/web.ts,
+ *   packages/memory/src/index.ts
  * [HERE]: packages/integrations/src/storage.ts - vault confinement via within() with realpath checks and explicit symlink rejection, atomic temp+rename JSON writes, and the Serial promise queue
  */
 import { mkdir, readFile, writeFile, rename, realpath, lstat } from 'node:fs/promises'
 import { resolve, relative, isAbsolute, dirname } from 'node:path'
+
+// Structural narrowing instead of an ErrnoException cast: an unknown thrown value
+// is only treated as a filesystem error when it really carries a string code.
+export function errnoCode(error: unknown): string | undefined {
+  if (typeof error !== 'object' || error === null || !('code' in error)) return undefined
+  const code = (error as { code?: unknown }).code
+  return typeof code === 'string' ? code : undefined
+}
 
 export async function within(root: string, path: string): Promise<string> {
   if (isAbsolute(path) || path.split(/[\\/]/).includes('..') || path.includes('\0'))
@@ -23,7 +33,7 @@ export async function within(root: string, path: string): Promise<string> {
       if (rel.startsWith('..') || isAbsolute(rel)) throw new Error('路径越过知识库边界')
       break
     } catch (e: unknown) {
-      if ((e as NodeJS.ErrnoException).code !== 'ENOENT') throw e
+      if (errnoCode(e) !== 'ENOENT') throw e
       const parent = dirname(check)
       if (parent === check) throw e
       check = parent
@@ -36,16 +46,17 @@ export async function within(root: string, path: string): Promise<string> {
     try {
       if ((await lstat(cursor)).isSymbolicLink()) throw new Error('不操作符号链接')
     } catch (e: unknown) {
-      if ((e as NodeJS.ErrnoException).code !== 'ENOENT') throw e
+      if (errnoCode(e) !== 'ENOENT') throw e
     }
   }
   return target
 }
 export async function readJson<T>(path: string, fallback: T): Promise<T> {
   try {
-    return JSON.parse(await readFile(path, 'utf8')) as T
+    const parsed: unknown = JSON.parse(await readFile(path, 'utf8'))
+    return parsed as T
   } catch (e: unknown) {
-    if ((e as NodeJS.ErrnoException).code === 'ENOENT') return fallback
+    if (errnoCode(e) === 'ENOENT') return fallback
     throw new Error(`无法读取本地数据：${path}`)
   }
 }

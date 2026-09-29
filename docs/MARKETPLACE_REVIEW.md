@@ -30,8 +30,21 @@ and refresh, secret exclusion, Electron transport fallback, and CSS constraints.
 - Filesystem and shell access are intentional agent capabilities. Their existing
   confinement and approval behavior is retained; removing the imports merely to
   silence a capability notice would remove supported features.
-- Vault enumeration and clipboard usage require review in context. This update
-  does not claim those capability notices have disappeared from the release scan.
+- Vault enumeration requires review in context: file listing backs the `find`
+  and `grep` agent tools and the file-tree thumbnails, both scoped to the vault.
+  This update does not claim that capability notice has disappeared from the
+  release scan.
+- System identity notice: no owned or vendored code path reads `os.hostname`,
+  `os.userInfo` or `os.networkInterfaces`. The Git history spawner copies an
+  explicit allowlist (`PATH`, `HOME`, temp, locale and Windows system
+  variables) instead of the full environment, so it structurally cannot inherit
+  `GIT_DIR`-style overrides either; the only other owned environment read is
+  `process.env.HOME` when locating the optional, capability-gated `agent-reach`
+  CLI, disclosed in SECURITY.md. Vendored upstream reads configuration and
+  debug variables (`NANOMEM_*`, `CATUI_DEBUG`, `NODE_ENV`) only.
+- Clipboard use is write-only (`navigator.clipboard.writeText` behind explicit
+  copy buttons) plus files taken from the user's own paste event; nothing polls
+  or reads the system clipboard in the background.
 - Ajv generates validation functions at runtime. Its dependency contains
   `new Function`; changing application-level imports does not eliminate all
   dynamic-code notices from bundled dependencies.

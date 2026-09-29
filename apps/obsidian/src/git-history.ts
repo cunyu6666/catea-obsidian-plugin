@@ -20,19 +20,33 @@ export interface GitHistory {
   hasMore: boolean
 }
 
+// A minimal local-only environment: these read-only commands never touch the
+// network, credentials or hooks. Copying an explicit allowlist instead of the
+// full process environment keeps machine identity variables out of the child
+// process, and structurally guarantees that an inherited Git override such as
+// GIT_DIR cannot redirect reads to a different repository.
+const GIT_ENV_ALLOWLIST = [
+  'PATH',
+  'HOME',
+  'USERPROFILE',
+  'XDG_CONFIG_HOME',
+  'SYSTEMROOT',
+  'WINDIR',
+  'COMSPEC',
+  'TMPDIR',
+  'TEMP',
+  'TMP',
+  'LANG',
+] as const
 async function git(vault: string, args: string[], signal?: AbortSignal): Promise<string> {
-  const environment = { ...process.env, GIT_TERMINAL_PROMPT: '0', LC_ALL: 'C' }
-  // An inherited Git override must not redirect reads to a different repository.
-  for (const key of [
-    'GIT_DIR',
-    'GIT_WORK_TREE',
-    'GIT_COMMON_DIR',
-    'GIT_INDEX_FILE',
-    'GIT_OBJECT_DIRECTORY',
-    'GIT_ALTERNATE_OBJECT_DIRECTORIES',
-    'GIT_NAMESPACE',
-  ])
-    delete (environment as NodeJS.ProcessEnv)[key]
+  const environment: Record<string, string> = {
+    GIT_TERMINAL_PROMPT: '0',
+    LC_ALL: 'C',
+  }
+  for (const key of GIT_ENV_ALLOWLIST) {
+    const value = process.env[key]
+    if (typeof value === 'string') environment[key] = value
+  }
   return new Promise((resolve, reject) => {
     execFile(
       'git',
