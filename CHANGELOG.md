@@ -3,6 +3,20 @@
 Notable changes per release. The version is the one in `manifest.json`; the GitHub
 release tag is that same number with no `v` prefix.
 
+## Unreleased
+
+### Added
+
+- One-click MCP presets in Settings: Figma (Framelink), GitHub, Context7 and
+  DeepWiki. Presets start disabled, keys stay in Obsidian secret storage, and a
+  stdio key is injected as an environment variable at connect time — only the
+  variable name is ever written to `.catea/config.json`, never a value.
+
+### Fixed
+
+- Removing an MCP server now also clears its stored bearer token from Obsidian
+  secret storage.
+
 ## 0.3.15
 
 ### Fixed

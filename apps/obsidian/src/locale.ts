@@ -293,6 +293,21 @@ Object.assign(english, {
   '另一知识库更新了本机 BYOK，请重新打开当前知识库后重试':
     'Another vault changed shared BYOK data. Reopen this vault and try again.',
 })
+Object.assign(english, {
+  添加: 'Add',
+  已添加: 'Added',
+  '需要本机已安装 Node.js / npx。': 'Requires Node.js and npx installed locally.',
+  '读取 Figma 设计稿的结构与样式，供 Agent 参考实现。添加后填入 Figma 个人访问令牌。':
+    'Reads the structure and styles of Figma designs for the Agent to implement against. Add it, then fill in a Figma personal access token.',
+  'GitHub 官方远程 MCP：仓库、Issue 与 PR 工具。填入个人访问令牌，可用范围由令牌权限决定。':
+    'Official GitHub remote MCP: repository, issue and PR tools. Fill in a personal access token; the available scope follows the token permissions.',
+  '查询库与框架的最新文档。无需密钥；匿名调用受上游速率限制。':
+    'Looks up current library and framework documentation. No key required; anonymous calls are rate-limited upstream.',
+  '就公开 GitHub 仓库的结构与实现提问。无需密钥。':
+    'Asks questions about the structure and implementation of public GitHub repositories. No key required.',
+  '保存在 Obsidian 密钥存储，连接时作为环境变量注入；不写入知识库配置。':
+    'Stored in Obsidian secret storage and injected as an environment variable at connect time; never written to vault configuration.',
+})
 export function translate(language: Language, text: string) {
   return language === 'en' ? english[text] || text : text
 }

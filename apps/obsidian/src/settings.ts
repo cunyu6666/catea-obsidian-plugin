@@ -1,8 +1,8 @@
 /**
  * [WHO]: Provides CateaSettings
- * [FROM]: Depends on obsidian, ./main, ../../../packages/agent-core/src/types, ../../../packages/agent-core/src/byok, ../../../packages/integrations/src/skills, ../../../packages/personas/src
+ * [FROM]: Depends on obsidian, ./main, ../../../packages/agent-core/src/types, ../../../packages/agent-core/src/byok, ../../../packages/integrations/src/skills, ../../../packages/integrations/src/mcp-presets, ../../../packages/personas/src
  * [TO]: Consumed by apps/obsidian/src/main.tsx
- * [HERE]: apps/obsidian/src/settings.ts - plugin settings tab for language, paper toggles, Agent persona and capabilities, BYOK models and MCP servers; ModelModal validates through normalizeModel
+ * [HERE]: apps/obsidian/src/settings.ts - plugin settings tab for language, paper toggles, Agent persona and capabilities, BYOK models, one-click MCP presets and MCP servers; ModelModal validates through normalizeModel
  */
 import { App, PluginSettingTab, Setting, Notice, Modal, type SettingDefinitionItem } from 'obsidian'
 import type Catea from './main'
@@ -17,6 +17,12 @@ import {
   selectedModel,
 } from '../../../packages/agent-core/src/byok'
 import { listSkills } from '../../../packages/integrations/src/skills'
+import {
+  createPresetServer,
+  injectSecretEnv,
+  matchPreset,
+  mcpPresets,
+} from '../../../packages/integrations/src/mcp-presets'
 import { persona, personas } from '../../../packages/personas/src'
 interface SettingsRow {
   name: string
@@ -419,8 +425,10 @@ export class CateaSettings extends PluginSettingTab {
     ]
     const mcp: SettingsRow[] = []
     for (const server of c.mcp) {
+      const preset = matchPreset(server)
       mcp.push({
-        name: server.id,
+        name: preset ? tr(preset.label) : server.id,
+        desc: preset?.needsNode ? tr('需要本机已安装 Node.js / npx。') : undefined,
         render: (s) => {
           s.addToggle((t) =>
             t.setValue(server.enabled).onChange(async (value) => {
@@ -440,6 +448,7 @@ export class CateaSettings extends PluginSettingTab {
               .setValue(server.transport)
               .onChange(async (value) => {
                 server.transport = value === 'stdio' ? 'stdio' : 'http'
+                injectSecretEnv(server)
                 await p.saveAgentSettings()
                 this.refresh()
               }),
@@ -481,14 +490,19 @@ export class CateaSettings extends PluginSettingTab {
             )
           },
         })
-      else
+      if (server.transport === 'http' || server.envSecret)
         mcp.push({
-          name: 'Bearer token',
+          name: server.transport === 'stdio' ? server.envSecret! : 'Bearer token',
+          desc:
+            server.transport === 'stdio'
+              ? tr('保存在 Obsidian 密钥存储，连接时作为环境变量注入；不写入知识库配置。')
+              : undefined,
           render: (s) => {
             s.addText((t) => {
               t.inputEl.type = 'password'
               t.setValue(server.token || '').onChange((value) => {
                 server.token = value
+                injectSecretEnv(server)
                 p.saveSecret(`mcp-${server.id}`, value)
               })
             })
@@ -500,10 +514,32 @@ export class CateaSettings extends PluginSettingTab {
           s.addButton((b) =>
             b.setButtonText(tr('移除 MCP')).onClick(async () => {
               c.mcp = c.mcp.filter((item) => item !== server)
+              p.saveSecret(`mcp-${server.id}`, '')
               await p.saveAgentSettings()
               this.refresh()
             }),
           )
+        },
+      })
+    }
+    for (const preset of mcpPresets) {
+      const added = c.mcp.some((s) => matchPreset(s)?.id === preset.id)
+      mcp.push({
+        name: tr(preset.label),
+        desc: preset.needsNode
+          ? `${tr(preset.desc)}${tr('需要本机已安装 Node.js / npx。')}`
+          : tr(preset.desc),
+        render: (s) => {
+          s.addButton((b) => {
+            b.setButtonText(added ? tr('已添加') : tr('添加')).setCta()
+            if (added) b.setDisabled(true)
+            else
+              b.onClick(async () => {
+                c.mcp.push(createPresetServer(preset))
+                await p.saveAgentSettings()
+                this.refresh()
+              })
+          })
         },
       })
     }

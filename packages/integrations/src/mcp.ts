@@ -1,8 +1,9 @@
 /**
  * [WHO]: Provides McpConfig, McpPool
  * [FROM]: Depends on @modelcontextprotocol/sdk/client/index.js, @modelcontextprotocol/sdk/client/stdio.js, @modelcontextprotocol/sdk/client/streamableHttp.js, ../../agent-core/src/providers, ../../agent-core/src/version
- * [TO]: Consumed by packages/agent-core/src/index.ts, packages/integrations/src/index.ts
- * [HERE]: packages/integrations/src/mcp.ts - connects enabled stdio and HTTP MCP servers, paginates tool discovery and namespaces tool names to 64 chars; catalog cap 1000, call timeout 120 s, output 24000 chars
+ * [TO]: Consumed by packages/agent-core/src/index.ts, packages/integrations/src/index.ts,
+ *   packages/integrations/src/mcp-presets.ts
+ * [HERE]: packages/integrations/src/mcp.ts - connects enabled stdio and HTTP MCP servers, paginates tool discovery and namespaces tool names to 64 chars; catalog cap 1000, call timeout 120 s, output 24000 chars; optional envSecret names the environment variable a stdio token is injected as, values stay memory-only
  */
 import { Client } from '@modelcontextprotocol/sdk/client/index.js'
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js'
@@ -18,6 +19,8 @@ export interface McpConfig {
   url?: string
   token?: string
   env?: Record<string, string>
+  /** Environment variable NAME a stdio token is injected as; not a secret, safe to persist. */
+  envSecret?: string
 }
 export class McpPool {
   private clients = new Map<string, Client>()

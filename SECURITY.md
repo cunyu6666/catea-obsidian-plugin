@@ -46,7 +46,10 @@ first open; the vault copy of model metadata is then cleared. A vault's selected
 model remains in its `.catea/config.json`.
 
 MCP bearer tokens remain in Obsidian's vault-scoped secret storage, keyed
-`catea-mcp-<id>`. If global encryption is unavailable, API keys also remain in
+`catea-mcp-<id>`. For stdio preset servers, the stored value is injected into
+the child-process environment under the configured variable name at connect
+time; only the variable name (for example `FIGMA_API_KEY`) appears in
+`.catea/config.json`, never a value. If global encryption is unavailable, API keys also remain in
 that store under `catea-<id>`. Neither is written to `.catea/config.json`.
 When secret storage is unavailable, keys remain in memory for the current session.
 

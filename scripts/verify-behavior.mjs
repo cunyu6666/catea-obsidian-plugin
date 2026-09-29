@@ -583,11 +583,15 @@ async function settingsFixture() {
   let saves = 0,
     stops = 0,
     refreshes = 0
+  const secrets = []
   const plugin = {
     app: {},
     settings: { enabled: true },
     t: (text) => text,
     vaultPath: '/unused',
+    saveSecret(id, value) {
+      secrets.push([id, value])
+    },
     agentSettings: {
       language: 'zh',
       enabled: true,
@@ -615,6 +619,7 @@ async function settingsFixture() {
   return {
     tab,
     plugin,
+    secrets: () => secrets,
     stats: () => ({ saves, stops, refreshes }),
     enableModern: () => {
       tab.update = () => {
@@ -684,6 +689,148 @@ test('Settings search metadata never contains API keys or MCP tokens', async () 
   const metadata = JSON.stringify(tab.getSettingDefinitions())
   assert.equal(metadata.includes('SECRET_MODEL_KEY'), false)
   assert.equal(metadata.includes('SECRET_MCP_TOKEN'), false)
+})
+
+test('MCP preset registry is credential-free and factories copy preset data', async () => {
+  const { mcpPresets, createPresetServer, matchPreset, injectSecretEnv } = await load(
+    'packages/integrations/src/mcp-presets.ts',
+  )
+  const ids = mcpPresets.map((preset) => preset.id)
+  // Cross-realm array: compare by value, deepStrictEqual would check prototypes.
+  assert.equal(ids.join(','), 'figma-framelink,github,context7,deepwiki')
+  for (const preset of mcpPresets) {
+    if (preset.transport === 'http') {
+      assert.ok(preset.url.startsWith('https://'), preset.id)
+      assert.equal(preset.command, undefined)
+      assert.equal(preset.envSecret, undefined)
+    } else {
+      assert.equal(preset.command, 'npx')
+      assert.ok(preset.args.includes('figma-developer-mcp'))
+      assert.equal(preset.envSecret, 'FIGMA_API_KEY')
+      assert.equal(preset.needsNode, true)
+    }
+  }
+  const serialized = JSON.stringify(mcpPresets)
+  assert.equal(serialized.includes('"token"'), false)
+  assert.equal(serialized.includes('"env"'), false)
+
+  const figma = mcpPresets.find((preset) => preset.id === 'figma-framelink')
+  const server = createPresetServer(figma)
+  assert.equal(server.enabled, false)
+  assert.ok(server.id !== createPresetServer(figma).id)
+  assert.equal('token' in server, false)
+  assert.equal(server.env, undefined)
+  assert.deepEqual(server.args, figma.args)
+  assert.notEqual(server.args, figma.args, 'args must be copied, never aliased')
+
+  const github = mcpPresets.find((preset) => preset.id === 'github')
+  const remote = createPresetServer(github)
+  assert.equal(remote.url, 'https://api.githubcopilot.com/mcp/')
+  assert.equal('envSecret' in remote, false)
+  assert.equal(matchPreset(remote)?.id, 'github')
+  assert.equal(matchPreset(server)?.id, 'figma-framelink')
+  assert.equal(matchPreset({ ...server, args: [...server.args, '--extra'] }), undefined)
+  assert.equal(matchPreset({ ...remote, url: 'https://example.invalid/mcp' }), undefined)
+
+  injectSecretEnv(remote)
+  assert.equal(remote.env, undefined, 'http servers must not materialize env')
+  server.token = 'FIGMA_PAT'
+  injectSecretEnv(server)
+  assert.equal(server.env.FIGMA_API_KEY, 'FIGMA_PAT')
+  server.env = { ...server.env, KEEP: '1' }
+  server.token = ''
+  injectSecretEnv(server)
+  assert.equal(server.env.FIGMA_API_KEY, undefined)
+  assert.equal(server.env.KEEP, '1')
+})
+
+test('MCP preset rows add a disabled server, route the key into env and clear secrets on removal', async () => {
+  const fixture = await settingsFixture()
+  fixture.enableModern()
+  const { tab, plugin, secrets } = fixture
+  const names = rows(tab).map((item) => item.name)
+  for (const label of ['Figma · Framelink', 'GitHub', 'Context7', 'DeepWiki'])
+    assert.ok(names.includes(label), `preset row missing: ${label}`)
+
+  const button = (row) => {
+    let click,
+      disabled = false,
+      label = ''
+    row.render({
+      addButton(fn) {
+        fn({
+          setButtonText(text) {
+            label = text
+            return this
+          },
+          setCta() {
+            return this
+          },
+          setDisabled(value) {
+            disabled = value
+            return this
+          },
+          onClick(handler) {
+            click = handler
+            return this
+          },
+        })
+        return this
+      },
+    })
+    return {
+      click: async () => click && click(),
+      disabled: () => disabled,
+      label: () => label,
+    }
+  }
+  const rowsNamed = (name) => rows(tab).filter((item) => item.name === name)
+
+  // Server rows render before preset rows, so the quick-add row is the last match.
+  const add = button(rowsNamed('Figma · Framelink').at(-1))
+  assert.equal(add.label(), '添加')
+  await add.click()
+  assert.equal(plugin.agentSettings.mcp.length, 1)
+  const server = plugin.agentSettings.mcp[0]
+  assert.equal(server.enabled, false)
+  assert.equal(server.transport, 'stdio')
+  assert.equal(server.command, 'npx')
+  assert.equal(server.envSecret, 'FIGMA_API_KEY')
+  assert.equal('token' in server, false)
+  assert.ok(rowsNamed('Figma · Framelink').length >= 2, 'server row uses the friendly label')
+
+  const dup = button(rowsNamed('Figma · Framelink').at(-1))
+  assert.equal(dup.disabled(), true)
+  assert.equal(dup.label(), '已添加')
+
+  const tokenRow = rows(tab).find((item) => item.name === 'FIGMA_API_KEY')
+  assert.ok(tokenRow, 'stdio preset must expose a key row named after its env variable')
+  let change
+  tokenRow.render({
+    addText(fn) {
+      fn({
+        inputEl: {},
+        setValue() {
+          return this
+        },
+        onChange(handler) {
+          change = handler
+          return this
+        },
+      })
+      return this
+    },
+  })
+  change('FIGMA_PAT_VALUE')
+  assert.equal(server.token, 'FIGMA_PAT_VALUE')
+  assert.equal(server.env.FIGMA_API_KEY, 'FIGMA_PAT_VALUE')
+  assert.deepEqual(secrets().at(-1), [`mcp-${server.id}`, 'FIGMA_PAT_VALUE'])
+  assert.equal(JSON.stringify(tab.getSettingDefinitions()).includes('FIGMA_PAT_VALUE'), false)
+
+  const remove = button(rowsNamed('移除 MCP').at(-1))
+  await remove.click()
+  assert.equal(plugin.agentSettings.mcp.length, 0)
+  assert.deepEqual(secrets().at(-1), [`mcp-${server.id}`, ''])
 })
 
 test('Certificate fallback lazily loads the host transport without relaxing TLS', async () => {
