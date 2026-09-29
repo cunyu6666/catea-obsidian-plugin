@@ -9,7 +9,7 @@ scanned a release containing them.
 | Review finding | Resolution |
 | --- | --- |
 | Clean build requires an unavailable sibling design system | The design system is now included under `packages/design-system`; installation and build were checked in a temporary copy without the sibling or pre-existing dependencies. |
-| `main.js` exceeds 5 MB | Native Obsidian Mermaid loading and the curated grammar bundle keep the 0.3.14 output at 4,490,605 bytes. Both the build script and CI enforce a limit of 5,000,000 bytes. |
+| `main.js` exceeds 5 MB | Native Obsidian Mermaid loading and the curated grammar bundle keep the 0.3.16 output at 4,379,302 bytes. Both the build script and CI enforce a limit of 5,000,000 bytes. |
 | Manifest description repeats the host name and lacks accepted terminal punctuation | Replaced it with a neutral bilingual description ending in an ASCII period. |
 | Bundle creates a `script` element | Returned to React 18 and the React-18-compatible Git Log release. The production bundle no longer contains `createElement('script')`; the flagged factory came from React DOM 19's hoistable-script implementation rather than application code. |
 | Missing build provenance | The GitHub release workflow attests `main.js` and `styles.css` before publishing. This takes effect only when that workflow runs successfully; local builds do not create attestations. |

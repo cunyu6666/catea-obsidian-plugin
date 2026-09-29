@@ -3,7 +3,7 @@
 Notable changes per release. The version is the one in `manifest.json`; the GitHub
 release tag is that same number with no `v` prefix.
 
-## Unreleased
+## 0.3.16
 
 ### Added
 
@@ -11,11 +11,27 @@ release tag is that same number with no `v` prefix.
   DeepWiki. Presets start disabled, keys stay in Obsidian secret storage, and a
   stdio key is injected as an environment variable at connect time — only the
   variable name is ever written to `.catea/config.json`, never a value.
+- A reproducible full-source marketplace audit command and an auditable upstream
+  adaptation record: verification reverses every vendored edit to re-check the
+  original snapshot digests.
+
+### Changed
+
+- User messages get a copy button in place of the per-message branch action, and
+  the streaming reply acknowledgement placeholder is removed.
+- Replace flagged owned accessibility CSS patterns (screen-reader clip-path
+  rules, a display:contents label) and apply the recorded scanner adaptations to
+  the vendored CatUI snapshots.
+- The Git history spawner copies an explicit environment allowlist instead of
+  the full process environment, keeping machine-identity variables and
+  inherited Git overrides out of the child process.
 
 ### Fixed
 
 - Removing an MCP server now also clears its stored bearer token from Obsidian
   secret storage.
+- Error handling across the storage surface uses structural errno narrowing
+  instead of casts, and the Bash tool rejection always carries an Error.
 
 ## 0.3.15
 
