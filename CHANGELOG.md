@@ -3,6 +3,17 @@
 Notable changes per release. The version is the one in `manifest.json`; the GitHub
 release tag is that same number with no `v` prefix.
 
+## 0.3.19
+
+### Fixed
+
+- Load the checked-in Node declarations through an explicit type-only source
+  import, rather than relying solely on automatic type-root discovery. The
+  marketplace regression now also disables automatic type inclusion and replaces
+  custom type roots to exercise this stricter environment.
+- Record the actual 0.3.18 marketplace result: 440 findings remained, including
+  all 434 type diagnostics. Only the two CSS findings cleared in that release.
+
 ## 0.3.18
 
 ### Fixed

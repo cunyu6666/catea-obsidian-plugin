@@ -1,11 +1,12 @@
 /**
  * [WHO]: Provides Catea, default
- * [FROM]: Depends on ./folder-icons, ./GitHistoryPanel, ./global-byok, ./updates, ./theme, ./note-thumbnails, ./note-previews, ./locale, ./selection, ./session-drafts, ./support-prompt, ../../../packages/agent-core/src/types, obsidian, react-dom/client, ./paper.cjs, ../../../packages/agent-core/src, ../../../packages/integrations/src/storage, ../../../packages/integrations/src/legacy-snapshots, ../../../packages/integrations/src/mcp-presets, ./panel, ./obsidian-tools, ./skills/obsidian.md, catea-components, ./settings, ./composition, node:fs/promises
+ * [FROM]: Depends on ../../../typings/runtime, ./folder-icons, ./GitHistoryPanel, ./global-byok, ./updates, ./theme, ./note-thumbnails, ./note-previews, ./locale, ./selection, ./session-drafts, ./support-prompt, ../../../packages/agent-core/src/types, obsidian, react-dom/client, ./paper.cjs, ../../../packages/agent-core/src, ../../../packages/integrations/src/storage, ../../../packages/integrations/src/legacy-snapshots, ../../../packages/integrations/src/mcp-presets, ./panel, ./obsidian-tools, ./skills/obsidian.md, catea-components, ./settings, ./composition, node:fs/promises
  * [TO]: Consumed by apps/obsidian/src/folder-icons.ts, apps/obsidian/src/note-previews.ts, apps/obsidian/src/note-thumbnails.ts,
  *   apps/obsidian/src/obsidian-tools.ts, apps/obsidian/src/panel.tsx,
  *   apps/obsidian/src/selection.ts, apps/obsidian/src/settings.ts, apps/obsidian/src/GitHistoryPanel.tsx
  * [HERE]: apps/obsidian/src/main.tsx - plugin entry: class Catea extends Paper, wiring config, secure secrets, ObsidianTools, session tabs, settings and sidebar; 60 s memory interval
  */
+import type {} from '../../../typings/runtime'
 import { installFolderIcons, type FolderAppearance } from './folder-icons'
 import { GitHistoryPanel } from './GitHistoryPanel'
 import { UpdateChecker, type UpdatePreferences } from './updates'

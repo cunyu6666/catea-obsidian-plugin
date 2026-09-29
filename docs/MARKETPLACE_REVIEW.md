@@ -1,6 +1,28 @@
 # Marketplace review follow-up
 
-## September 30 scorecard regression
+## Release 0.3.18 online result: type fix did not take effect
+
+The online scan now points to `9e0301c04dc10a63ce62f90d888a94c6f4d42338`
+(release 0.3.18). It reports **440**, not zero: all 434 unsafe-type findings
+remain, plus the same six capability notices. Only the two CSS warnings cleared.
+[Captured 0.3.18 inventory](./reviews/2026-09-30-scorecard-0.3.18.json).
+The earlier local simulation was insufficient evidence of scanner compatibility.
+
+The first fix relied on `tsconfig.json` automatic `typeRoots` discovery. A stricter
+local model that disables automatic type inclusion and replaces the type roots
+fails to load our declarations, reproducing a blind spot in the original gate.
+The private scanner's actual configuration is unknown; overriding or omitting
+local type-root discovery is a hypothesis, not an observed implementation fact.
+
+The follow-up patch imports `typings/runtime.d.ts` from the plugin entry using
+`import type`. That declaration module explicitly references the unmodified
+Node declarations, making their inclusion part of the source graph rather than
+only a compiler configuration side effect. This import emits no runtime code.
+The regression gate now disables automatic type inclusion as well as hiding
+npm-installed Node/Undici declarations. A new release and online scan are still
+required to validate this follow-up; no online reduction is claimed for it.
+
+## September 30 initial local regression (before online validation)
 
 The [public scorecard](https://community.obsidian.md/plugins/catea-paper) for
 release 0.3.17, commit `d713ab0d1f35ba8c23abd63e026cf6e721462309`, reports **442**
@@ -46,10 +68,8 @@ compilation. They are not removed or hidden to change a score. See the capabilit
 analysis below and SECURITY.md. The seven informational notices are separate from
 the headline 442 and include the GPL license, network usage and unavailable scans.
 
-The online scorecard has not been rescanned against these local changes. A new
-release and the marketplace rescan are required to measure its new count. This
-review does not claim that the website is already at zero or that every private
-scanner check is reproduced locally.
+The subsequent 0.3.18 scan above supersedes the initial local result: the CSS
+fix worked, but the type-root fix did not clear the online type diagnostics.
 
 ### Local validation
 
@@ -59,7 +79,7 @@ The dependency-poor regression covers 147 runtime source files with zero unsafe
 findings and zero TypeScript diagnostics. `main.js` is 4,396,893 bytes. The generated
 design-system CSS remains byte-identical to the pre-change working-tree build.
 Existing uncommitted application changes were preserved; these counts describe
-the complete working tree, not an isolated release. No new release was published.
+the complete working tree, not an isolated release. This was the pre-release validation; 0.3.18 was subsequently published and scanned.
 
 ## Earlier review
 
