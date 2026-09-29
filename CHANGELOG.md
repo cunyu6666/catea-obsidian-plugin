@@ -3,7 +3,7 @@
 Notable changes per release. The version is the one in `manifest.json`; the GitHub
 release tag is that same number with no `v` prefix.
 
-## Unreleased
+## 0.3.17
 
 ### Added
 
