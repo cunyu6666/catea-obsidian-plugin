@@ -3,6 +3,21 @@
 Notable changes per release. The version is the one in `manifest.json`; the GitHub
 release tag is that same number with no `v` prefix.
 
+## 0.3.13
+
+### Added
+
+- Generate a concise conversation title with the active BYOK model after the
+  first completed reply, using a small tool-free request with validated JSON
+  output and a safe fallback when title generation fails.
+- Show an optional, bilingual GitHub Star invitation on first use and at most
+  once per local calendar month, with a clearly voluntary dismissal path.
+
+### Changed
+
+- Remove the redundant visible “Generating” label from the conversation menu
+  while retaining the animated activity indicator and accessible status text.
+
 ## 0.3.12
 
 ### Changed

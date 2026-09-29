@@ -14,6 +14,7 @@ byok.ts: Validates ModelConfig and resolves configured and selected models; prov
 context.ts: WorkingContext keeps the full journal while presenting a checkpoint-windowed message view; estimates prompt tokens as `(system + tools) / 3`.
 compaction.ts: Chooses safe user-turn or completed tool-cycle cuts, checks the current model budget and coordinates threshold or overflow compaction through narrow ports.
 compaction-summary.ts: Calls the injected BYOK model client to generate iterative context checkpoint summaries.
+conversation-title.ts: Uses the active BYOK model after the first completed reply to produce a validated 2-24 character JSON-formatted conversation title; failures retain the user-text fallback.
 contracts.ts: Host-neutral session data and conversation/memory ports used for dependency injection; assistant messages retain ordered thinking and tool activity records.
 i18n.ts: Flat error-label map, `t()` interpolation and `textValue()` for safe formatting of unknown values.
 index.ts: `class Agent` owns one session, saves through `ConversationStore`, repairs interrupted tool calls, publishes pending turns before note preparation, assembles tools, records thinking, tool events and per-write file changes in order, enforces model-identity privacy in the system prompt, drives `agentLoop` and enqueues memory.

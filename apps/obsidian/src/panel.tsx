@@ -660,11 +660,7 @@ export function Panel({ plugin }: { plugin: Catea }) {
                   ) : (
                     <Icon name="chat" size={15} />
                   ),
-                  detail: plugin.hasQuestion(tab.session.id)
-                    ? t('等待你的回答')
-                    : tab.running
-                      ? t('正在生成')
-                      : undefined,
+                  detail: plugin.hasQuestion(tab.session.id) ? t('等待你的回答') : undefined,
                   onSelect: () => {
                     plugin.agent = tab
                     plugin.agentSettings.personaId = tab.session.personaId

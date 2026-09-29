@@ -73,6 +73,54 @@ const model = {
   protocol: 'openai',
 }
 
+test('Support prompt is due on first use and at most once per local calendar month', async () => {
+  const { supportPromptDue, supportPromptMonth } = await load('apps/obsidian/src/support-prompt.ts')
+  const january = new Date(2026, 0, 31, 23, 59)
+  const february = new Date(2026, 1, 1, 0, 1)
+  assert.equal(supportPromptMonth(january), '2026-01')
+  assert.equal(supportPromptDue(undefined, january), true)
+  assert.equal(supportPromptDue('2026-01', january), false)
+  assert.equal(supportPromptDue('2026-01', february), true)
+})
+
+test('Conversation titles use a bounded fixed-format model request and reject malformed output', async () => {
+  const { generateConversationTitle } = await load('packages/agent-core/src/conversation-title.ts')
+  let request
+  const client = {
+    async *stream(value) {
+      request = value
+      yield { type: 'done', reply: { text: '{"title":"快照清理方案"}', calls: [] } }
+    },
+  }
+  const title = await generateConversationTitle(
+    client,
+    model,
+    '为什么会产生大量快照？',
+    '每条消息都会复制整个 vault。',
+    new AbortController().signal,
+  )
+  assert.equal(title, '快照清理方案')
+  assert.equal(request.tools.length, 0)
+  assert.equal(request.maxTokens, 64)
+  assert.match(request.system, /exactly one JSON object/)
+
+  const malformed = {
+    async *stream() {
+      yield { type: 'done', reply: { text: '快照清理方案', calls: [] } }
+    },
+  }
+  assert.equal(
+    await generateConversationTitle(
+      malformed,
+      model,
+      'question',
+      'answer',
+      new AbortController().signal,
+    ),
+    null,
+  )
+})
+
 test('Drafts stay with their session and failed sends restore only their own content', async () => {
   const { SessionDraftStore } = await load('apps/obsidian/src/session-drafts.ts')
   const drafts = new SessionDraftStore()

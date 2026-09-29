@@ -10,6 +10,13 @@ const english: Record<string, string> = {
     'Removed obsolete full-vault Catea snapshots to reclaim vault space',
   '旧版 Catea 快照清理失败，可手动删除 .catea/snapshots':
     'Could not remove obsolete Catea snapshots. You can delete .catea/snapshots manually',
+  '如果 Catea 对你有一点帮助': 'If Catea has been a little helpful',
+  'Catea 仍在持续打磨。如果它恰好对你的写作或整理有所帮助，愿意的话，可以去 GitHub 点一颗 Star。':
+    'Catea is still being carefully improved. If it has helped with your writing or organization, you are welcome to leave a Star on GitHub.',
+  '这会让更多人看到项目，也给维护带来一点鼓励。完全自愿，关闭即可继续使用。':
+    'It helps more people discover the project and gives its maintenance a little encouragement. It is entirely optional; close this dialog to continue.',
+  暂时不用: 'Not now',
+  '前往 GitHub': 'Open GitHub',
   刷新: 'Refresh',
   关闭: 'Close',
   'Git 历史': 'Git history',

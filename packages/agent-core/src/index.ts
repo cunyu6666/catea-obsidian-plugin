@@ -1,6 +1,6 @@
 /**
  * [WHO]: Provides Agent, Hooks, Message, Session, Settings
- * [FROM]: Depends on ./i18n, ../upstream/loop/agent-loop, ./context, ./compaction, ./compaction-summary, ./contracts, ./upstream-stream, ./ask-user-question, ./types, ../../integrations/src/web, ./byok, ./model-capabilities, ./permission-policy, ./providers, ../../personas/src, ../../integrations/src/skills, ../../integrations/src/tools, ../../integrations/src/mcp, ../../memory/src/tools, ./protocol-repair
+ * [FROM]: Depends on ./i18n, ../upstream/loop/agent-loop, ./context, ./compaction, ./compaction-summary, ./contracts, ./upstream-stream, ./ask-user-question, ./types, ../../integrations/src/web, ./byok, ./model-capabilities, ./permission-policy, ./providers, ../../personas/src, ../../integrations/src/skills, ../../integrations/src/tools, ../../integrations/src/mcp, ../../memory/src/tools, ./protocol-repair, ./conversation-title
  * [TO]: Consumed by apps/obsidian/src/composition.ts, apps/obsidian/src/main.tsx,
  *   apps/obsidian/src/panel.tsx
  * [HERE]: packages/agent-core/src/index.ts - class Agent owns one session: persists it, repairs interrupted tool calls, assembles tools, drives agentLoop and enqueues memory; index capped at 500
@@ -41,6 +41,7 @@ import { VaultTools, fileTools, type Approve } from '../../integrations/src/tool
 import { McpPool, type McpConfig } from '../../integrations/src/mcp'
 import { memoryTools, memoryReadOnly } from '../../memory/src/tools'
 import { repairToolProtocol } from './protocol-repair'
+import { generateConversationTitle } from './conversation-title'
 
 export interface Settings {
   gitHistory?: boolean
@@ -358,6 +359,7 @@ export class Agent {
     const model = selectedModel(config.models, config.modelId)
     if (!model) throw new Error('请先在设置中完成 BYOK 模型配置（包含 API Key）')
     const userId = crypto.randomUUID()
+    const firstTurn = this.session.messages.length === 0
     const previousTitle = this.session.title,
       previousAttachments = this.session.attachments
     this.historyBusy = true
@@ -386,7 +388,7 @@ export class Agent {
       },
       reply,
     )
-    if (this.session.messages.length === 2) this.session.title = text.slice(0, 40)
+    if (firstTurn) this.session.title = text.slice(0, 40)
     this.hooks.change()
     // Publish the turn before asynchronous note preparation can delay the UI.
     try {
@@ -847,6 +849,24 @@ Internal note references use [[path|label]]. Only call listed tools. Preserve ra
       continuity.cancel()
       await compaction.check('threshold', continuity.messages())
       await save()
+      if (firstTurn && reply.status === 'complete' && reply.text.trim()) {
+        try {
+          const title = await generateConversationTitle(
+            this.modelClient,
+            model,
+            text,
+            reply.text,
+            signal,
+          )
+          if (title) {
+            this.session.title = title
+            await save()
+            this.hooks.change()
+          }
+        } catch {
+          // A title is optional metadata; the completed reply must remain successful.
+        }
+      }
       if (this.settings().memory)
         await this.memory
           .enqueue({

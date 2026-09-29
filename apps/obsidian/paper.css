@@ -642,6 +642,10 @@ body.gp-enabled .catea-editor-zoom-label { position: absolute; width: 1px; heigh
 
 .catea-git-node { position: absolute; top: 50%; left: 50%; width: 7px; height: 7px; border-radius: 50%; transform: translate(-50%, -50%); z-index: 1; pointer-events: none; }
 .catea-file-changes-modal.modal {width:min(760px,calc(100vw - 32px));max-width:calc(100vw - 32px)}
+.catea-support-modal.modal {width:min(440px,calc(100vw - 32px));}
+.catea-support-modal .modal-content>p {line-height:1.7;margin:0 0 12px;}
+.catea-support-modal .catea-support-modal__note {color:var(--text-muted);font-size:var(--font-ui-small);}
+.catea-support-modal .setting-item {border-top:0;padding-top:12px;}
 .catea-file-changes {display:flex;max-height:68vh;flex-direction:column;gap:12px;overflow:auto;padding:2px}
 
 /* The preference only paints Paper while its master switch is enabled. */

@@ -1,6 +1,6 @@
 /**
  * [WHO]: Provides Catea, default
- * [FROM]: Depends on ./GitHistoryPanel, ./global-byok, ./updates, ./theme, ./note-thumbnails, ./note-previews, ./locale, ./selection, ./session-drafts, ../../../packages/agent-core/src/types, obsidian, react-dom/client, ./paper.cjs, ../../../packages/agent-core/src, ../../../packages/integrations/src/storage, ../../../packages/integrations/src/legacy-snapshots, ./panel, ./obsidian-tools, ./skills/obsidian.md, catea-components, ./settings, ./composition, node:fs/promises
+ * [FROM]: Depends on ./GitHistoryPanel, ./global-byok, ./updates, ./theme, ./note-thumbnails, ./note-previews, ./locale, ./selection, ./session-drafts, ./support-prompt, ../../../packages/agent-core/src/types, obsidian, react-dom/client, ./paper.cjs, ../../../packages/agent-core/src, ../../../packages/integrations/src/storage, ../../../packages/integrations/src/legacy-snapshots, ./panel, ./obsidian-tools, ./skills/obsidian.md, catea-components, ./settings, ./composition, node:fs/promises
  * [TO]: Consumed by apps/obsidian/src/note-previews.ts, apps/obsidian/src/note-thumbnails.ts,
  *   apps/obsidian/src/obsidian-tools.ts, apps/obsidian/src/panel.tsx,
  *   apps/obsidian/src/selection.ts, apps/obsidian/src/settings.ts, apps/obsidian/src/GitHistoryPanel.tsx
@@ -15,6 +15,7 @@ import { registerNotePreviews } from './note-previews'
 import { humanizeError, translate } from './locale'
 import { installSelectionAction } from './selection'
 import { SessionDraftStore, type SelectedQuote } from './session-drafts'
+import { supportPromptDue, supportPromptMonth } from './support-prompt'
 import type {
   AskUserQuestion,
   AskUserQuestionAnswer,
@@ -45,6 +46,7 @@ import { createAgentFactory } from './composition'
 import { mkdir } from 'node:fs/promises'
 const VIEW = 'catea-agent'
 const GIT_VIEW = 'catea-git-history'
+const GITHUB_REPOSITORY = 'https://github.com/cunyu6666/catea-obsidian-plugin'
 const DOCK_ICON_MATCHES: [RegExp, string][] = [
   [/catea/i, 'gemini'],
   [/quick switch|快速切换/i, 'search-2'],
@@ -67,23 +69,27 @@ const Base = Paper as unknown as {
 }
 export default class Catea extends Base {
   declare settings: Record<string, boolean>
-  agentSettings: Settings & UpdatePreferences & { includeCurrentNote: boolean; theme?: ThemeMode } =
-    {
-      language: 'zh',
-      enabled: true,
-      web: true,
-      models: [],
-      modelId: '',
-      personaId: 'aria',
-      skills: [],
-      mcp: [],
-      memory: true,
-      shell: false,
-      includeCurrentNote: true,
-      gitHistory: false,
-      enableReplyAnnotations: false,
-      permissionMode: 'assist',
-    }
+  agentSettings: Settings &
+    UpdatePreferences & {
+      includeCurrentNote: boolean
+      theme?: ThemeMode
+      supportPromptMonth?: string
+    } = {
+    language: 'zh',
+    enabled: true,
+    web: true,
+    models: [],
+    modelId: '',
+    personaId: 'aria',
+    skills: [],
+    mcp: [],
+    memory: true,
+    shell: false,
+    includeCurrentNote: true,
+    gitHistory: false,
+    enableReplyAnnotations: false,
+    permissionMode: 'assist',
+  }
   private editorZoom = new Map<MarkdownView, { scale: number; restore: () => void }>()
   updates!: UpdateChecker
   openPluginUpdates() {
@@ -232,6 +238,7 @@ export default class Catea extends Base {
     this.registerView(GIT_VIEW, (leaf) => new GitHistoryView(leaf, this))
     this.app.workspace.onLayoutReady(() => {
       void this.syncGitHistory()
+      void this.maybeShowSupportPrompt()
     })
     this.addCommand({
       id: 'open-git-history',
@@ -268,6 +275,9 @@ export default class Catea extends Base {
     const updateTimer = window.setTimeout(() => void this.updates.check(), 10000)
     this.register(() => window.clearTimeout(updateTimer))
     this.registerInterval(window.setInterval(() => void this.updates.check(), 60 * 60 * 1000))
+    this.registerInterval(
+      window.setInterval(() => void this.maybeShowSupportPrompt(), 24 * 60 * 60 * 1000),
+    )
     this.registerInterval(
       window.setInterval(() => {
         if (this.agentSettings.enabled && this.agentSettings.memory)
@@ -648,6 +658,42 @@ export default class Catea extends Base {
     ).setting
     settings?.open()
     settings?.openTabById(this.manifest.id)
+  }
+  private async maybeShowSupportPrompt() {
+    if (!supportPromptDue(this.agentSettings.supportPromptMonth)) return
+    this.agentSettings.supportPromptMonth = supportPromptMonth()
+    try {
+      await this.saveAgentSettings()
+    } catch {
+      // Do not show a recurring prompt unless its monthly gate can be persisted.
+      return
+    }
+    const modal = new Modal(this.app)
+    modal.modalEl.addClass('catea-support-modal')
+    modal.titleEl.setText(this.t('如果 Catea 对你有一点帮助'))
+    modal.contentEl.createEl('p', {
+      text: this.t(
+        'Catea 仍在持续打磨。如果它恰好对你的写作或整理有所帮助，愿意的话，可以去 GitHub 点一颗 Star。',
+      ),
+    })
+    modal.contentEl.createEl('p', {
+      text: this.t('这会让更多人看到项目，也给维护带来一点鼓励。完全自愿，关闭即可继续使用。'),
+      cls: 'catea-support-modal__note',
+    })
+    modal.onClose = () => this.dialogs.delete(modal)
+    new Setting(modal.contentEl)
+      .addButton((button) => button.setButtonText(this.t('暂时不用')).onClick(() => modal.close()))
+      .addButton((button) =>
+        button
+          .setButtonText(this.t('前往 GitHub'))
+          .setCta()
+          .onClick(() => {
+            modal.close()
+            window.open(GITHUB_REPOSITORY, '_blank', 'noopener,noreferrer')
+          }),
+      )
+    this.dialogs.add(modal)
+    modal.open()
   }
   async noteContext(enabled: boolean) {
     if (!enabled) return ''
