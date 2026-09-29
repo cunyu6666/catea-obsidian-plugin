@@ -115,11 +115,12 @@ tests/                       # DIP harness: contract parser, verify gate, govern
 # entire build input. That is what lets CI build a release and what Obsidian's
 # own build verification runs against a clean checkout.
 
-npm install        # workspace install, including the vendored design system
+npm ci             # reproducible workspace install, including the vendored design system
 npm run build      # esbuild bundle -> dist/catea-paper/
-npm test           # node --test; requires no dependencies at all
+npm test           # node --test; run after npm ci because behavior tests bundle fixtures
 npm run typecheck  # scoped tsc over owned code only
 npm run lint       # official Obsidian rules for host and adapter source
+npm run format:check # Prettier check over owned TypeScript and JavaScript
 npm run test:behavior # runtime adapter regressions; requires npm install
 ```
 
@@ -129,16 +130,17 @@ directory: `main.js`, `styles.css`, `manifest.json`, `LICENSE`,
 files. It does not install the plugin; copying it into
 `<vault>/.obsidian/plugins/catea-paper/` is a separate, manual step.
 
-**Verification status — measured on 2026-09-28 with a clean temporary copy.**
-Only repository files were copied; no sibling checkout or existing node_modules
-was available. `npm ci` completed before these checks.
+**Verification status — measured on 2026-09-29 after rebasing onto 0.3.11.**
+`npm ci` had completed before these checks; every command below ran from this
+repository with the vendored design system.
 
 | Command | Result |
 |---------|--------|
-| `npm run build` | **exit 0** — main.js approximately 4.14 MB, below the 5 MB limit enforced by the build script |
-| `npm test` | **exit 0** — contract and governance checks, including literal dynamic-import detection |
-| `npm run test:behavior` | **exit 0** — model streaming, context handoff and settings regression checks |
+| `npm run build` | **exit 0** — main.js 4,579,290 bytes, below the 5 MB limit enforced by the build script |
+| `npm test` | **exit 0** — 304 contract, governance and regression checks |
+| `npm run test:behavior` | **exit 0** — 33 model, context, settings and host-adapter regressions |
 | `npm run lint` | **exit 0** — official Obsidian recommended rules over hand-written host and adapter source |
+| `npm run format:check` | **exit 0** — all owned TypeScript and JavaScript matches the repository Prettier style |
 | `npm run typecheck` | **exit 0** — 0 diagnostics in owned source, 84 in the vendored snapshot, 0 external |
 
 The lint gate includes the vendored design system but excludes byte-verified
@@ -156,9 +158,9 @@ WASM added about 10 MB), and Mermaid renders through the Obsidian runtime that i
 already loaded rather than a bundled second renderer. `.github/workflows/ci.yml`
 asserts the size on every build.
 
-**Runtime requirement.** `npm test` runs on Node's built-in test runner and relies
-on native TypeScript type stripping, so Node 24 or newer is expected (verified on
-v24.21.0).
+**Runtime requirement.** The gates run on Node's built-in test runner, use native
+TypeScript type stripping, and bundle selected fixtures with esbuild. Run `npm ci`
+first; Node 24 or newer is expected (verified on v24.21.0).
 
 ---
 

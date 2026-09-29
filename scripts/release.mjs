@@ -14,10 +14,10 @@
 // same gates, publish the same three assets, and refuse to re-release a version
 // that users already have.
 
-import {execFileSync} from 'node:child_process'
-import {readFileSync, existsSync, statSync} from 'node:fs'
-import {fileURLToPath} from 'node:url'
-import {dirname, resolve} from 'node:path'
+import { execFileSync } from 'node:child_process'
+import { readFileSync, existsSync, statSync } from 'node:fs'
+import { fileURLToPath } from 'node:url'
+import { dirname, resolve } from 'node:path'
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const OUT = resolve(ROOT, 'dist/catea-paper')
@@ -39,15 +39,15 @@ const block = (message) => {
 }
 
 function git(args) {
-  return execFileSync('git', args, {cwd: ROOT, encoding: 'utf8'}).trim()
+  return execFileSync('git', args, { cwd: ROOT, encoding: 'utf8' }).trim()
 }
 
 function run(command, args) {
   try {
-    const out = execFileSync(command, args, {cwd: ROOT, encoding: 'utf8', stdio: 'pipe'})
-    return {ok: true, out}
+    const out = execFileSync(command, args, { cwd: ROOT, encoding: 'utf8', stdio: 'pipe' })
+    return { ok: true, out }
   } catch (error) {
-    return {ok: false, out: `${error.stdout || ''}${error.stderr || ''}`}
+    return { ok: false, out: `${error.stdout || ''}${error.stderr || ''}` }
   }
 }
 
@@ -83,13 +83,16 @@ for (const [label, argv] of [
 if (!existsSync(OUT)) fail(`no build output at dist/catea-paper; run npm run build first`)
 for (const asset of ASSETS) {
   const file = resolve(OUT, asset)
-  if (!existsSync(file) || !statSync(file).isFile()) fail(`build output is missing the release asset ${asset}`)
+  if (!existsSync(file) || !statSync(file).isFile())
+    fail(`build output is missing the release asset ${asset}`)
 }
 const builtVersion = String(JSON.parse(readFileSync(resolve(OUT, 'manifest.json'), 'utf8')).version)
 if (builtVersion !== version) {
   fail(`dist/catea-paper/manifest.json says ${builtVersion}; rebuild before releasing ${version}`)
 }
-log(`assets: ${ASSETS.map((asset) => `${asset} (${Math.round(statSync(resolve(OUT, asset)).size / 1024)} KB)`).join(', ')}`)
+log(
+  `assets: ${ASSETS.map((asset) => `${asset} (${Math.round(statSync(resolve(OUT, asset)).size / 1024)} KB)`).join(', ')}`,
+)
 
 // ---- 4. repository state ---------------------------------------------------
 
@@ -107,7 +110,9 @@ log(`target: ${owner}/${repo} @ ${branch} ${commit.slice(0, 7)}`)
 
 const existing = git(['ls-remote', '--tags', 'origin', `refs/tags/${version}`])
 if (existing) {
-  block(`tag ${version} already exists on origin; Obsidian ignores a re-released version, so bump the version instead`)
+  block(
+    `tag ${version} already exists on origin; Obsidian ignores a re-released version, so bump the version instead`,
+  )
 }
 
 // ---- 5. release notes ------------------------------------------------------
@@ -123,7 +128,10 @@ function previousTag() {
 
 const since = previousTag()
 const range = since ? `${since}..HEAD` : 'HEAD'
-const notes = git(['log', '--oneline', '--no-merges', range]).split('\n').filter(Boolean).slice(0, 50)
+const notes = git(['log', '--oneline', '--no-merges', range])
+  .split('\n')
+  .filter(Boolean)
+  .slice(0, 50)
 log(`notes: ${notes.length} commits since ${since || 'the beginning of history'}`)
 
 // ---- 6. publish ------------------------------------------------------------
@@ -152,7 +160,7 @@ const headers = {
 
 const created = await fetch(`https://api.github.com/repos/${owner}/${repo}/releases`, {
   method: 'POST',
-  headers: {...headers, 'content-type': 'application/json'},
+  headers: { ...headers, 'content-type': 'application/json' },
   body: JSON.stringify({
     tag_name: version,
     target_commitish: commit,
@@ -172,7 +180,11 @@ for (const asset of ASSETS) {
     `https://uploads.github.com/repos/${owner}/${repo}/releases/${release.id}/assets?name=${encodeURIComponent(asset)}`,
     {
       method: 'POST',
-      headers: {...headers, 'content-type': 'application/octet-stream', 'content-length': String(bytes.length)},
+      headers: {
+        ...headers,
+        'content-type': 'application/octet-stream',
+        'content-length': String(bytes.length),
+      },
       body: bytes,
     },
   )

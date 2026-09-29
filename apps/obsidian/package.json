@@ -1,6 +1,8 @@
 {
   "name": "catea-obsidian",
-  "version": "0.3.11",
+  "version": "0.3.12",
+  "private": true,
+  "license": "GPL-3.0-only",
   "type": "module",
   "dependencies": {
     "@tomplum/react-git-log": "3.5.1",

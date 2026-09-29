@@ -2,6 +2,10 @@
 
 **The only Obsidian Agent plugin you need.**
 
+[![CI](https://github.com/cunyu6666/catea-obsidian-plugin/actions/workflows/ci.yml/badge.svg)](https://github.com/cunyu6666/catea-obsidian-plugin/actions/workflows/ci.yml)
+[![Latest release](https://img.shields.io/github/v/release/cunyu6666/catea-obsidian-plugin?display_name=tag)](https://github.com/cunyu6666/catea-obsidian-plugin/releases/latest)
+[![License: GPL-3.0](https://img.shields.io/badge/license-GPL--3.0-blue.svg)](./LICENSE)
+
 [中文](#中文)
 
 Your knowledge should do more than sit in a folder. Catea brings an agent into Obsidian that can read your notes, research the web, write in your vault, and carry what it learns into the next conversation.
@@ -14,7 +18,7 @@ Give it an outcome. Shape the work as it happens. Build something worth keeping.
 - **An agent that can keep going.** Multi-step execution, working notes, context handoffs, and long-term memory support work that takes more than one reply. You can add direction while it works.
 - **Research where you write.** Search the web, read pages, and bring sources into the same conversation as your own material.
 - **Your models. Your tools.** Bring an OpenAI- or Anthropic-compatible provider, configure OpenRouter, and extend the agent with Skills and MCP servers.
-- **A workspace you want to stay in.** A paper-style editor, streaming conversations, parallel chat tabs, and light, dark, or system appearance. Everything lives alongside your notes.
+- **A workspace you want to stay in.** A paper-style editor, streaming conversations, parallel sessions, and light, dark, or system appearance. Everything lives alongside your notes.
 
 Try a task with an outcome:
 
@@ -44,6 +48,10 @@ Model requests send relevant prompts, notes, and tool results to your chosen pro
 
 The default **Assist** mode asks for approval for file changes and other sensitive actions. **Full access** skips those approvals; Bash commands can access files beyond your vault. See the [security model](./SECURITY.md) for details.
 
+Versions before 0.3.12 created full-vault recovery copies under `.catea/snapshots`.
+Current releases use tool-scoped file review instead and remove that obsolete,
+plugin-owned snapshot directory on startup to reclaim disk space.
+
 [GPL-3.0](./LICENSE). Built on open-source work including CatUI, ANNO, and Tabler Icons. [Credits and third-party licenses](./THIRD_PARTY_NOTICES.md).
 
 ---
@@ -62,7 +70,7 @@ The default **Assist** mode asks for approval for file changes and other sensiti
 - **让复杂任务继续向前。** 多步骤执行、工作笔记、上下文交接和长期记忆，支撑需要持续推进的工作。它执行时，你仍然可以补充要求。
 - **研究与写作，在同一个地方。** 搜索网页、阅读资料，把外部来源与你已有的积累放进同一场对话。
 - **模型与能力，由你选择。** 接入 OpenAI 或 Anthropic 兼容服务，快速配置 OpenRouter，通过 Skills 和 MCP 扩展 Agent 能做的事。
-- **一个愿意长时间使用的工作区。** 纸张式编辑界面、流式对话、并行会话标签，以及亮色、暗色、跟随系统三种外观。工作就在笔记身边展开。
+- **一个愿意长时间使用的工作区。** 纸张式编辑界面、流式对话、并行会话，以及亮色、暗色、跟随系统三种外观。工作就在笔记身边展开。
 
 试着直接交给它一个目标：
 
@@ -91,5 +99,7 @@ Catea 可检查新版本，并在顶部横幅提醒更新。设置中可以关�
 模型请求会把相关提示词、笔记和工具结果发送给你选择的服务商。网络搜索与网页读取使用 Exa、Jina 或 DuckDuckGo；你启用的 MCP 服务会收到执行工具所需的输入。GitHub 自动更新检查每天最多一次，不发送笔记或密钥。网络搜索与自动检查更新各有独立开关。
 
 默认的「帮我批准」模式会对文件修改等敏感操作请求确认。「完全访问」会跳过这些审批；Bash 命令可以访问知识库之外的文件。详情见[安全说明](./SECURITY.md)。
+
+0.3.12 之前的版本会在 `.catea/snapshots` 生成知识库全量副本。当前版本已改为按工具记录文件变更，并会在启动时删除这个不再使用、由插件创建的旧快照目录，以释放磁盘空间。
 
 采用 [GPL-3.0](./LICENSE) 许可证。感谢 CatUI、ANNO、Tabler Icons 等开源项目。[完整致谢与第三方许可](./THIRD_PARTY_NOTICES.md)。

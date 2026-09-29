@@ -12,7 +12,7 @@ body:
     attributes:
       label: Plugin version
       description: From Settings → Community plugins, or the release you installed.
-      placeholder: '0.3.1'
+      placeholder: '0.3.12'
     validations:
       required: true
   - type: input
@@ -59,8 +59,8 @@ body:
     attributes:
       label: Output of the local gates, if you can run them
       description: |
-        `npm test` and `npm run typecheck` are dependency-free and take about a
-        second. Skip this if you cannot build the project.
+        After `npm ci`, include `npm test`, `npm run typecheck`, `npm run lint`,
+        and `npm run test:behavior`. Skip this if you cannot build the project.
       render: text
     validations:
       required: false

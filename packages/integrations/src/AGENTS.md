@@ -8,8 +8,9 @@ package builds on.
 
 ## Member List
 
-conversation-store.ts: Vault-backed conversation persistence with serialized writes, session indexing and delete rollback.
+conversation-store.ts: Vault-backed conversation persistence with serialized writes, a 500-session index, eviction cleanup and delete rollback.
 index.ts: Barrel re-exporting the integration surface (VaultTools, McpPool, skill loaders, storage helpers); nothing imports it, consumers import the submodules directly.
+legacy-snapshots.ts: One-way migration that deletes only the obsolete `.catea/snapshots` tree created by pre-0.3.12 full-vault recovery.
 mcp.ts: `McpPool` connects enabled stdio and HTTP MCP servers, paginates tool discovery and namespaces tool names to 64 chars; catalog cap 1000, call timeout 120 s, output 24000 chars.
 skills.ts: Loads enabled `.catea/skills/<id>/SKILL.md` packages, lists skill directories, and reads path-guarded resources; content capped at 48000 chars, traversal rejected.
 storage.ts: Vault confinement through `within()` with realpath checks and explicit symlink rejection, atomic temp+rename JSON writes, and the `Serial` promise queue.

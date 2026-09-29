@@ -5,12 +5,12 @@
  * [HERE]: tests/governance.test.ts - enforces one version across manifest.json, package.json, versions.json and the runtime constant, so a release cannot be cut from a half-bumped tree
  */
 
-import {readFileSync, existsSync} from 'node:fs'
-import {resolve} from 'node:path'
-import {test} from 'node:test'
+import { readFileSync, existsSync } from 'node:fs'
+import { resolve } from 'node:path'
+import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import {REPO_ROOT, inScopeDIPFiles, readSource} from './dip-contract.ts'
-import {PLUGIN_VERSION} from '../packages/agent-core/src/version.ts'
+import { REPO_ROOT, inScopeDIPFiles, readSource } from './dip-contract.ts'
+import { PLUGIN_VERSION } from '../packages/agent-core/src/version.ts'
 
 function json(rel: string): Record<string, unknown> {
   return JSON.parse(readFileSync(resolve(REPO_ROOT, rel), 'utf8'))
@@ -21,9 +21,21 @@ const manifestVersion = String(manifest.version)
 const manifestMinApp = String(manifest.minAppVersion)
 
 test('governance | manifest.json is a valid plugin manifest', () => {
-  assert.equal(manifest.id, 'catea-paper', 'manifest id must stay catea-paper; Obsidian keys updates off it')
-  assert.equal(manifest.isDesktopOnly, true, 'the plugin uses Node fs/child_process, so it must stay desktop-only')
-  assert.match(manifestVersion, /^\d+\.\d+\.\d+$/, 'manifest version must be a bare semver with no v prefix')
+  assert.equal(
+    manifest.id,
+    'catea-paper',
+    'manifest id must stay catea-paper; Obsidian keys updates off it',
+  )
+  assert.equal(
+    manifest.isDesktopOnly,
+    true,
+    'the plugin uses Node fs/child_process, so it must stay desktop-only',
+  )
+  assert.match(
+    manifestVersion,
+    /^\d+\.\d+\.\d+$/,
+    'manifest version must be a bare semver with no v prefix',
+  )
   assert.match(manifestMinApp, /^\d+\.\d+\.\d+$/, 'minAppVersion must be a bare semver')
 })
 
@@ -38,7 +50,11 @@ test('governance | the runtime constant equals manifest.json', () => {
 test('governance | every package.json agrees with manifest.json', () => {
   for (const rel of ['package.json', 'apps/obsidian/package.json']) {
     const version = String(json(rel).version)
-    assert.equal(version, manifestVersion, `${rel} says ${version} but manifest.json says ${manifestVersion}`)
+    assert.equal(
+      version,
+      manifestVersion,
+      `${rel} says ${version} but manifest.json says ${manifestVersion}`,
+    )
   }
 })
 
@@ -50,8 +66,16 @@ test('governance | versions.json maps the released version to minAppVersion', ()
     `versions.json must map "${manifestVersion}" to the manifest minAppVersion "${manifestMinApp}" so older Obsidian builds can still resolve a compatible release`,
   )
   for (const [pluginVersion, minApp] of Object.entries(versions)) {
-    assert.match(pluginVersion, /^\d+\.\d+\.\d+$/, `versions.json key "${pluginVersion}" is not a bare semver`)
-    assert.match(String(minApp), /^\d+\.\d+\.\d+$/, `versions.json value for ${pluginVersion} is not a bare semver`)
+    assert.match(
+      pluginVersion,
+      /^\d+\.\d+\.\d+$/,
+      `versions.json key "${pluginVersion}" is not a bare semver`,
+    )
+    assert.match(
+      String(minApp),
+      /^\d+\.\d+\.\d+$/,
+      `versions.json value for ${pluginVersion} is not a bare semver`,
+    )
   }
 })
 
@@ -85,6 +109,9 @@ test('governance | the release-blocking asset files exist for a release', () => 
   const built = resolve(REPO_ROOT, 'dist/catea-paper')
   if (!existsSync(built)) return
   for (const asset of ['main.js', 'manifest.json', 'styles.css']) {
-    assert.ok(existsSync(resolve(built, asset)), `build output is missing the release asset ${asset}`)
+    assert.ok(
+      existsSync(resolve(built, asset)),
+      `build output is missing the release asset ${asset}`,
+    )
   }
 })

@@ -1,6 +1,13 @@
 {
   "name": "catea-source",
-  "version": "0.3.11",
+  "version": "0.3.12",
+  "private": true,
+  "description": "Source workspace for the Catea Obsidian agent plugin",
+  "license": "GPL-3.0-only",
+  "repository": "github:cunyu6666/catea-obsidian-plugin",
+  "engines": {
+    "node": ">=24"
+  },
   "type": "module",
   "workspaces": [
     "apps/*",
@@ -12,7 +19,10 @@
     "test": "node --test",
     "typecheck": "node scripts/typecheck.mjs",
     "lint": "eslint \"apps/*/src/**/*.{ts,tsx}\" \"packages/*/src/**/*.{ts,tsx}\" \"packages/design-system/components/src/**/*.{ts,tsx}\" --max-warnings=0",
-    "test:behavior": "node --test scripts/verify-behavior.mjs"
+    "test:behavior": "node --test scripts/verify-behavior.mjs",
+    "check": "npm test && npm run format:check && npm run typecheck && npm run lint && npm run test:behavior && npm run build",
+    "format": "prettier --write \"apps/obsidian/src/**/*.{ts,tsx}\" \"packages/{agent-core,integrations,memory,personas}/src/**/*.{ts,tsx}\" \"packages/design-system/components/src/**/*.{ts,tsx}\" \"scripts/**/*.mjs\" \"tests/**/*.{ts,mjs}\"",
+    "format:check": "prettier --check \"apps/obsidian/src/**/*.{ts,tsx}\" \"packages/{agent-core,integrations,memory,personas}/src/**/*.{ts,tsx}\" \"packages/design-system/components/src/**/*.{ts,tsx}\" \"scripts/**/*.mjs\" \"tests/**/*.{ts,mjs}\""
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.0.0",
@@ -35,6 +45,7 @@
     "obsidian": "^1.8.7",
     "postcss": "^8.5.0",
     "postcss-selector-parser": "^7.1.0",
+    "prettier": "^3.9.9",
     "tailwindcss": "^4.1.0",
     "typescript": "^5.9.0",
     "typescript-eslint": "^8.70.1"

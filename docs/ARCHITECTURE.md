@@ -1,196 +1,151 @@
-# Catea Agent — Architecture and Implementation Status
+# Catea Architecture
 
-Status as of 2026-09-28 (version 0.3.1).
+Status: 2026-09-29, version 0.3.12.
 
-**Verified on 2026-09-28 in a complete workspace**: `npm run build` completed with
-exit 0 and produced `dist/catea-paper/` (main.js, styles.css, manifest.json at
-0.3.1, and the licence files); `npm test` completed with exit 0 and 171 passing
-assertions; the 2026-09-27 hands-on acceptance record below was observed in a
-running Obsidian instance.
+Catea is a desktop-only Obsidian plugin. The agent loop, model transport, tools,
+memory adapter, and UI all run inside the Obsidian host process. There is no Catea
+account, relay service, telemetry endpoint, or vendor backend.
 
-**Not verified**: raw `npx tsc --noEmit` still reports 84 diagnostics, all of them in
-the vendored `packages/*/upstream/**` snapshot, which omits sibling modules and so
-cannot typecheck standalone. `npm run typecheck` is green: it fails on owned code
-and reports that snapshot as a count.
-Loading the built plugin inside Obsidian is also unverified here, because that
-needs a live Obsidian instance and a test vault.
+The root [AGENTS.md](../AGENTS.md) is the machine-checked navigation and ownership
+map. This document records the architectural decisions and trust boundaries behind
+that map.
 
----
+## Runtime shape
 
-## Requirements Mapping
+```text
+Obsidian host
+  apps/obsidian/src/main.tsx
+    ├─ React sidebar and settings
+    ├─ native Obsidian tools
+    ├─ global encrypted BYOK profiles
+    └─ theme, updates, Git history, editor zoom
+             │
+             ▼
+Agent core
+  packages/agent-core/src/
+    ├─ session orchestration and context handoff
+    ├─ OpenAI-compatible and Anthropic transports
+    └─ vendored CatUI loop behind one adapter
+             │
+             ▼
+Capabilities
+  packages/integrations/src/  vault, web, MCP, skills
+  packages/memory/src/        retained memory adapter
+  packages/personas/src/      persona prompts
+```
 
-| Requirement | Current implementation |
-| --- | --- |
-| CatUI standard loop + ANNO provider | Pinned-version standard loop source, tool argument validation and scheduling, stop recovery, steering mid-run; full journal plus model-authored handoff |
-| CatUI tools | read/write/edit/ls/find/grep/bash/time plus a user question tool; shell off by default, writes and shell commands confirmed per call |
-| Skills / MCP | Explicit enablement and resource reads from `.catea/skills`; MCP SDK over HTTP and stdio with tool discovery, session reuse and shutdown |
-| Personas | Vex, Aria, Pencil, sourced from ANNO. The user's "arial" refers to the existing Aria |
-| Full memory core | Complete CatUI mem-core source snapshot: layered recall, working/episodic/semantic/procedural memory, linking, reinforcement, forgetting, archive restore, conflict resolution, consolidation and insights |
-| UI / design system | Tokens and components vendored under `packages/design-system`; ANNO Composer / StreamingChatResponse / AgentActivities / ApprovalCard; Tabler icons |
+The design system is vendored under `packages/design-system` and linked through
+npm workspaces. A clean clone is therefore the complete build input used by CI and
+Obsidian's release verifier.
 
----
+## Decisions
 
-## ADR 001: In-Process Loop
+### In-process agent loop
 
-**Decision**: the Obsidian host executes the loop directly and streams to the
-model over Node HTTP(S). There is no CatUI ACP subprocess and no relay server.
+The host calls the CatUI standard loop directly and sends model traffic over Node
+HTTP(S). This avoids an ACP subprocess and keeps cancellation, approvals, session
+persistence, and streaming under one lifecycle. The trade-off is that the plugin
+owns those lifecycles and must test them explicitly.
 
-**Rationale**: shortens the path from UI to first token and reuses ANNO's provider
-protocol mapping.
+### Vendored upstream with a narrow patch boundary
 
-**Trade-offs**: network and tool lifecycles are owned by the plugin. First-token
-and full-turn latency have not been benchmarked, so no claim is made that this is
-faster than CatUI.
+CatUI's agent loop and memory core are vendored under `packages/*/upstream/`.
+Agent-core bytes are checked against `SOURCE_HASHES.json`; the reviewed loop patch
+is applied during the build and described by `LOCAL_PATCHES.json`. Hand-written
+host code imports only the adapters under `packages/*/src/`.
 
----
+The upstream snapshot intentionally omits sibling CatUI packages, so raw `tsc`
+cannot resolve it in isolation. `npm run typecheck` reports those diagnostics but
+fails only for owned source. Provenance and buildability are enforced separately.
 
-## ADR 002: Keep the CatUI Memory Core, Replace the Host Adapter
+### Durable context without transcript destruction
 
-The mem-core source is retained rather than reduced to a single memory table.
-`memoryDir` takes precedence over CatUI's global environment variables, so
-nothing is written to `~/.nanomem`. `.catea/memory/global` and the per-persona
-subdirectories are isolated. At the end of a session, extraction work is enqueued
-durably and progress is recorded per stage; failures keep their error and a
-backoff timestamp so processing resumes after a restart.
+`WorkingContext` keeps the complete journal and presents a bounded window to the
+model. Compaction appends a checkpoint instead of rewriting prior records. Session
+history remains searchable, interrupted tool calls are repaired on resume, and
+overflow recovery is bounded.
 
-Recall waits at most 600 ms on the first-token path; on timeout it uses that
-persona's existing cache and refreshes in the background. Consolidation and
-archiving run serially in the queue. The engine and the NanoMem extension
-lifecycle are reused as-is; a `MemoryHost` injects the knowledge base, persona,
-structured BYOK configuration and events. The CatUI TUI is not embedded.
+### Reviewable writes instead of vault snapshots
 
-**Trade-offs**: automatic extraction can add model calls. The engine is GPL-3.0,
-so its licence and provenance are retained. This is not a migration of an existing
-`~/.catui` directory: existing CatUI memory is neither read nor modified.
+Every structured write records its original and modified content on the tool
+event. The conversation UI coalesces repeated writes to the same file and exposes
+the resulting diff even when the turn fails or produces no final text. Catea does
+not copy the whole vault when a message is sent.
 
----
+This follows the same useful boundary as Craft Agents: reversibility is attached
+to concrete tool mutations, not implemented as an unbounded series of full
+workspace copies. Catea currently provides review, not an automatic multi-file
+transaction rollback; Git remains the durable recovery mechanism for vaults that
+use it.
 
-## ADR 003: Standalone Design-System Monorepo
+On first startup after upgrading, the plugin removes the obsolete
+`.catea/snapshots` tree. No current code reads it, and the migration is confined to
+that exact plugin-owned path.
 
-**Status**: superseded in part on 2026-09-28. The workspace still keeps its own
-package boundaries, but it is vendored into this repository under
-`packages/design-system` because Obsidian's release build verification builds a
-clean checkout, and an out-of-tree sibling directory cannot be obtained there.
+### Retained memory, host-owned storage
 
-`catea-design-system` has its own `package.json` and workspaces: `packages/tokens`,
-`packages/components`, `apps/showcase`. The main repository consumes the component
-interface only, and no component imports Obsidian, the filesystem, a model or
-memory. This follows qoder-loop's separation of component package and showcase.
+The complete CatUI memory engine is retained. Catea replaces only the host adapter:
+memory is isolated by persona, recall is bounded on the first-token path, and
+extraction jobs persist with retry state. The engine is GPL-3.0 and its provenance
+and notices remain in the distribution.
 
-Both directories currently sit under the user's vault repository; no remote Git
-repository was created for the design system. It can be versioned and moved out
-independently.
+### Explicit capability boundaries
 
----
+Vault reads, writes, shell commands, web access, MCP servers, and memory are
+separate capabilities. Assist mode asks before mutations; full mode allows them;
+disabled capabilities are denied. Filesystem paths are confined to the vault and
+symbolic links are rejected. The shell is off by default and is not represented as
+a sandbox.
 
-## Runtime Layout
+## Persistence and retention
 
 ```text
 .catea/
-  config.json              # model metadata, toggles, MCP config; no API key or token
-  sessions/index.json
-  sessions/<id>.json       # raw conversation and tool transcript
-  skills/<id>/SKILL.md
-  memory/pending-turns.json
-  memory/global/
-  memory/aria/
-  memory/vex/
-  memory/pencil/
+  config.json                 vault toggles and non-secret model metadata
+  sessions/index.json        newest 500 conversations
+  sessions/<id>.json         one raw conversation and tool transcript
+  skills/<id>/SKILL.md       explicitly enabled local skills
+  memory/pending-turns.json  durable extraction queue
+  memory/{global,aria,vex,pencil}/
 ```
 
-Keys use Obsidian's secret storage. When it is unavailable they exist only in
-memory and the UI says so explicitly. The shell is off by default; when enabled,
-each command shows its working directory and the literal command, and states that
-it is not a sandbox. MCP stdio starts the user-enabled configuration on first tool
-discovery in a conversation, and every MCP tool call is confirmed individually.
+When a conversation ages out of the 500-row index, its session file is deleted by
+the same serialized store. Branching copies only history before the selected user
+message and only attachments referenced by that retained history.
 
----
+Model profiles and API keys live in encrypted Obsidian user data when Electron
+safeStorage is genuinely OS-backed. On unsupported hosts, model metadata stays
+vault-local and keys use Obsidian secure storage when available, otherwise memory
+only. MCP tokens remain vault-scoped. See [SECURITY.md](../SECURITY.md) for the
+threat model.
 
-## Pre-Release Acceptance Checklist
+## Release verification
 
-Not yet executed as a whole. Each item is a manual procedure in a test vault:
+CI runs from a clean checkout on Node 24:
 
-1. Build the plugin and load it in a test vault; confirm the paper master switch is
-   restored, the Agent has its own switch, and panel unload and dialog cancel behave.
-2. Run one streaming text turn and one multi-step tool turn against each of an
-   OpenAI-compatible and an Anthropic endpoint; cancel during model response,
-   during a tool call, and during a confirmation dialog.
-3. For read/write/edit: path escape, symlinks, file changed during confirmation,
-   `raw/` protection, and append-only `wiki/log.md`.
-4. For MCP over HTTP and stdio: initialization, paginated tool discovery, error
-   responses, process exit, reconfiguration, and refusing a call.
-5. Skills: enablement, relative resource reads, disabling, and escape attempts;
-   three-persona switching, current-note opt-in, and long-file truncation.
-6. Memory: extraction, recall, working/episodic/consolidation/forgetting/conflict/
-   restore against the same samples as CatUI; restart recovery, queue retry, and
-   cancellation when the switch is turned off.
-7. Holding model, input and tools fixed, measure first-token, tool turnaround and
-   full-turn latency for ANNO, CatUI and Catea.
+1. `npm ci`
+2. `npm test`
+3. `npm run format:check`
+4. `npm run typecheck`
+5. `npm run lint`
+6. `npm run test:behavior`
+7. `npm run build`
+8. release-asset, version, and 5 MB bundle assertions
 
----
+The manual release workflow repeats the gates, attests the built JavaScript and
+CSS, and publishes the three assets required by Obsidian. Loading the plugin in a
+real Obsidian test vault remains a manual pre-release check; CI does not claim to
+verify native host rendering.
 
-## 2026-09-27 Hands-On Acceptance Record
+## Manual smoke checklist
 
-- The CatUI standard loop source and 24 supporting AI modules were compared
-  byte-for-byte against the original commit; fingerprints are recorded in
-  `packages/agent-core/upstream/SOURCE_HASHES.json`.
-- MiniMax, driven from Obsidian, actually called `time` → `working_notes` write →
-  `session_history` list → AskUserQuestion; after the choice was submitted the
-  reply continued successfully.
-- Recorded SSE delivery for that run: 7 text increments, first text at about
-  2.4 s, response complete at about 4.6 s. This is a single observation, not a
-  throughput guarantee.
-- A segmented historical session exercised `new_context` and produced a
-  context-window checkpoint after the complete tool result. The following request
-  dropped from 27078 to 16754 input tokens; `session_history` search still returned
-  the early raw user records; `windows` returned one window; all 31 raw transcript
-  records were retained.
-- A single oversized history record was deferred for handoff under upstream's safe
-  retention policy rather than being cut. "accepted" means the request was queued,
-  not that the switch happened; the window record is authoritative.
-- A multi-turn background memory queue completed, persisted episodes and drained.
-  Complex conflict, forgetting and archive-restore algorithms reuse upstream code
-  but were not exercised item by item against destructive fixtures in this vault.
-- Typecheck, unit tests and the full suite were not run for that acceptance pass;
-  the build was used for the actual plugin delivery.
-
----
-
-## 2026-09-28 DIP Bootstrap
-
-The repository now carries a verifiable documentation layer: a root `AGENTS.md`
-(P1), five module maps (P2), and P3 contract headers on all 33 in-scope source
-files, each enforced by a contract test. `npm test` covers both the per-file
-contracts and repo-wide isomorphism between documentation and code.
-
-Deliberately excluded from DIP: the 74 vendored files under
-`packages/*/upstream/`; `scripts/`, which the scope rule does not cover at all
-(`apps/*/src` and `packages/*/src` only), so `scripts/build.mjs` carries no header;
-and `__tests__/` itself. See `docs/specs/2026-09-28-dip-bootstrap-design.md` for the
-approved design and its verification limits.
-
-## 2026-09-28 Repository Governance
-
-Added once the repository became public, to make releases and versions enforceable
-rather than conventional:
-
-- **One version source.** `packages/agent-core/src/version.ts` holds
-  `PLUGIN_VERSION`; a governance test keeps it, `manifest.json`, both
-  `package.json` files and `versions.json` in agreement, and rejects any other
-  hardcoded version literal. Two files had drifted to `0.3.0` before this.
-- **`versions.json`**, which did not exist, so older Obsidian builds can resolve a
-  compatible older release.
-- **A usable `tsc` gate.** Raw `tsc` reports ~87 diagnostics that cannot be fixed
-  from this repository (84 from the vendored snapshot, which omits sibling modules;
-  3 from the external design system, which ships `.ts` rather than `.d.ts`).
-  `scripts/typecheck.mjs` runs the same program and fails only on owned code.
-  Narrowing tsconfig `exclude` was tried and made it worse (87 → 129).
-- **CI** on push, pull requests and demand: install, contracts and governance,
-  typecheck. The build job is gated on a `DESIGN_SYSTEM_REPO` variable because the
-  design system is not a git repository and cannot be checked out by a runner.
-- **Releases.** `scripts/release.mjs` (dry run by default) validates the gates, the
-  three required assets and the built version, then creates the GitHub Release;
-  `.github/workflows/release.yml` does the same on a runner once the design system
-  has a repository.
-- **`CONTRIBUTING.md`, `SECURITY.md`, `CHANGELOG.md`** and issue and pull request
-  templates, including the DIP obligations a contributor has to satisfy.
+- Load the clean build in a disposable vault and restart Obsidian.
+- Run one streaming reply and one multi-tool reply against each supported protocol.
+- Stop during model streaming, tool execution, and an approval prompt.
+- Exercise read, write, edit, path escape, symlink, `raw/` protection, and file
+  change review after a failed turn.
+- Branch a conversation containing attachments and verify future attachments are
+  absent.
+- Open parallel sessions, Git history, theme switching, editor zoom, and update
+  checks.
+- Restart with pending memory work and verify the durable queue resumes.

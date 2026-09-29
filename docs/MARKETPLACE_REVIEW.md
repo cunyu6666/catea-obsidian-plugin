@@ -9,7 +9,7 @@ scanned a release containing them.
 | Review finding | Resolution |
 | --- | --- |
 | Clean build requires an unavailable sibling design system | The design system is now included under `packages/design-system`; installation and build were checked in a temporary copy without the sibling or pre-existing dependencies. |
-| `main.js` exceeds 5 MB | Native Obsidian Mermaid loading and the curated grammar bundle keep the output around 4.14 MB. Both the build script and CI enforce a limit of 5,000,000 bytes. |
+| `main.js` exceeds 5 MB | Native Obsidian Mermaid loading and the curated grammar bundle keep the 0.3.12 output at 4,579,290 bytes. Both the build script and CI enforce a limit of 5,000,000 bytes. |
 | Missing build provenance | The GitHub release workflow attests `main.js` and `styles.css` before publishing. This takes effect only when that workflow runs successfully; local builds do not create attestations. |
 | Undeclared dependencies | Runtime dependencies are declared in the workspaces that import them, with an updated lockfile. |
 | Settings search compatibility | Shared setting definitions expose searchable names to the modern API while preserving the legacy display path. Secrets are not included in searchable metadata. |
@@ -17,7 +17,7 @@ scanned a release containing them.
 | CSS `!important` and `:has` | Replaced them in plugin and design-system CSS with scoped specificity, explicit selection/menu state, and registered ribbon hover handlers. |
 | README title detection | The primary heading is Markdown and matches the plugin name. |
 
-CI and release preflight now run lint and adapter behavior checks in addition to
+CI and release preflight now run formatting, lint and adapter behavior checks in addition to
 contracts, governance, typecheck and build. The behavior checks exercise OpenAI
 and Anthropic streaming and buffered replies, context handoff, settings search
 and refresh, secret exclusion, Electron transport fallback, and CSS constraints.

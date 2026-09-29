@@ -1,4 +1,11 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from 'react'
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type CSSProperties,
+} from 'react'
 import { createHighlighterCore, type HighlighterCore } from 'shiki/core'
 import { createJavaScriptRegexEngine } from 'shiki/engine/javascript'
 import bash from '@shikijs/langs/bash'
@@ -25,13 +32,33 @@ import { DitherLoader } from './DitherLoader'
 // language is not listed here renders as plain text, so adding one is a
 // deliberate size decision rather than an oversight.
 const languages = {
-  bash, css, html, javascript, json, jsx, markdown, python, rust, toml, tsx, typescript, yaml,
+  bash,
+  css,
+  html,
+  javascript,
+  json,
+  jsx,
+  markdown,
+  python,
+  rust,
+  toml,
+  tsx,
+  typescript,
+  yaml,
 }
 const grammars = Object.values(languages)
 
 const aliases: Record<string, string> = {
-  js: 'javascript', ts: 'typescript', py: 'python', sh: 'bash', zsh: 'bash',
-  yml: 'yaml', rb: 'ruby', rs: 'rust', kt: 'kotlin', objc: 'objc',
+  js: 'javascript',
+  ts: 'typescript',
+  py: 'python',
+  sh: 'bash',
+  zsh: 'bash',
+  yml: 'yaml',
+  rb: 'ruby',
+  rs: 'rust',
+  kt: 'kotlin',
+  objc: 'objc',
   'objective-c': 'objc',
 }
 
@@ -50,10 +77,12 @@ function highlight(code: string, language: string) {
     langs: grammars,
     engine: createJavaScriptRegexEngine(),
   })
-  return highlighter.then(instance => instance.codeToTokensWithThemes(code, {
-    lang: language,
-    themes: { light: 'github-light', dark: 'github-dark' },
-  }))
+  return highlighter.then((instance) =>
+    instance.codeToTokensWithThemes(code, {
+      lang: language,
+      themes: { light: 'github-light', dark: 'github-dark' },
+    }),
+  )
 }
 
 // Adapted from beui's AgentCode: keep finished lines stable while the last line grows.
@@ -65,26 +94,39 @@ function useCodeTokens(code: string, language: string, streaming: boolean): Code
   useEffect(() => {
     let cancelled = false
     const cached = tokenCache.get(key)
-    if (cached) { setResult({ key, code, language, lines: cached }); return }
+    if (cached) {
+      setResult({ key, code, language, lines: cached })
+      return
+    }
 
     const wait = streaming ? Math.max(0, 90 - (performance.now() - lastHighlightAt.current)) : 0
     const timer = window.setTimeout(() => {
       lastHighlightAt.current = performance.now()
-      void highlight(code, language).then(lines => {
-        if (cancelled) return
-        const tokens = lines.map(line => line.map(token => ({
-          content: token.content,
-          offset: token.offset,
-          light: token.variants.light?.color,
-          dark: token.variants.dark?.color,
-        })))
-        if (tokenCache.size >= maxCacheEntries) tokenCache.delete(tokenCache.keys().next().value || '')
-        tokenCache.set(key, tokens)
-        setResult({ key, code, language, lines: tokens })
-      }).catch(() => { if (!cancelled) setResult(null) })
+      void highlight(code, language)
+        .then((lines) => {
+          if (cancelled) return
+          const tokens = lines.map((line) =>
+            line.map((token) => ({
+              content: token.content,
+              offset: token.offset,
+              light: token.variants.light?.color,
+              dark: token.variants.dark?.color,
+            })),
+          )
+          if (tokenCache.size >= maxCacheEntries)
+            tokenCache.delete(tokenCache.keys().next().value || '')
+          tokenCache.set(key, tokens)
+          setResult({ key, code, language, lines: tokens })
+        })
+        .catch(() => {
+          if (!cancelled) setResult(null)
+        })
     }, wait)
 
-    return () => { cancelled = true; window.clearTimeout(timer) }
+    return () => {
+      cancelled = true
+      window.clearTimeout(timer)
+    }
   }, [code, key, language, streaming])
 
   const cached = tokenCache.get(key)
@@ -106,7 +148,14 @@ export interface CodeBlockProps {
 }
 
 // Code surface with beui's stable line updates and scroll following.
-export function CodeBlock({ code, language = 'text', showHeader = true, streaming = false, maxHeight = 280, labels }: CodeBlockProps) {
+export function CodeBlock({
+  code,
+  language = 'text',
+  showHeader = true,
+  streaming = false,
+  maxHeight = 280,
+  labels,
+}: CodeBlockProps) {
   const resolvedLanguage = aliases[language.toLowerCase()] || language.toLowerCase()
   const shikiLanguage = resolvedLanguage in languages ? resolvedLanguage : 'text'
   const tokens = useCodeTokens(code, shikiLanguage, streaming)
@@ -116,13 +165,18 @@ export function CodeBlock({ code, language = 'text', showHeader = true, streamin
   const copyTimer = useRef<number | undefined>(undefined)
   const [copied, setCopied] = useState(false)
   let offset = 0
-  const lines = code.split('\n').map(content => {
+  const lines = code.split('\n').map((content) => {
     const line = { content, offset }
     offset += content.length + 1
     return line
   })
 
-  useEffect(() => () => { if (copyTimer.current) window.clearTimeout(copyTimer.current) }, [])
+  useEffect(
+    () => () => {
+      if (copyTimer.current) window.clearTimeout(copyTimer.current)
+    },
+    [],
+  )
 
   useLayoutEffect(() => {
     const viewport = viewportRef.current
@@ -137,22 +191,84 @@ export function CodeBlock({ code, language = 'text', showHeader = true, streamin
       setCopied(true)
       if (copyTimer.current) window.clearTimeout(copyTimer.current)
       copyTimer.current = window.setTimeout(() => setCopied(false), 1600)
-    } catch { setCopied(false) }
+    } catch {
+      setCopied(false)
+    }
   }, [code])
 
-  return <div className="anno-code-block" data-state={streaming ? 'streaming' : 'complete'} aria-busy={streaming}>
-    {showHeader && <div className="anno-code-block__header">
-      <span className="anno-code-block__identity"><Icon name="code" size={16} /><span>{resolvedLanguage === 'text' ? labels.plainText : resolvedLanguage}</span></span>
-      <span className="anno-code-block__actions">
-        {streaming && <span className="anno-code-block__writing" role="status"><DitherLoader label={labels.writing}/>{labels.writing}</span>}
-        <button type="button" onClick={() => void copy()}><span className="catea-sr-only">{copied ? labels.copied : labels.copy}</span><Icon name={copied ? 'check' : 'copy'} size={16} /></button>
-      </span>
-    </div>}
-    <div ref={viewportRef} className="anno-code-block__content anno-auto-scrollbar" style={{ maxHeight }} role={streaming ? 'log' : undefined} aria-live={streaming ? 'polite' : undefined} onWheel={event=>{if(event.deltaY<0)followCode.current=false}} onScroll={event=>{const viewport=event.currentTarget;if(viewport.scrollTop<lastCodeTop.current-1)followCode.current=false;else if(viewport.scrollHeight-viewport.scrollTop-viewport.clientHeight<16)followCode.current=true;lastCodeTop.current=viewport.scrollTop}}>
-      <pre><code>{lines.map((line, index) => <span className="anno-code-block__line" key={line.offset}>
-        <span className="anno-code-block__line-number" aria-hidden="true">{index + 1}</span>
-        <span className="anno-code-block__line-content">{tokens?.[index]?.map(token => <span key={`${token.offset}-${token.content}`} className="anno-code-block__token" style={{ '--anno-code-light': token.light || 'currentColor', '--anno-code-dark': token.dark || token.light || 'currentColor' } as CSSProperties}>{token.content}</span>) || line.content || '\u00a0'}</span>
-      </span>)}</code></pre>
+  return (
+    <div
+      className="anno-code-block"
+      data-state={streaming ? 'streaming' : 'complete'}
+      aria-busy={streaming}
+    >
+      {showHeader && (
+        <div className="anno-code-block__header">
+          <span className="anno-code-block__identity">
+            <Icon name="code" size={16} />
+            <span>{resolvedLanguage === 'text' ? labels.plainText : resolvedLanguage}</span>
+          </span>
+          <span className="anno-code-block__actions">
+            {streaming && (
+              <span className="anno-code-block__writing" role="status">
+                <DitherLoader label={labels.writing} />
+                {labels.writing}
+              </span>
+            )}
+            <button type="button" onClick={() => void copy()}>
+              <span className="catea-sr-only">{copied ? labels.copied : labels.copy}</span>
+              <Icon name={copied ? 'check' : 'copy'} size={16} />
+            </button>
+          </span>
+        </div>
+      )}
+      <div
+        ref={viewportRef}
+        className="anno-code-block__content anno-auto-scrollbar"
+        style={{ maxHeight }}
+        role={streaming ? 'log' : undefined}
+        aria-live={streaming ? 'polite' : undefined}
+        onWheel={(event) => {
+          if (event.deltaY < 0) followCode.current = false
+        }}
+        onScroll={(event) => {
+          const viewport = event.currentTarget
+          if (viewport.scrollTop < lastCodeTop.current - 1) followCode.current = false
+          else if (viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight < 16)
+            followCode.current = true
+          lastCodeTop.current = viewport.scrollTop
+        }}
+      >
+        <pre>
+          <code>
+            {lines.map((line, index) => (
+              <span className="anno-code-block__line" key={line.offset}>
+                <span className="anno-code-block__line-number" aria-hidden="true">
+                  {index + 1}
+                </span>
+                <span className="anno-code-block__line-content">
+                  {tokens?.[index]?.map((token) => (
+                    <span
+                      key={`${token.offset}-${token.content}`}
+                      className="anno-code-block__token"
+                      style={
+                        {
+                          '--anno-code-light': token.light || 'currentColor',
+                          '--anno-code-dark': token.dark || token.light || 'currentColor',
+                        } as CSSProperties
+                      }
+                    >
+                      {token.content}
+                    </span>
+                  )) ||
+                    line.content ||
+                    '\u00a0'}
+                </span>
+              </span>
+            ))}
+          </code>
+        </pre>
+      </div>
     </div>
-  </div>
+  )
 }

@@ -1,5 +1,13 @@
-import {ActionMenu} from './ActionMenu'
-import { useId, useLayoutEffect, useRef, useState, type DragEvent, type KeyboardEvent, type ReactNode } from 'react'
+import { ActionMenu } from './ActionMenu'
+import {
+  useId,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type DragEvent,
+  type KeyboardEvent,
+  type ReactNode,
+} from 'react'
 import { Icon } from './Icon'
 
 interface ComposerProps {
@@ -31,7 +39,34 @@ interface ComposerProps {
   className?: string
 }
 
-export function Composer({ value, onChange, onSubmit, placeholder, mode, inputLabel, submitLabel, running = false, stopLabel = 'Stop', onStop, leading, trailing, attachments, onDropFiles, onPickFiles, onPickFolder, folderLabel, workingDirectory, attachLabel, fileLabel, dropLabel, hasSubmitContent, disabled, busy, autoFocus, className = '' }: ComposerProps) {
+export function Composer({
+  value,
+  onChange,
+  onSubmit,
+  placeholder,
+  mode,
+  inputLabel,
+  submitLabel,
+  running = false,
+  stopLabel = 'Stop',
+  onStop,
+  leading,
+  trailing,
+  attachments,
+  onDropFiles,
+  onPickFiles,
+  onPickFolder,
+  folderLabel,
+  workingDirectory,
+  attachLabel,
+  fileLabel,
+  dropLabel,
+  hasSubmitContent,
+  disabled,
+  busy,
+  autoFocus,
+  className = '',
+}: ComposerProps) {
   const inputLabelId = useId()
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -57,42 +92,51 @@ export function Composer({ value, onChange, onSubmit, placeholder, mode, inputLa
   }
 
   return (
-    <div className={`anno-composer ${className}`}
-      onDragEnter={event => {
+    <div
+      className={`anno-composer ${className}`}
+      onDragEnter={(event) => {
         if (!hasFiles(event)) return
         event.preventDefault()
         dragDepth.current += 1
         setDragging(true)
       }}
-      onDragOver={event => {
+      onDragOver={(event) => {
         if (!hasFiles(event)) return
         event.preventDefault()
         event.dataTransfer.dropEffect = 'copy'
       }}
-      onDragLeave={event => {
+      onDragLeave={(event) => {
         if (!dragging) return
         event.preventDefault()
         dragDepth.current = Math.max(0, dragDepth.current - 1)
         if (!dragDepth.current) setDragging(false)
       }}
-      onDrop={event => {
+      onDrop={(event) => {
         if (!hasFiles(event)) return
         event.preventDefault()
         dragDepth.current = 0
         setDragging(false)
         onDropFiles?.(event.dataTransfer)
-      }}>
+      }}
+    >
       {attachments}
       {/* Obsidian turns aria-label into a hover tooltip; a referenced label preserves the accessible name without it. */}
-      <span id={inputLabelId} hidden>{inputLabel}</span>
+      <span id={inputLabelId} hidden>
+        {inputLabel}
+      </span>
       <textarea
         aria-labelledby={inputLabelId}
         ref={inputRef}
         autoFocus={autoFocus}
         value={value}
-        onChange={event => onChange(event.target.value)}
+        onChange={(event) => onChange(event.target.value)}
         onKeyDown={handleKeyDown}
-        onPaste={event=>{if(onPickFiles&&event.clipboardData.files.length){event.preventDefault();onPickFiles(event.clipboardData.files)}}}
+        onPaste={(event) => {
+          if (onPickFiles && event.clipboardData.files.length) {
+            event.preventDefault()
+            onPickFiles(event.clipboardData.files)
+          }
+        }}
         placeholder={placeholder}
         disabled={disabled}
         rows={2}
@@ -100,25 +144,75 @@ export function Composer({ value, onChange, onSubmit, placeholder, mode, inputLa
       />
       <div className="anno-composer__toolbar">
         <div className="anno-composer__toolbar-group">
-          {onPickFiles&&<input ref={fileInputRef} className="anno-composer__file-input" type="file" multiple tabIndex={-1} onChange={event=>{if(event.target.files?.length)onPickFiles(event.target.files);event.target.value=''}}/>}
-          {(onPickFiles||onPickFolder)&&<ActionMenu label={attachLabel||'Add'} icon={<Icon name="add" size={17}/>} items={[
-            ...(onPickFiles?[{id:'file',label:fileLabel||'Add files',icon:<Icon name="file" size={15}/>,onSelect:()=>fileInputRef.current?.click()}]:[]),
-            ...(onPickFolder?[{id:'folder',label:folderLabel||'Add folder',icon:<Icon name="folder" size={15}/>,onSelect:onPickFolder}]:[]),
-          ]}/>}
+          {onPickFiles && (
+            <input
+              ref={fileInputRef}
+              className="anno-composer__file-input"
+              type="file"
+              multiple
+              tabIndex={-1}
+              onChange={(event) => {
+                if (event.target.files?.length) onPickFiles(event.target.files)
+                event.target.value = ''
+              }}
+            />
+          )}
+          {(onPickFiles || onPickFolder) && (
+            <ActionMenu
+              label={attachLabel || 'Add'}
+              icon={<Icon name="add" size={17} />}
+              items={[
+                ...(onPickFiles
+                  ? [
+                      {
+                        id: 'file',
+                        label: fileLabel || 'Add files',
+                        icon: <Icon name="file" size={15} />,
+                        onSelect: () => fileInputRef.current?.click(),
+                      },
+                    ]
+                  : []),
+                ...(onPickFolder
+                  ? [
+                      {
+                        id: 'folder',
+                        label: folderLabel || 'Add folder',
+                        icon: <Icon name="folder" size={15} />,
+                        onSelect: onPickFolder,
+                      },
+                    ]
+                  : []),
+              ]}
+            />
+          )}
           {workingDirectory}
           {leading}
         </div>
-        <div className="anno-composer__toolbar-group">{trailing}
+        <div className="anno-composer__toolbar-group">
+          {trailing}
           <button
             type="button"
             data-state={stopping ? 'stop' : 'submit'}
-            disabled={stopping ? disabled : (!value.trim() && !hasSubmitContent) || disabled || busy}
+            disabled={
+              stopping ? disabled : (!value.trim() && !hasSubmitContent) || disabled || busy
+            }
             onClick={stopping ? onStop : onSubmit}
             className="anno-composer__send"
-          ><span className="catea-sr-only">{stopping ? stopLabel : submitLabel}</span><Icon name={stopping ? 'stop' : mode === 'search' ? 'search' : 'arrow-up'} size={stopping ? 14 : 16} /></button>
+          >
+            <span className="catea-sr-only">{stopping ? stopLabel : submitLabel}</span>
+            <Icon
+              name={stopping ? 'stop' : mode === 'search' ? 'search' : 'arrow-up'}
+              size={stopping ? 14 : 16}
+            />
+          </button>
         </div>
       </div>
-      {dragging && <div className="anno-composer__drop-overlay" role="status"><Icon name="upload" size={18} />{dropLabel}</div>}
+      {dragging && (
+        <div className="anno-composer__drop-overlay" role="status">
+          <Icon name="upload" size={18} />
+          {dropLabel}
+        </div>
+      )}
     </div>
   )
 }

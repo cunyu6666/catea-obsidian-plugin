@@ -5,10 +5,10 @@
  * [HERE]: tests/dip-contract.ts - shared DIP contract parser; turns a P3 header plus the actual source into verifiable assertions, so documentation drift fails the suite
  */
 
-import {readFileSync, readdirSync, existsSync, statSync} from 'node:fs'
-import {fileURLToPath} from 'node:url'
-import {dirname, resolve, join, relative, sep} from 'node:path'
-import {test} from 'node:test'
+import { readFileSync, readdirSync, existsSync, statSync } from 'node:fs'
+import { fileURLToPath } from 'node:url'
+import { dirname, resolve, join, relative, sep } from 'node:path'
+import { test } from 'node:test'
 import assert from 'node:assert/strict'
 
 const HERE = dirname(fileURLToPath(import.meta.url))
@@ -36,7 +36,7 @@ export function listRepoFiles(): string[] {
   if (fileIndexCache) return fileIndexCache
   const out: string[] = []
   const walk = (abs: string) => {
-    for (const entry of readdirSync(abs, {withFileTypes: true})) {
+    for (const entry of readdirSync(abs, { withFileTypes: true })) {
       if (SKIP_DIRS.has(entry.name)) continue
       const child = join(abs, entry.name)
       if (entry.isDirectory()) walk(child)
@@ -84,7 +84,7 @@ function cleanFieldValue(raw: string): string {
   return raw
     .replace(/\*\//g, '')
     .split('\n')
-    .map(line => line.replace(/^\s*\*?\s?/, ''))
+    .map((line) => line.replace(/^\s*\*?\s?/, ''))
     .join(' ')
     .replace(/\s+/g, ' ')
     .trim()
@@ -94,7 +94,7 @@ function splitItems(raw: string): string[] {
   if (!raw) return []
   return raw
     .split(',')
-    .map(part => part.trim())
+    .map((part) => part.trim())
     .filter(Boolean)
 }
 
@@ -107,7 +107,7 @@ const FIELD_PREFIX: Record<string, RegExp> = {
 export function extractP3(text: string): P3 {
   const block = firstBlockComment(text)
   if (!block || !block.includes('[WHO]:')) {
-    return {found: false, who: [], from: [], to: [], here: ''}
+    return { found: false, who: [], from: [], to: [], here: '' }
   }
   const parts = block.split(new RegExp('\\[(' + P3_FIELDS.join('|') + ')\\]\\:'))
   const fields: Record<string, string> = {}
@@ -142,7 +142,8 @@ export function extractExports(text: string): ExportInfo {
   let hasDefault = false
 
   // export (default) (async) (abstract) function|class|interface|type|enum NAME
-  const named = /^[ \t]*export[ \t]+(?:default[ \t]+)?(?:async[ \t]+)?(?:abstract[ \t]+)?(function|class|interface|type|enum)[ \t]*\*?[ \t]*([A-Za-z_$][\w$]*)/gm
+  const named =
+    /^[ \t]*export[ \t]+(?:default[ \t]+)?(?:async[ \t]+)?(?:abstract[ \t]+)?(function|class|interface|type|enum)[ \t]*\*?[ \t]*([A-Za-z_$][\w$]*)/gm
   for (const m of text.matchAll(named)) names.add(m[2])
 
   // export const|let|var NAME[, NAME2...]
@@ -169,7 +170,7 @@ export function extractExports(text: string): ExportInfo {
   const star = /^[ \t]*export[ \t]+\*[ \t]+from[ \t]*['"]([^'"]+)['"]/gm
   for (const m of text.matchAll(star)) reexports.add(m[1])
 
-  return {names, hasDefault, reexports}
+  return { names, hasDefault, reexports }
 }
 
 // ---------- imports ----------
@@ -208,13 +209,14 @@ export function extractImports(text: string): Set<string> {
     // Guard against an unterminated statement swallowing the rest of the file.
     if (buffer.length > 600) buffer = ''
   }
-  for (const m of source.matchAll(/(?:require|import)\s*\(\s*['"]([^'"]+)['"]\s*\)/g)) specs.add(m[1])
+  for (const m of source.matchAll(/(?:require|import)\s*\(\s*['"]([^'"]+)['"]\s*\)/g))
+    specs.add(m[1])
   return specs
 }
 
 // ---------- specifier resolution ----------
 
-const RESOLVE_SUFFIXES = ['', ...SOURCE_EXT, ...SOURCE_EXT.map(ext => `/index${ext}`)]
+const RESOLVE_SUFFIXES = ['', ...SOURCE_EXT, ...SOURCE_EXT.map((ext) => `/index${ext}`)]
 
 export function resolveSpecifier(fromRel: string, spec: string): string | null {
   if (!spec.startsWith('.')) return null
@@ -287,7 +289,10 @@ export function contractTest(targetRel: string): void {
   })
 
   test(`${targetRel} | [FROM] imports present`, () => {
-    assert.ok(p3.from.length > 0, `[FROM] is empty in ${targetRel}; use "(none)" when the file has no imports`)
+    assert.ok(
+      p3.from.length > 0,
+      `[FROM] is empty in ${targetRel}; use "(none)" when the file has no imports`,
+    )
     for (const dep of p3.from) {
       if (dep === '(none)') {
         assert.equal(
@@ -305,7 +310,10 @@ export function contractTest(targetRel: string): void {
   })
 
   test(`${targetRel} | [TO] consumers resolve`, () => {
-    assert.ok(p3.to.length > 0, `[TO] is empty in ${targetRel}; use "(entry)" when nothing imports this file`)
+    assert.ok(
+      p3.to.length > 0,
+      `[TO] is empty in ${targetRel}; use "(entry)" when nothing imports this file`,
+    )
     for (const entry of p3.to) {
       if (entry === '(entry)') {
         assert.equal(

@@ -5,11 +5,18 @@
  * [HERE]: tests/dip-verify.test.ts - automation of the oh-my-dev /verify procedure; fails on any documentation-to-code drift
  */
 
-import {readFileSync, readdirSync, existsSync} from 'node:fs'
-import {resolve, dirname} from 'node:path'
-import {test} from 'node:test'
+import { readFileSync, readdirSync, existsSync } from 'node:fs'
+import { resolve, dirname } from 'node:path'
+import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import {REPO_ROOT, extractP3, inScopeDIPFiles, isDIPSource, listRepoFiles, toRepoPath} from './dip-contract.ts'
+import {
+  REPO_ROOT,
+  extractP3,
+  inScopeDIPFiles,
+  isDIPSource,
+  listRepoFiles,
+  toRepoPath,
+} from './dip-contract.ts'
 
 const P1 = 'AGENTS.md'
 
@@ -26,12 +33,14 @@ const REQUIRED_TOP_LEVEL = ['apps/', 'packages/', 'docs/', 'scripts/', 'tests/']
 const MEMBER_LINE = /^\s*[-*]?\s*([\w.\-]+\.(?:ts|tsx|mjs|js|cjs|md|css|json))\s*:\s*\S/
 
 function directFiles(dir: string): string[] {
-  return readdirSync(resolve(REPO_ROOT, dir), {withFileTypes: true})
-    .filter(entry => entry.isFile())
-    .map(entry => entry.name)
-    // The module map is not a member of the module it maps.
-    .filter(name => name !== 'AGENTS.md')
-    .sort()
+  return (
+    readdirSync(resolve(REPO_ROOT, dir), { withFileTypes: true })
+      .filter((entry) => entry.isFile())
+      .map((entry) => entry.name)
+      // The module map is not a member of the module it maps.
+      .filter((name) => name !== 'AGENTS.md')
+      .sort()
+  )
 }
 
 function section(text: string, heading: string): string {
@@ -67,7 +76,10 @@ function directoryEntries(p1: string): string[] {
 }
 
 test('DIP | P1 root charter exists', () => {
-  assert.ok(existsSync(resolve(REPO_ROOT, P1)), `${P1} is missing; the DIP navigation root must exist`)
+  assert.ok(
+    existsSync(resolve(REPO_ROOT, P1)),
+    `${P1} is missing; the DIP navigation root must exist`,
+  )
 })
 
 test('DIP | every in-scope source file carries a P3 header', () => {
@@ -86,12 +98,8 @@ test('DIP | every in-scope file is claimed by exactly one P3 contract test', () 
     const text = readFileSync(resolve(REPO_ROOT, rel), 'utf8')
     for (const m of text.matchAll(/contractTest\(\s*['"]([^'"]+)['"]\s*\)/g)) claimed.add(m[1])
   }
-  const uncovered = inScopeDIPFiles().filter(rel => !claimed.has(rel))
-  assert.deepEqual(
-    uncovered,
-    [],
-    `in-scope files with no contract test: ${uncovered.join(', ')}`,
-  )
+  const uncovered = inScopeDIPFiles().filter((rel) => !claimed.has(rel))
+  assert.deepEqual(uncovered, [], `in-scope files with no contract test: ${uncovered.join(', ')}`)
 })
 
 test('DIP | no contract test targets a file outside DIP scope', () => {
@@ -101,7 +109,7 @@ test('DIP | no contract test targets a file outside DIP scope', () => {
     const text = readFileSync(resolve(REPO_ROOT, rel), 'utf8')
     for (const m of text.matchAll(/contractTest\(\s*['"]([^'"]+)['"]\s*\)/g)) claimed.add(m[1])
   }
-  const strays = [...claimed].filter(rel => !isDIPSource(rel))
+  const strays = [...claimed].filter((rel) => !isDIPSource(rel))
   assert.deepEqual(strays, [], `contract tests targeting excluded files: ${strays.join(', ')}`)
 })
 
@@ -117,8 +125,8 @@ test('DIP | every module directory has a P2 map whose member list matches the fi
     const text = readFileSync(abs, 'utf8')
     const listed = memberList(text)
     const actual = directFiles(dir)
-    const missing = actual.filter(name => !listed.includes(name))
-    const ghosts = listed.filter(name => !actual.includes(name))
+    const missing = actual.filter((name) => !listed.includes(name))
+    const ghosts = listed.filter((name) => !actual.includes(name))
     if (missing.length) problems.push(`${p2Path} omits: ${missing.join(', ')}`)
     if (ghosts.length) problems.push(`${p2Path} lists non-existent: ${ghosts.join(', ')}`)
   }
@@ -137,7 +145,8 @@ test('DIP | P2 parent links resolve', () => {
       continue
     }
     const target = resolve(REPO_ROOT, dirname(`${dir}/AGENTS.md`), m[1].trim())
-    if (!existsSync(target)) problems.push(`${dir}/AGENTS.md parent "${m[1].trim()}" does not resolve`)
+    if (!existsSync(target))
+      problems.push(`${dir}/AGENTS.md parent "${m[1].trim()}" does not resolve`)
   }
   assert.deepEqual(problems, [], problems.join(' | '))
 })
@@ -147,28 +156,29 @@ test('DIP | P1 directory structure matches the filesystem', () => {
   const entries = directoryEntries(p1)
   assert.ok(entries.length > 0, 'P1 has no parseable Directory Structure fenced block')
 
-  const phantoms = entries.filter(entry => !existsSync(resolve(REPO_ROOT, entry)))
+  const phantoms = entries.filter((entry) => !existsSync(resolve(REPO_ROOT, entry)))
   assert.deepEqual(phantoms, [], `P1 lists directories that do not exist: ${phantoms.join(', ')}`)
 
   for (const required of REQUIRED_TOP_LEVEL) {
-    assert.ok(
-      entries.includes(required),
-      `P1 Directory Structure does not list ${required}`,
-    )
+    assert.ok(entries.includes(required), `P1 Directory Structure does not list ${required}`)
   }
 })
 
 test('DIP | P1 links to every P2 map', () => {
   const p1 = readFileSync(resolve(REPO_ROOT, P1), 'utf8')
-  const missing = P2_DIRS.filter(dir => !p1.includes(`${dir}/AGENTS.md`))
+  const missing = P2_DIRS.filter((dir) => !p1.includes(`${dir}/AGENTS.md`))
   assert.deepEqual(missing, [], `P1 does not link these P2 maps: ${missing.join(', ')}`)
 })
 
 test('DIP | vendored upstream is excluded and documented', () => {
-  const vendored = listRepoFiles().filter(rel => rel.includes('/upstream/'))
+  const vendored = listRepoFiles().filter((rel) => rel.includes('/upstream/'))
   assert.ok(vendored.length > 0, 'expected vendored upstream files to exist')
   const wronglyInScope = vendored.filter(isDIPSource)
-  assert.deepEqual(wronglyInScope, [], `vendored files must not be in DIP scope: ${wronglyInScope.join(', ')}`)
+  assert.deepEqual(
+    wronglyInScope,
+    [],
+    `vendored files must not be in DIP scope: ${wronglyInScope.join(', ')}`,
+  )
 
   const p1 = readFileSync(resolve(REPO_ROOT, P1), 'utf8')
   assert.ok(
@@ -180,14 +190,15 @@ test('DIP | vendored upstream is excluded and documented', () => {
 test('DIP | no generated or runtime artifacts are tracked', () => {
   const tracked = listRepoFiles()
   const forbidden = tracked.filter(
-    rel => rel.startsWith('node_modules/') || rel.startsWith('dist/') || rel.startsWith('.catea/'),
+    (rel) =>
+      rel.startsWith('node_modules/') || rel.startsWith('dist/') || rel.startsWith('.catea/'),
   )
   assert.deepEqual(forbidden, [], `must never be tracked: ${forbidden.join(', ')}`)
 })
 
 test('DIP | P2 maps are listed in the repository index at the expected paths', () => {
-  const expected = P2_DIRS.map(dir => toRepoPath(resolve(REPO_ROOT, `${dir}/AGENTS.md`)))
+  const expected = P2_DIRS.map((dir) => toRepoPath(resolve(REPO_ROOT, `${dir}/AGENTS.md`)))
   const present = new Set(listRepoFiles())
-  const absent = expected.filter(path => !present.has(path))
+  const absent = expected.filter((path) => !present.has(path))
   assert.deepEqual(absent, [], `missing P2 maps: ${absent.join(', ')}`)
 })

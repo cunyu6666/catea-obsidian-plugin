@@ -8,26 +8,30 @@ export type ThemeMode = 'light' | 'dark' | 'system'
 
 export class ThemeController {
   private mode: ThemeMode = 'system'
-  private documents = new Map<Document, {media: MediaQueryList; update: () => void; previous?: string}>()
+  private documents = new Map<
+    Document,
+    { media: MediaQueryList; update: () => void; previous?: string }
+  >()
 
   attach(doc: Document) {
     if (this.documents.has(doc) || !doc.defaultView) return
     const media = doc.defaultView.matchMedia('(prefers-color-scheme: dark)')
     const update = () => {
-      doc.body.dataset.cateaTheme = this.mode === 'system' ? (media.matches ? 'dark' : 'light') : this.mode
+      doc.body.dataset.cateaTheme =
+        this.mode === 'system' ? (media.matches ? 'dark' : 'light') : this.mode
     }
-    this.documents.set(doc, {media, update, previous: doc.body.dataset.cateaTheme})
+    this.documents.set(doc, { media, update, previous: doc.body.dataset.cateaTheme })
     media.addEventListener('change', update)
     update()
   }
 
   setMode(mode: unknown) {
     this.mode = mode === 'light' || mode === 'dark' ? mode : 'system'
-    for (const {update} of this.documents.values()) update()
+    for (const { update } of this.documents.values()) update()
   }
 
   dispose() {
-    for (const [doc, {media, update, previous}] of this.documents) {
+    for (const [doc, { media, update, previous }] of this.documents) {
       media.removeEventListener('change', update)
       if (previous === undefined) delete doc.body.dataset.cateaTheme
       else doc.body.dataset.cateaTheme = previous

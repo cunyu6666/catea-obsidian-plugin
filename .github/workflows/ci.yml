@@ -33,6 +33,9 @@ jobs:
       - name: Contract and governance gate
         run: npm test
 
+      - name: Formatting
+        run: npm run format:check
+
       # Fails only on diagnostics in code this repository owns. The vendored
       # CatUI snapshot is reported as a count instead; upstream provenance and
       # the build-time loop patch are checked by the contract and build gates.

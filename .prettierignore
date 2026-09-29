@@ -1,0 +1,4 @@
+dist/
+node_modules/
+apps/obsidian/src/paper.cjs
+packages/*/upstream/

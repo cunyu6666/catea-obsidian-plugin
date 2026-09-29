@@ -16,12 +16,14 @@ enforce, so a change can be checked before it is proposed.
 
 | Command | What it does | Requires installed dependencies |
 |---|---|---|
-| `npm install` | workspace install | no |
-| `npm test` | the contract, isomorphism and version-consistency gates | no |
+| `npm ci` | reproducible workspace install | npm and network access |
+| `npm test` | contracts, isomorphism, governance and storage regressions | yes |
 | `npm run typecheck` | `tsc`, scoped to owned code | yes |
 | `npm run lint` | official Obsidian rules over host and adapters | yes |
+| `npm run format:check` | Prettier check over owned TypeScript and JavaScript | yes |
 | `npm run test:behavior` | runtime streaming, context and settings regressions | yes |
 | `npm run build` | bundle to `dist/catea-paper/` | **yes** |
+| `npm run check` | the complete local CI sequence, including the build | yes |
 
 ## Documentation is enforced, not suggested
 
@@ -55,8 +57,9 @@ are checked against `SOURCE_HASHES.json`, and its build-time patch against
 (the scope rule covers `apps/*/src` and `packages/*/src`), and `__tests__/`
 (a contract test for a contract test is circular).
 
-Run `npm test` before every commit. It takes about a second and needs no
-dependencies, which is exactly why it is the gate.
+Run `npm ci` once, then `npm run check` before proposing a change. CI runs the
+same gates from a clean checkout. Use `npm run format` to apply the repository
+style.
 
 ## Commits
 
@@ -100,10 +103,10 @@ Obsidian's updater needs a **GitHub Release** whose tag is the version with **no
 alone is not enough, and a version that was already published is ignored — cut a
 new version instead of re-releasing.
 
-`.github/workflows/release.yml` does the same on a runner, but it is inactive until
-the design system has a repository to check out (see the `DESIGN_SYSTEM_REPO`
-repository variable). Until then, releases come from a machine that has the
-sibling workspace.
+`.github/workflows/release.yml` is the preferred publishing path. It is manually
+dispatched with the exact version, builds from the vendored workspace, attests
+`main.js` and `styles.css`, and creates the GitHub Release. The local script remains
+available for maintainers who need the same checks from a trusted workstation.
 
 ## Known limitations
 
@@ -114,5 +117,6 @@ sibling workspace.
 - **Narrowing tsconfig `exclude` does not work.** Specifying `exclude` replaces the
   built-in `node_modules` exclusion and pulls more external sources into the
   program (measured: 87 → 129 diagnostics). It was tried; do not retry it.
-- **The design system is not a git repository**, so it cannot be pinned, reviewed
-  or fetched by CI. `npm run build` is only reproducible on a machine that has it.
+- **A live Obsidian smoke test is still manual.** CI verifies the source, adapters,
+  release assets and bundle size, but a maintainer must load the build in a test
+  vault before publishing to verify host integration and visual behavior.

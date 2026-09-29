@@ -32,6 +32,10 @@ Those files can contain private note content. `.catea/` is git-ignored because i
 must never be committed or distributed. `memory/pending-turns.json` is the durable
 queue of turns awaiting extraction.
 
+Releases before 0.3.12 also created `.catea/snapshots`. Current code never reads
+that tree and removes that exact plugin-owned directory on startup; no other vault
+path is part of the migration.
+
 ### Credentials
 
 When Electron's OS-backed safeStorage is available, Catea encrypts the BYOK model
@@ -72,8 +76,9 @@ requirements.
 
 ### The shell tool is not a sandbox
 
-`bash` executes real commands, can leave the vault, and is **enabled by default**.
-What limits it is the permission mode:
+`bash` executes real commands, can leave the vault, and is **disabled by default**.
+The user must enable it explicitly. Once enabled, what limits it is the permission
+mode:
 
 - **assist** (default): only an exact, non-composable `pwd` or `ls -…` is
   automatically approved; everything else asks for confirmation, showing the working

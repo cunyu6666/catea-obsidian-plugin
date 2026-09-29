@@ -16,8 +16,8 @@
 // program (measured: 87 -> 129 diagnostics).
 
 import ts from 'typescript'
-import {fileURLToPath} from 'node:url'
-import {dirname, resolve, relative, sep} from 'node:path'
+import { fileURLToPath } from 'node:url'
+import { dirname, resolve, relative, sep } from 'node:path'
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 
@@ -40,9 +40,13 @@ if (!configPath) {
 const config = ts.readConfigFile(configPath, ts.sys.readFile)
 const parsed = ts.parseJsonConfigFileContent(config.config, ts.sys, ROOT)
 const program = ts.createProgram(parsed.fileNames, parsed.options)
-const diagnostics = [...(config.error ? [config.error] : []), ...parsed.errors, ...ts.getPreEmitDiagnostics(program)]
+const diagnostics = [
+  ...(config.error ? [config.error] : []),
+  ...parsed.errors,
+  ...ts.getPreEmitDiagnostics(program),
+]
 
-const buckets = {own: [], vendored: [], external: []}
+const buckets = { own: [], vendored: [], external: [] }
 
 for (const d of diagnostics) {
   const message = ts.flattenDiagnosticMessageText(d.messageText, '\n')
@@ -52,7 +56,7 @@ for (const d of diagnostics) {
     continue
   }
   const rel = toRel(d.file.fileName)
-  const {line, character} = d.file.getLineAndCharacterOfPosition(d.start)
+  const { line, character } = d.file.getLineAndCharacterOfPosition(d.start)
   buckets[classify(rel)].push(`${rel}(${line + 1},${character + 1}): error TS${d.code}: ${message}`)
 }
 

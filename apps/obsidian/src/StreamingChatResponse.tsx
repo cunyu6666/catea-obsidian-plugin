@@ -7,32 +7,54 @@
 import { useEffect, useLayoutEffect, useRef, useState, type ComponentProps } from 'react'
 import { useReducedMotion } from 'motion/react'
 import { ResponseCard } from 'catea-components'
-import type {ReactNode} from 'react'
+import type { ReactNode } from 'react'
 
 // Smooth network chunks without replaying completed history or delaying stop/error states.
-export function StreamingChatResponse({ content, streaming = false, paused = false, interrupted = false, render, ...props }: Omit<ComponentProps<typeof ResponseCard>, 'children' | 'copyText'> & { content: string; paused?:boolean; interrupted?: boolean;render:(content:string,streaming:boolean)=>ReactNode }) {
+export function StreamingChatResponse({
+  content,
+  streaming = false,
+  paused = false,
+  interrupted = false,
+  render,
+  ...props
+}: Omit<ComponentProps<typeof ResponseCard>, 'children' | 'copyText'> & {
+  content: string
+  paused?: boolean
+  interrupted?: boolean
+  render: (content: string, streaming: boolean) => ReactNode
+}) {
   const container = useRef<HTMLDivElement>(null)
   const followContent = useRef(true)
   const lastContentTop = useRef(0)
   const reduceMotion = useReducedMotion()
   const [visible, setVisible] = useState(streaming && !reduceMotion ? '' : content)
   const revealed = useRef(visible)
-  const animating = !paused && !reduceMotion && !interrupted && content.startsWith(visible) && visible !== content
+  const animating =
+    !paused && !reduceMotion && !interrupted && content.startsWith(visible) && visible !== content
   const displayed = animating ? visible : content
   const busy = streaming || animating
 
   useEffect(() => {
     const viewport = container.current?.closest<HTMLElement>('.anno-response-card__content')
     if (!viewport) return
-    const onWheel = (event: WheelEvent) => { if (event.deltaY < 0) followContent.current = false }
+    const onWheel = (event: WheelEvent) => {
+      if (event.deltaY < 0) followContent.current = false
+    }
     const onScroll = () => {
       if (viewport.scrollTop < lastContentTop.current - 1) followContent.current = false
-      else if (viewport.scrollTop > lastContentTop.current + 1 && viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight < 16) followContent.current = true
+      else if (
+        viewport.scrollTop > lastContentTop.current + 1 &&
+        viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight < 16
+      )
+        followContent.current = true
       lastContentTop.current = viewport.scrollTop
     }
     viewport.addEventListener('wheel', onWheel, { passive: true })
     viewport.addEventListener('scroll', onScroll, { passive: true })
-    return () => { viewport.removeEventListener('wheel', onWheel); viewport.removeEventListener('scroll', onScroll) }
+    return () => {
+      viewport.removeEventListener('wheel', onWheel)
+      viewport.removeEventListener('scroll', onScroll)
+    }
   }, [])
 
   useLayoutEffect(() => {
@@ -55,7 +77,10 @@ export function StreamingChatResponse({ content, streaming = false, paused = fal
     let cursor = revealed.current.length
     const reveal = (now: number) => {
       const remaining = content.length - cursor
-      cursor = Math.min(content.length, cursor + Math.min(now - previous, 64) / 1000 * Math.max(110, remaining / 0.25))
+      cursor = Math.min(
+        content.length,
+        cursor + (Math.min(now - previous, 64) / 1000) * Math.max(110, remaining / 0.25),
+      )
       previous = now
       let end = Math.floor(cursor)
       // Never split a UTF-16 surrogate pair (for example an emoji).
@@ -68,7 +93,11 @@ export function StreamingChatResponse({ content, streaming = false, paused = fal
     return () => win.cancelAnimationFrame(frame)
   }, [content, reduceMotion, interrupted, paused])
 
-  return <ResponseCard {...props} copyText={content} streaming={busy}>
-    <div ref={container} className="chat-message-body">{render(displayed,busy)}</div>
-  </ResponseCard>
+  return (
+    <ResponseCard {...props} copyText={content} streaming={busy}>
+      <div ref={container} className="chat-message-body">
+        {render(displayed, busy)}
+      </div>
+    </ResponseCard>
+  )
 }

@@ -4,7 +4,7 @@
  *   SearchEngine, SearchProvider, SearchServiceConfig, SkillRecord, Source, TokenUsage,
  *   ToolCall, ToolEvent, TranscriptItem
  * [FROM]: Depends on (none)
- * [TO]: Consumed by apps/obsidian/src/main.tsx, apps/obsidian/src/panel.tsx, apps/obsidian/src/settings.ts,
+ * [TO]: Consumed by apps/obsidian/src/main.tsx, apps/obsidian/src/panel.tsx, apps/obsidian/src/settings.ts, apps/obsidian/src/turn-review.ts,
  *   packages/agent-core/src/ask-user-question.ts, packages/agent-core/src/attachments.ts,
  *   packages/agent-core/src/byok.ts, packages/agent-core/src/index.ts,
  *   packages/agent-core/src/model-capabilities.ts,
@@ -15,12 +15,12 @@
 export type ModelProtocol = 'openai' | 'anthropic'
 
 export interface ModelCapabilities {
-  vision:boolean
-  documents:boolean
-  tools:boolean
-  streaming:boolean
-  parallelTools:boolean
-  structuredOutput:boolean
+  vision: boolean
+  documents: boolean
+  tools: boolean
+  streaming: boolean
+  parallelTools: boolean
+  structuredOutput: boolean
 }
 
 export interface ModelConfig {
@@ -31,7 +31,7 @@ export interface ModelConfig {
   apiKey: string
   model: string
   contextWindow?: number
-  capabilities?:Partial<ModelCapabilities>
+  capabilities?: Partial<ModelCapabilities>
 }
 
 export type SearchEngine = 'default' | 'google' | 'bing' | 'baidu'
@@ -149,10 +149,19 @@ export interface ChatSession {
 
 export type TranscriptItem =
   | { role: 'user'; content: string; attachmentIds?: string[] }
-  | { role: 'assistant'; content: string; calls?: ToolCall[]; anthropicContent?: Record<string, unknown>[] }
+  | {
+      role: 'assistant'
+      content: string
+      calls?: ToolCall[]
+      anthropicContent?: Record<string, unknown>[]
+    }
   | { role: 'tool'; callId: string; name: string; content: string }
 
-export interface ToolCall { id: string; name: string; args: Record<string, unknown> }
+export interface ToolCall {
+  id: string
+  name: string
+  args: Record<string, unknown>
+}
 
 export interface SkillRecord {
   id: string
@@ -170,5 +179,12 @@ export type AgentEvent =
   | { type: 'agent:tool'; sessionId: string; messageId: string; tool: ToolEvent }
   | { type: 'agent:done'; sessionId: string; messageId: string }
   | { type: 'agent:error'; sessionId: string; messageId: string; error: string }
-  | { type: 'agent:approval'; sessionId: string; requestId: string; serverId: string; toolName: string; args: Record<string, unknown> }
+  | {
+      type: 'agent:approval'
+      sessionId: string
+      requestId: string
+      serverId: string
+      toolName: string
+      args: Record<string, unknown>
+    }
   | { type: 'agent:question'; sessionId: string; requestId: string; questions: AskUserQuestion[] }

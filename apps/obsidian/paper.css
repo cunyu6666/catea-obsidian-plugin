@@ -606,17 +606,6 @@ body.gp-enabled.gp-enabled .gp-duplicate-inline-title .inline-title { display: n
 .catea-settings__card .setting-item-control :is(input,select,textarea):focus-visible,
 .catea-settings__card .setting-item-control button:focus-visible {outline:2px solid var(--interactive-accent);outline-offset:2px}
 @media (max-width:650px) {.catea-settings {padding-inline:8px}.catea-settings__card > .setting-item {align-items:flex-start;gap:10px;padding:12px}.catea-settings__card .setting-item-info {min-width:0}}
-.catea-revert-modal.modal {width:min(500px,calc(100vw - 32px));max-width:calc(100vw - 32px)}
-.catea-revert-modal .modal-content > p {margin:6px 0 14px;color:var(--text-muted);font-size:13px;line-height:1.55}
-.catea-revert-summary {max-height:42vh;overflow:auto;border:1px dashed var(--background-modifier-border);border-radius:10px;background:var(--background-secondary);padding:4px 14px}
-.catea-revert-summary__block {padding:9px 0}
-.catea-revert-summary__block + .catea-revert-summary__block {border-top:1px dashed var(--background-modifier-border)}
-.catea-revert-summary__block strong {font-size:12px;font-weight:600}
-.catea-revert-summary__block ul {margin:7px 0 0;padding-left:16px;color:var(--text-muted);font:11px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;overflow-wrap:anywhere}
-.catea-revert-summary > p {margin:10px 0;color:var(--text-muted);font-size:12px}
-.catea-revert-confirm {background:var(--color-red);color:var(--text-on-accent)}
-.catea-revert-confirm:hover {background:var(--color-red);filter:brightness(.94)}
-
 /* Per-editor text zoom controls; the toolbar itself keeps its normal size. */
 body.gp-enabled .catea-editor-zoom { display: flex; align-items: center; gap: 2px; margin-left: 8px; padding-left: 8px; border-left: 1px solid var(--background-modifier-border); flex-shrink: 0; }
 body.gp-enabled .catea-editor-zoom .gp-tool:disabled { opacity: .35; cursor: default; }

@@ -3,6 +3,35 @@
 Notable changes per release. The version is the one in `manifest.json`; the GitHub
 release tag is that same number with no `v` prefix.
 
+## 0.3.12
+
+### Changed
+
+- Replace per-message full-vault recovery snapshots with reviewable per-tool file
+  changes, so normal chat no longer multiplies the vault's storage footprint.
+- Remove the obsolete `.catea/snapshots` tree once on startup; it is no longer read
+  by the plugin and can otherwise retain gigabytes from older releases.
+- Reconcile the 0.3.8–0.3.11 conversation, Git history, editor zoom, global BYOK,
+  theme and update work into one current code line.
+- Refresh contributor and architecture documentation so the documented build,
+  release and dependency requirements match CI.
+- Default Bash access to off for new installations; users can enable it explicitly
+  when a task requires shell commands.
+
+### Fixed
+
+- Keep only attachments referenced by the retained history when branching a
+  conversation; attachments from future turns no longer leak into the branch.
+- Keep file-change review available when a tool-bearing turn ends without final
+  assistant text or ends in an error.
+- Delete session files when their rows age out of the 500-conversation index,
+  preventing unbounded orphaned conversation data.
+
+### Quality
+
+- Add behavioral regressions for branch attachment isolation, session retention,
+  failed-turn file review and repeated file-write coalescing.
+
 ## 0.3.11
 
 ### Added
@@ -151,7 +180,7 @@ name, instead of carrying a decorative glyph.
 - DIP documentation layer: a root charter (`AGENTS.md`, P1), a member list per module
   (P2), and a `[WHO]/[FROM]/[TO]/[HERE]` contract header on every in-scope source
   file, all in English.
-- `npm test`: dependency-free assertions covering the per-file contracts, repo-wide
+- `npm test`: assertions covering the per-file contracts, repo-wide
   documentation-to-code isomorphism, and version consistency.
 - `npm run typecheck`: a `tsc` gate scoped to owned code. Vendored upstream and the
   external design system contribute diagnostics that cannot be fixed here, so the
@@ -182,7 +211,7 @@ name, instead of carrying a decorative glyph.
 - `packages/integrations/src/web.ts` no longer reaches `input.url` after narrowing
   `input` to `never`.
 
-## 0.3.2
+### Marketplace review follow-up
 
 - The four blocking findings from Obsidian's automated release review of `0.3.1`
   (commit `bf69fa2`):

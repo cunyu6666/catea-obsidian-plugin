@@ -21,10 +21,22 @@ const buttonVariants = cva(
   },
 )
 
-export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement>, VariantProps<typeof buttonVariants> { asChild?: boolean }
+export interface ButtonProps
+  extends React.ButtonHTMLAttributes<HTMLButtonElement>, VariantProps<typeof buttonVariants> {
+  asChild?: boolean
+}
 
-export const ShadcnButton = React.forwardRef<HTMLButtonElement, ButtonProps>(({ className, variant, size, asChild = false, ...props }, ref) => {
-  const Component = asChild ? Slot : 'button'
-  return <Component data-slot="button" className={cn(buttonVariants({ variant, size }), className)} ref={ref} {...props} />
-})
+export const ShadcnButton = React.forwardRef<HTMLButtonElement, ButtonProps>(
+  ({ className, variant, size, asChild = false, ...props }, ref) => {
+    const Component = asChild ? Slot : 'button'
+    return (
+      <Component
+        data-slot="button"
+        className={cn(buttonVariants({ variant, size }), className)}
+        ref={ref}
+        {...props}
+      />
+    )
+  },
+)
 ShadcnButton.displayName = 'ShadcnButton'
