@@ -130,15 +130,56 @@ test('Drafts stay with their session and failed sends restore only their own con
     text: 'First',
     attachments: [attachment],
     quotes: [{ id: 'q', path: 'note.md', text: 'quoted' }],
+    skills: ['figma-framelink'],
   }))
   const sent = drafts.get('a')
   drafts.clear('a')
+  assert.equal(drafts.get('a').skills.length, 0, 'clear must reset skill tags')
+  drafts.update('a', (current) => ({ ...current, skills: ['deepwiki'] }))
   drafts.update('b', (current) => ({ ...current, text: 'Second' }))
   drafts.restore('a', sent)
   assert.equal(drafts.get('a').text, 'First')
   assert.equal(drafts.get('a').attachments[0].id, 'file-a')
   assert.equal(drafts.get('a').quotes[0].text, 'quoted')
+  assert.equal(
+    drafts.get('a').skills.join(','),
+    'figma-framelink,deepwiki',
+    'restore must union sent and freshly tagged skills',
+  )
   assert.equal(drafts.get('b').text, 'Second')
+  assert.equal(drafts.get('b').skills.length, 0)
+})
+
+test('Slash skill picker parses token-bounded queries and filters by id or description', async () => {
+  const { parseSlashQuery, filterSkillItems } = await load(
+    'packages/design-system/components/src/SkillPicker.tsx',
+  )
+  const leading = parseSlashQuery('/fig')
+  assert.equal(leading.query, 'fig')
+  assert.equal(leading.start, 0)
+  const afterSpace = parseSlashQuery('help me /deep')
+  assert.equal(afterSpace.query, 'deep')
+  assert.equal(afterSpace.start, 8)
+  const bare = parseSlashQuery('done /')
+  assert.equal(bare.query, '')
+  assert.equal(bare.start, 5)
+  assert.equal(parseSlashQuery('see notes/todo'), null, 'paths must not open the picker')
+  assert.equal(parseSlashQuery('a/b'), null)
+  assert.equal(parseSlashQuery('no slash here'), null)
+  assert.equal(parseSlashQuery('stale /ok then more'), null, 'only a trailing token counts')
+
+  const items = [
+    { id: 'figma-framelink', description: 'Read Figma designs', enabled: true },
+    { id: 'deepwiki', description: 'Ask about repositories', enabled: false },
+  ]
+  assert.equal(filterSkillItems(items, '').length, 2)
+  const byId = filterSkillItems(items, 'FIG')
+  assert.equal(byId.length, 1)
+  assert.equal(byId[0].id, 'figma-framelink')
+  const byDesc = filterSkillItems(items, 'repositories')
+  assert.equal(byDesc.length, 1)
+  assert.equal(byDesc[0].id, 'deepwiki')
+  assert.equal(filterSkillItems(items, 'zzz').length, 0)
 })
 
 test('Model capabilities centralize known exceptions and explicit overrides', async () => {
@@ -972,7 +1013,7 @@ test('A provider-aborted stream retries once without repeating completed tools',
         'export const serviceFetch=async()=>{throw new Error("Unexpected network request")}',
       '../../integrations/src/mcp': 'export class McpPool {async connect(){return []}}',
       '../../integrations/src/skills':
-        'export const loadSkills=async()=>[];export const readSkillResource=()=>{}',
+        'export const loadSkills=async()=>[];export const readSkillResource=()=>{};export const listSkills=async()=>[]',
       '../upstream/loop/agent-loop': `export const agentLoop=async function*(_prompts,_context,options){
       const failed={role:'assistant',content:[{type:'text',text:''}],stopReason:'error',errorMessage:'aborted',timestamp:Date.now()};
       yield {type:'message_end',message:failed};
@@ -1021,6 +1062,62 @@ test('A provider-aborted stream retries once without repeating completed tools',
   assert.equal(agent.session.messages[1].error, undefined)
 })
 
+test('Per-message skill tags override the enabled set for exactly one turn', async () => {
+  const loadSkillsCalls = []
+  const { Agent } = await load(
+    'packages/agent-core/src/index.ts',
+    {
+      './transport':
+        'export const serviceFetch=async()=>{throw new Error("Unexpected network request")}',
+      '../../agent-core/src/transport':
+        'export const serviceFetch=async()=>{throw new Error("Unexpected network request")}',
+      '../../integrations/src/mcp': 'export class McpPool {async connect(){return []}}',
+      '../../integrations/src/skills':
+        'export const loadSkills=async(_vault,enabled)=>{globalThis.recordSkills(enabled.slice());return []};export const readSkillResource=()=>{};export const listSkills=async()=>["alpha","beta"]',
+      '../upstream/loop/agent-loop': `export const agentLoop=async function*(){
+        const answer={role:'assistant',content:[{type:'text',text:'ok'}],stopReason:'stop',timestamp:Date.now()};
+        yield {type:'message_update',message:answer};yield {type:'message_end',message:answer};
+        yield {type:'agent_end'};
+      }`,
+    },
+    {
+      structuredClone,
+      TransformStream,
+      recordSkills: (ids) => loadSkillsCalls.push(ids.join(',')),
+    },
+  )
+  const config = {
+    enabled: true,
+    models: [model],
+    modelId: model.id,
+    personaId: 'aria',
+    skills: ['alpha'],
+    mcp: [],
+    memory: false,
+    web: false,
+    shell: false,
+  }
+  const agent = new Agent(
+    '/unused',
+    () => config,
+    { change: () => {}, notice: () => {}, approve: async () => true, ask: async () => ({}) },
+    {
+      conversations: { save: async () => {}, list: async () => [], load: async () => undefined },
+      memory: { close: () => {} },
+      modelClient: {},
+    },
+  )
+  await agent.send('tagged turn', '', [], ['beta'])
+  await agent.send('plain turn', '')
+  assert.equal(loadSkillsCalls[0], 'beta', 'tags must replace the enabled set for that turn')
+  assert.equal(loadSkillsCalls[1], 'alpha', 'the next untagged turn falls back to settings')
+
+  const installed = await agent.installedSkills()
+  assert.equal(installed.length, 2)
+  assert.equal(installed[0].id, 'alpha')
+  assert.equal(installed[0].description, 'alpha', 'missing SKILL.md falls back to the id')
+})
+
 test('Branching retains only attachments referenced before the branch point', async () => {
   const { Agent } = await load(
     'packages/agent-core/src/index.ts',
@@ -1031,7 +1128,7 @@ test('Branching retains only attachments referenced before the branch point', as
         'export const serviceFetch=async()=>{throw new Error("Unexpected network request")}',
       '../../integrations/src/mcp': 'export class McpPool {async connect(){return []}}',
       '../../integrations/src/skills':
-        'export const loadSkills=async()=>[];export const readSkillResource=()=>{}',
+        'export const loadSkills=async()=>[];export const readSkillResource=()=>{};export const listSkills=async()=>[]',
       '../upstream/loop/agent-loop': 'export const agentLoop=async function*(){}',
     },
     { structuredClone, TransformStream },
@@ -1131,7 +1228,7 @@ test('Thinking steps stay in event order around tool calls and persist separatel
         'export const serviceFetch=async()=>{throw new Error("Unexpected network request")}',
       '../../integrations/src/mcp': 'export class McpPool {async connect(){return []}}',
       '../../integrations/src/skills':
-        'export const loadSkills=async()=>[];export const readSkillResource=()=>{}',
+        'export const loadSkills=async()=>[];export const readSkillResource=()=>{};export const listSkills=async()=>[]',
       '../upstream/loop/agent-loop': `export const agentLoop=async function*(){
       const first={role:'assistant',content:[{type:'thinking',thinking:'Find the note.'}],stopReason:'toolUse',timestamp:Date.now()};
       yield {type:'message_update',message:first};yield {type:'message_end',message:first};

@@ -308,6 +308,12 @@ Object.assign(english, {
   '保存在 Obsidian 密钥存储，连接时作为环境变量注入；不写入知识库配置。':
     'Stored in Obsidian secret storage and injected as an environment variable at connect time; never written to vault configuration.',
 })
+Object.assign(english, {
+  选择技能: 'Select a skill',
+  无匹配技能: 'No matching skills',
+  已启用: 'Enabled',
+  移除技能: 'Remove skill',
+})
 export function translate(language: Language, text: string) {
   return language === 'en' ? english[text] || text : text
 }

@@ -22,10 +22,10 @@ main.tsx: Plugin entry: `class Catea extends Paper`, wiring config, secure secre
 note-previews.ts: Registers `html` and `svg` code-block previews as sandboxed, script-blocking CSP iframes with Preview, Source and Copy tabs.
 note-thumbnails.ts: Paints 108x144 canvas file-tree thumbnails from title, excerpt and first local raster under 5 MB; 2 MB Markdown cap, 256-entry cache, concurrency 2.
 obsidian-tools.ts: Eight `obsidian_*` tools over the Obsidian API with hidden-path guards; search 50 hits, read 300 lines x 2000 chars, note cap 2 MB, write cap 100 KB; structured note writes emit original/modified records and properties use `FileManager.processFrontMatter`.
-panel.tsx: React sidebar root composing a header session dropdown, empty conversation cat artwork, history, message list with user-message copy actions and composer; maps updates, model picker, approvals, optional annotations, attachments, file diffs and ordered provider thinking/tool activities; submits before asynchronous note preparation.
+panel.tsx: React sidebar root composing a header session dropdown, empty conversation cat artwork, history, message list with user-message copy actions and composer with a slash skill picker; maps updates, model picker, approvals, optional annotations, attachments, file diffs and ordered provider thinking/tool activities; submits before asynchronous note preparation.
 paper.cjs: Vendored, generated 1.6 MB bundle providing the Paper base class with embedded Tabler icon assets; skipped by DIP, never hand-edited.
 selection.ts: Adds an editor-menu entry and a floating add-to-Catea popup positioned through CodeMirror `coordsAtPos`, rebinding listeners on layout change.
-session-drafts.ts: Keeps composer text, attachments and selected quotes isolated by session ID, including asynchronous restoration after send failure.
+session-drafts.ts: Keeps composer text, attachments, selected quotes and per-message skill tags isolated by session ID, including asynchronous restoration after send failure.
 support-prompt.ts: Gates the optional GitHub support prompt, shown only when the Agent sidebar opens, to at most once per local calendar month; a settings toggle turns it off.
 tool-presenters.ts: Registry for tool activity card names, summaries and detail payloads; unknown tools use a fallback presenter.
 turn-review.ts: Coalesces repeated tool writes into one per-file diff and decides when an empty or failed turn needs a standalone review action.

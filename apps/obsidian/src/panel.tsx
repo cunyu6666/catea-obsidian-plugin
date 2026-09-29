@@ -21,6 +21,10 @@ import {
   AgentActivities,
   type AgentActivityItem,
   ActionMenu,
+  SkillPicker,
+  parseSlashQuery,
+  filterSkillItems,
+  type SkillPickerItem,
   DitherLoader,
   Icon,
   IconButton,
@@ -247,8 +251,86 @@ export function Panel({ plugin }: { plugin: Catea }) {
     plugin.drafts.update(id, change)
     plugin.emit()
   }
-  const setText = (value: string) =>
+  const setText = (value: string) => {
     changeDraft(sessionId, (current) => ({ ...current, text: value }))
+    evaluateSlash(value)
+  }
+  // Slash skill picker state: the open token, roving active index, and the
+  // lazily loaded installed-skill catalog (background-revalidated per open).
+  const [slash, setSlash] = useState<{ query: string; start: number } | null>(null)
+  const [skillActive, setSkillActive] = useState(0)
+  const [skillCatalog, setSkillCatalog] = useState<Array<{
+    id: string
+    description: string
+  }> | null>(null)
+  const skillCatalogRef = useRef<Array<{ id: string; description: string }> | null>(null)
+  const skillsInflight = useRef<Promise<void> | null>(null)
+  const dismissedToken = useRef<string | null>(null)
+  const slashOpen = slash !== null
+  useEffect(() => {
+    setSlash(null)
+    setSkillActive(0)
+    dismissedToken.current = null
+  }, [sessionId])
+  useEffect(() => {
+    if (!slashOpen || skillsInflight.current) return
+    const silent = skillCatalogRef.current !== null
+    skillsInflight.current = agent
+      .installedSkills()
+      .then((items) => {
+        skillCatalogRef.current = items
+        setSkillCatalog(items)
+      })
+      .catch((e: unknown) => {
+        if (!silent) setError(e instanceof Error ? e.message : String(e))
+      })
+      .finally(() => {
+        skillsInflight.current = null
+      })
+  }, [slashOpen, agent])
+  const evaluateSlash = (value: string) => {
+    const token = parseSlashQuery(value)
+    if (!token) {
+      setSlash(null)
+      return
+    }
+    // An explicit Esc stays dismissed while the same token keeps growing; it
+    // reopens only after the token is erased or a fresh slash starts a new one.
+    if (dismissedToken.current && value.slice(token.start).startsWith(dismissedToken.current)) {
+      setSlash(null)
+      return
+    }
+    // The tail regex alone goes stale when the caret moves away from the end.
+    const input = panelRef.current?.querySelector<HTMLTextAreaElement>('.anno-composer__input')
+    if (input && input.selectionEnd !== value.length) {
+      setSlash(null)
+      return
+    }
+    if (slash && slash.query === token.query && slash.start === token.start) return
+    setSkillActive(0)
+    setSlash(token)
+  }
+  // Read the enabled set from the plugin prop directly: `config` is bound later
+  // in the render body, and this mapping runs eagerly.
+  const skillItems: SkillPickerItem[] = (skillCatalog || []).map((item) => ({
+    ...item,
+    enabled: plugin.agentSettings.skills.includes(item.id),
+  }))
+  const slashItems = slash ? filterSkillItems(skillItems, slash.query) : []
+  const slashActive = Math.min(skillActive, Math.max(0, slashItems.length - 1))
+  const selectSkill = (item: SkillPickerItem) => {
+    if (!slash) return
+    const start = slash.start
+    dismissedToken.current = null
+    changeDraft(sessionId, (current) => ({
+      ...current,
+      text: current.text.slice(0, Math.min(start, current.text.length)),
+      skills: current.skills.includes(item.id) ? current.skills : [...current.skills, item.id],
+    }))
+    setSlash(null)
+    panelRef.current?.querySelector<HTMLTextAreaElement>('.anno-composer__input')?.focus()
+  }
+  const recheckSlash = () => evaluateSlash(plugin.drafts.get(sessionId).text)
   const readFiles = async (input: FileList | DataTransfer) => {
     const target = agent.session.id
     if (readingSessions.current.has(target)) return
@@ -452,7 +534,8 @@ export function Panel({ plugin }: { plugin: Catea }) {
       hasAnnotation = snapshot.quotes.some((quote) => quote.comment?.trim()),
       value = snapshot.text.trim() || (hasAnnotation ? t('请按批注继续') : t('请查看这些附件')),
       sendingFiles = [...snapshot.attachments],
-      quotes = [...snapshot.quotes]
+      quotes = [...snapshot.quotes],
+      sendingSkills = [...snapshot.skills]
     if (
       (!snapshot.text.trim() && !sendingFiles.length && !hasAnnotation) ||
       plugin.question ||
@@ -479,8 +562,8 @@ export function Panel({ plugin }: { plugin: Catea }) {
     }
     void (
       agent.running
-        ? context().then((attached) => agent.steer(value, attached, sendingFiles))
-        : agent.send(value, context, sendingFiles)
+        ? context().then((attached) => agent.steer(value, attached, sendingFiles, sendingSkills))
+        : agent.send(value, context, sendingFiles, sendingSkills)
     )
       .catch((e: unknown) => {
         if (plugin.agent === agent) setError(e instanceof Error ? e.message : String(e))
@@ -526,70 +609,137 @@ export function Panel({ plugin }: { plugin: Catea }) {
   )
   const composer = (
     <>
-      <Composer
-        value={text}
-        onChange={setText}
-        onSubmit={send}
-        running={agent.running}
-        onStop={() => agent.stop()}
-        stopLabel={t('停止生成')}
-        placeholder={
-          !model
-            ? t('先在设置中配置模型')
-            : agent.running
-              ? t('补充要求，会在安全边界接入…')
-              : empty
-                ? t('搜索或向 AI 提问…')
-                : t('继续对话…')
-        }
-        mode="ai"
-        inputLabel={t('消息')}
-        submitLabel={t('发送')}
-        busy={!!plugin.question || readingFiles}
-        hasSubmitContent={files.length > 0 || draft.quotes.some((quote) => !!quote.comment?.trim())}
-        onPickFiles={(input) => void readFiles(input)}
-        onPickFolder={addFolder}
-        onDropFiles={(input) => void readFiles(input)}
-        attachLabel={t('添加附件')}
-        fileLabel={t('添加文件')}
-        folderLabel={t('添加文件夹')}
-        dropLabel={t('放下以添加文件')}
-        disabled={!config.enabled || !model || (agent.historyBusy && !agent.running)}
-        attachments={
-          <>
-            {files.length > 0 && fileCards(files, true)}
-            {readingFiles && (
-              <div className="chat-notice catea-loading-notice">
-                <DitherLoader label={t('正在读取附件…')} />
-                {t('正在读取附件…')}
-              </div>
-            )}
-            {plugin.selections.length > 0 && (
-              <div className="catea-quotes">
-                {plugin.selections.map((q) => (
-                  <div className="catea-quote" key={q.id}>
-                    <div>
-                      <strong>{q.path.split('/').pop()}</strong>
-                      <blockquote>{q.text}</blockquote>
-                      {q.comment && <p>{q.comment}</p>}
+      <div
+        className="catea-skill-picker"
+        onKeyDownCapture={(event) => {
+          // Full IME bypass: arrows navigate candidate windows, Enter confirms
+          // composition — none of them may reach the picker.
+          if (!slash || event.nativeEvent.isComposing) return
+          if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+            event.preventDefault()
+            event.stopPropagation()
+            if (!slashItems.length) return
+            const len = slashItems.length
+            setSkillActive((n) => (event.key === 'ArrowDown' ? (n + 1) % len : (n - 1 + len) % len))
+          } else if (event.key === 'Enter') {
+            // Zero matches: fall through so "/whatever" stays sendable as text.
+            if (!slashItems.length) return
+            event.preventDefault()
+            event.stopPropagation()
+            selectSkill(slashItems[slashActive])
+          } else if (event.key === 'Escape') {
+            event.preventDefault()
+            event.stopPropagation()
+            dismissedToken.current = text.slice(slash.start)
+            setSlash(null)
+          } else if (event.key === 'Tab') {
+            // Close without preventDefault so focus traversal stays native.
+            dismissedToken.current = text.slice(slash.start)
+            setSlash(null)
+          }
+        }}
+        onKeyUpCapture={recheckSlash}
+        onClickCapture={recheckSlash}
+      >
+        {slash && (
+          <SkillPicker
+            items={slashItems}
+            activeIndex={slashActive}
+            selectedIds={draft.skills}
+            onSelect={selectSkill}
+            listLabel={t('选择技能')}
+            emptyLabel={t('无匹配技能')}
+            enabledLabel={t('已启用')}
+            addedLabel={t('已添加')}
+          />
+        )}
+        <Composer
+          value={text}
+          onChange={setText}
+          onSubmit={send}
+          running={agent.running}
+          onStop={() => agent.stop()}
+          stopLabel={t('停止生成')}
+          placeholder={
+            !model
+              ? t('先在设置中配置模型')
+              : agent.running
+                ? t('补充要求，会在安全边界接入…')
+                : empty
+                  ? t('搜索或向 AI 提问…')
+                  : t('继续对话…')
+          }
+          mode="ai"
+          inputLabel={t('消息')}
+          submitLabel={t('发送')}
+          busy={!!plugin.question || readingFiles}
+          hasSubmitContent={
+            files.length > 0 || draft.quotes.some((quote) => !!quote.comment?.trim())
+          }
+          onPickFiles={(input) => void readFiles(input)}
+          onPickFolder={addFolder}
+          onDropFiles={(input) => void readFiles(input)}
+          attachLabel={t('添加附件')}
+          fileLabel={t('添加文件')}
+          folderLabel={t('添加文件夹')}
+          dropLabel={t('放下以添加文件')}
+          disabled={!config.enabled || !model || (agent.historyBusy && !agent.running)}
+          attachments={
+            <>
+              {draft.skills.length > 0 && (
+                <div className="catea-skill-tags">
+                  {draft.skills.map((id) => (
+                    <span className="catea-skill-tag" key={id}>
+                      <span className="catea-skill-tag__name">{id}</span>
+                      <IconButton
+                        label={t('移除技能')}
+                        onClick={() =>
+                          changeDraft(sessionId, (current) => ({
+                            ...current,
+                            skills: current.skills.filter((skill) => skill !== id),
+                          }))
+                        }
+                      >
+                        <Icon name="close" size={12} />
+                      </IconButton>
+                    </span>
+                  ))}
+                </div>
+              )}
+              {files.length > 0 && fileCards(files, true)}
+              {readingFiles && (
+                <div className="chat-notice catea-loading-notice">
+                  <DitherLoader label={t('正在读取附件…')} />
+                  {t('正在读取附件…')}
+                </div>
+              )}
+              {plugin.selections.length > 0 && (
+                <div className="catea-quotes">
+                  {plugin.selections.map((q) => (
+                    <div className="catea-quote" key={q.id}>
+                      <div>
+                        <strong>{q.path.split('/').pop()}</strong>
+                        <blockquote>{q.text}</blockquote>
+                        {q.comment && <p>{q.comment}</p>}
+                      </div>
+                      <IconButton
+                        label={t('移除引用')}
+                        onClick={() => {
+                          plugin.selections = plugin.selections.filter((s) => s.id !== q.id)
+                          plugin.emit()
+                        }}
+                      >
+                        <Icon name="close" size={14} />
+                      </IconButton>
                     </div>
-                    <IconButton
-                      label={t('移除引用')}
-                      onClick={() => {
-                        plugin.selections = plugin.selections.filter((s) => s.id !== q.id)
-                        plugin.emit()
-                      }}
-                    >
-                      <Icon name="close" size={14} />
-                    </IconButton>
-                  </div>
-                ))}
-              </div>
-            )}
-          </>
-        }
-        trailing={modelPicker}
-      />
+                  ))}
+                </div>
+              )}
+            </>
+          }
+          trailing={modelPicker}
+        />
+      </div>
       {error && (
         <div className="chat-notice" role="alert">
           {humanizeError(error, config.language || 'zh')}

@@ -3,6 +3,18 @@
 Notable changes per release. The version is the one in `manifest.json`; the GitHub
 release tag is that same number with no `v` prefix.
 
+## Unreleased
+
+### Added
+
+- Type `/` in the composer to open a skill picker above the input, with
+  type-to-search and keyboard navigation. Chosen skills appear as removable
+  tags, and the tagged message injects only the selected skills for that turn —
+  including installed skills that are not enabled in settings. Tags belong to
+  the session draft: they survive tab switches and are restored when a send
+  fails. A steering message sent mid-run cannot rebuild the running turn's
+  system prompt, so its tags apply only when the run has already finished.
+
 ## 0.3.16
 
 ### Added

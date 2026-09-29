@@ -11,5 +11,6 @@
 @import "./anno-components.css";
 @import "./anno-chat.css";
 @import "./host-layout.css";
+@import "./skill-picker.css";
 
 @import './code-content.css';

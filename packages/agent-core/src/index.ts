@@ -36,7 +36,7 @@ import { requirePermission } from './permission-policy'
 import { type ToolDefinition } from './providers'
 import type { ModelConfig, ChatAttachment, FileChange } from './types'
 import { persona } from '../../personas/src'
-import { loadSkills, readSkillResource } from '../../integrations/src/skills'
+import { listSkills, loadSkills, readSkillResource } from '../../integrations/src/skills'
 import { VaultTools, fileTools, type Approve } from '../../integrations/src/tools'
 import { McpPool, type McpConfig } from '../../integrations/src/mcp'
 import { memoryTools, memoryReadOnly } from '../../memory/src/tools'
@@ -306,8 +306,12 @@ export class Agent {
     const snapshot = structuredClone({ ...this.session, updated: Date.now() })
     return this.conversations.save(snapshot)
   }
-  steer(text: string, noteContext: string, files: ChatAttachment[] = []) {
-    if (!this.running) return this.send(text, noteContext, files)
+  steer(text: string, noteContext: string, files: ChatAttachment[] = [], skills?: string[]) {
+    // Forward the per-message skill selection: the run may finish while the
+    // caller's asynchronous context resolves, and steer then delegates to send.
+    // Mid-run steering cannot rebuild the system prompt, so tags only affect
+    // the injection of a turn that has not started yet.
+    if (!this.running) return this.send(text, noteContext, files, skills)
     this.addAttachments(files)
     const content = [text, noteContext].filter(Boolean).join('\n\n'),
       displayId = crypto.randomUUID()
@@ -334,6 +338,20 @@ export class Agent {
   stop() {
     this.abort?.abort()
   }
+  /** Installed skill ids with best-effort descriptions for the composer picker. */
+  async installedSkills(): Promise<Array<{ id: string; description: string }>> {
+    const items: Array<{ id: string; description: string }> = []
+    for (const id of await listSkills(this.vault)) {
+      try {
+        // Per-id loading: one broken SKILL.md must not hide every later skill.
+        const [skill] = await loadSkills(this.vault, [id])
+        items.push({ id, description: skill?.description || id })
+      } catch {
+        items.push({ id, description: id })
+      }
+    }
+    return items
+  }
   async close(closeMemory = true) {
     this.stop()
     if (closeMemory) this.memory.close()
@@ -350,11 +368,17 @@ export class Agent {
     text: string,
     noteContext: string | (() => Promise<string>),
     files: ChatAttachment[] = [],
+    skills?: string[],
   ) {
     if (this.running || this.historyBusy || !text.trim()) return
     this.compaction = undefined
     const config = structuredClone(this.settings())
     config.personaId = this.session.personaId
+    // Per-message skill selection ("focus + temporary unlock"): when the composer
+    // carries skill tags, this turn injects exactly those skills — including ones
+    // not enabled in settings. Without tags the enabled set is used unchanged.
+    // skill_read reads the same snapshot, so its guard stays consistent.
+    if (skills?.length) config.skills = [...new Set(skills)]
     if (!config.enabled) throw new Error('Agent 已关闭')
     const model = selectedModel(config.models, config.modelId)
     if (!model) throw new Error('请先在设置中完成 BYOK 模型配置（包含 API Key）')
