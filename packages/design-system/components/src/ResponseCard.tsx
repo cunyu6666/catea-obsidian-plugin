@@ -18,7 +18,6 @@ interface ResponseCardProps {
     labels: { input: string; output: string; cacheRead: string }
   }
   onExpand: () => void
-  onViewMarkdown: () => void
   labels: {
     copy: string
     copied: string
@@ -54,16 +53,19 @@ export function ResponseCard({
   tokenUsage,
   footerActions,
   onExpand,
-  onViewMarkdown,
   labels,
 }: ResponseCardProps) {
-  const [copied, setCopied] = useState(false)
+  const [copied, setCopied] = useState<'copy' | 'markdown' | null>(null)
   const [sourcesOpen, setSourcesOpen] = useState(false)
   const [streamingIndex, setStreamingIndex] = useState(0)
   const [now, setNow] = useState(() => Date.now())
   const reduceMotion = useReducedMotion()
   const sourcesId = useId()
   const safeSources = sources.filter((source) => /^https?:\/\//i.test(source.url))
+  const cacheHitPercent =
+    tokenUsage && tokenUsage.input > 0
+      ? Math.round(Math.min(1, Math.max(0, tokenUsage.cacheRead / tokenUsage.input)) * 100)
+      : 0
   const streamingLabels = labels.streaming
   const streamingLabelCount = typeof streamingLabels === 'string' ? 0 : streamingLabels.length
   useEffect(() => {
@@ -82,16 +84,16 @@ export function ResponseCard({
   }, [streaming, reduceMotion, streamingLabelCount])
   useEffect(() => {
     if (!copied) return
-    const timer = window.setTimeout(() => setCopied(false), 1800)
+    const timer = window.setTimeout(() => setCopied(null), 1800)
     return () => window.clearTimeout(timer)
   }, [copied])
 
-  async function copy() {
+  async function copy(action: 'copy' | 'markdown') {
     try {
       await navigator.clipboard.writeText(copyText)
-      setCopied(true)
+      setCopied(action)
     } catch {
-      setCopied(false)
+      setCopied(null)
     }
   }
 
@@ -133,14 +135,18 @@ export function ResponseCard({
             <button
               className="anno-response-card__action"
               type="button"
-              onClick={() => void copy()}
+              onClick={() => void copy('copy')}
             >
-              <Icon name={copied ? 'check' : 'copy'} size={12} />
-              {copied ? labels.copied : labels.copy}
+              <Icon name={copied === 'copy' ? 'check' : 'copy'} size={12} />
+              {copied === 'copy' ? labels.copied : labels.copy}
             </button>
-            <button className="anno-response-card__action" type="button" onClick={onViewMarkdown}>
-              <Icon name="markdown" size={12} />
-              {labels.markdown}
+            <button
+              className="anno-response-card__action"
+              type="button"
+              onClick={() => void copy('markdown')}
+            >
+              <Icon name={copied === 'markdown' ? 'check' : 'markdown'} size={12} />
+              {copied === 'markdown' ? labels.copied : labels.markdown}
             </button>
             {safeSources.length > 0 && (
               <button
@@ -182,7 +188,9 @@ export function ResponseCard({
                   {tokenUsage.output.toLocaleString()}
                 </span>
                 <span>
-                  {tokenUsage.labels.cacheRead} {tokenUsage.cacheRead.toLocaleString()}
+                  <span aria-hidden="true">· </span>
+                  <span className="catea-sr-only">{tokenUsage.labels.cacheRead} </span>
+                  {cacheHitPercent}%
                 </span>
               </span>
             )}

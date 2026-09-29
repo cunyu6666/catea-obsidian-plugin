@@ -679,6 +679,7 @@ body.gp-enabled[data-catea-theme="dark"] .catea-note-preview__tabs button[aria-p
   scrollbar-width:thin;
   scrollbar-color:transparent transparent;
 }
+:is(.catea-ui,.catea-ui *,.catea-detail-modal,.catea-detail-modal *,.catea-note-preview,.catea-note-preview *,.catea-file-changes,.catea-file-changes *):hover,
 :is(.catea-ui,.catea-ui *,.catea-detail-modal,.catea-detail-modal *,.catea-note-preview,.catea-note-preview *,.catea-file-changes,.catea-file-changes *)[data-catea-scrolling] {
   scrollbar-color:color-mix(in srgb,var(--foreground,var(--text-muted)) 38%,transparent) transparent;
 }
@@ -689,6 +690,33 @@ body.gp-enabled[data-catea-theme="dark"] .catea-note-preview__tabs button[aria-p
 }
 :is(.catea-ui,.catea-ui *,.catea-detail-modal,.catea-detail-modal *,.catea-note-preview,.catea-note-preview *,.catea-file-changes,.catea-file-changes *)::-webkit-scrollbar-track {background:transparent;}
 :is(.catea-ui,.catea-ui *,.catea-detail-modal,.catea-detail-modal *,.catea-note-preview,.catea-note-preview *,.catea-file-changes,.catea-file-changes *)::-webkit-scrollbar-thumb {background:transparent;border-radius:999px;}
+:is(.catea-ui,.catea-ui *,.catea-detail-modal,.catea-detail-modal *,.catea-note-preview,.catea-note-preview *,.catea-file-changes,.catea-file-changes *):hover::-webkit-scrollbar-thumb,
 :is(.catea-ui,.catea-ui *,.catea-detail-modal,.catea-detail-modal *,.catea-note-preview,.catea-note-preview *,.catea-file-changes,.catea-file-changes *)[data-catea-scrolling]::-webkit-scrollbar-thumb {
   background:color-mix(in srgb,var(--foreground,var(--text-muted)) 38%,transparent);
 }
+
+/* Per-folder overrides share the explorer's original icon slot. */
+body .nav-files-container .nav-folder-title[data-catea-folder-icon] .nav-folder-title-content::before {
+  content:"";display:inline-block;width:16px;height:16px;margin-inline-end:8px;vertical-align:-3px;
+  background:var(--catea-folder-color,currentColor);opacity:1;
+  mask:var(--catea-folder-mask) center/contain no-repeat;
+  -webkit-mask:var(--catea-folder-mask) center/contain no-repeat;
+}
+body.gp-enabled.gp-tabler-on .nav-files-container .nav-folder-title[data-catea-folder-icon] .nav-folder-title-content::before {
+  mask-image:var(--catea-folder-mask);-webkit-mask-image:var(--catea-folder-mask);
+  background:var(--catea-folder-color,currentColor);opacity:1;
+}
+.catea-folder-picker__path {color:var(--text-muted);font-size:12px;overflow-wrap:anywhere;}
+.catea-folder-picker__preview {display:flex;align-items:center;gap:10px;padding:12px 0;}
+.catea-folder-glyph {display:inline-block;flex-shrink:0;width:22px;height:22px;background:var(--catea-folder-color,currentColor);mask:var(--catea-folder-mask) center/contain no-repeat;-webkit-mask:var(--catea-folder-mask) center/contain no-repeat;}
+.catea-folder-picker h3 {margin:18px 0 10px;color:var(--text-muted);font-size:12px;}
+.catea-folder-picker__icons {display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px;}
+.catea-folder-picker__icons button {display:flex;height:auto;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:10px 2px;border:1px solid transparent;background:transparent;box-shadow:none;font-size:11px;}
+.catea-folder-picker__colors {display:grid;grid-template-columns:repeat(10,minmax(0,1fr));gap:4px;}
+.catea-folder-picker__colors button {display:grid;min-width:0;height:32px;place-items:center;padding:3px;border:1px solid transparent;background:transparent;box-shadow:none;}
+.catea-folder-swatch {display:block;width:18px;height:18px;border-radius:50%;background:var(--catea-folder-color);}
+.catea-folder-picker button[aria-pressed="true"] {border-color:var(--interactive-accent);background:var(--background-modifier-hover);}
+.catea-folder-picker button:focus-visible {outline:2px solid var(--interactive-accent);outline-offset:2px;}
+.catea-folder-picker__actions {display:flex;justify-content:flex-end;gap:8px;margin-top:24px;}
+.catea-folder-picker__actions button:first-child {margin-right:auto;}
+.catea-folder-picker__sr {position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap;}

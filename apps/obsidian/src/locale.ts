@@ -6,6 +6,33 @@
  */
 export type Language = 'zh' | 'en'
 const english: Record<string, string> = {
+  '无法保存文件夹图标，请重试。': 'Could not save the folder icon. Please try again.',
+  '文件夹已不存在。': 'The folder no longer exists.',
+  恢复默认: 'Reset to default',
+  棕色: 'Brown',
+  金色: 'Gold',
+  橙色: 'Orange',
+  红色: 'Red',
+  粉色: 'Pink',
+  紫色: 'Purple',
+  蓝色: 'Blue',
+  青色: 'Teal',
+  森林绿: 'Forest',
+  灰绿: 'Sage',
+  盆栽: 'Plant',
+  烧瓶: 'Flask',
+  地球: 'Globe',
+  档案盒: 'Archive box',
+  灯泡: 'Light bulb',
+  调色盘: 'Palette',
+  耳机: 'Headphones',
+  相机: 'Camera',
+  公文包: 'Briefcase',
+  书本: 'Book',
+  颜色: 'Color',
+  图标: 'Icon',
+  保存: 'Save',
+  自定义文件夹图标: 'Customize folder icon',
   '已清理旧版 Catea 全量快照，释放知识库空间':
     'Removed obsolete full-vault Catea snapshots to reclaim vault space',
   '旧版 Catea 快照清理失败，可手动删除 .catea/snapshots':

@@ -69,6 +69,29 @@ const dockCss = (
     }),
   )
 ).join('\n')
+const folderIcons = [
+  'book-open',
+  'briefcase',
+  'camera',
+  'headphone',
+  'palette',
+  'lightbulb',
+  'archive',
+  'globe',
+  'flask',
+  'plant',
+]
+const folderCss = (
+  await Promise.all(
+    folderIcons.map(async (name) => {
+      const svg = await readFile(
+        resolve(root, `apps/obsidian/remix-folders/${name}-line.svg`),
+        'utf8',
+      )
+      return `[data-catea-folder-icon="${name}"]{--catea-folder-mask:url("data:image/svg+xml,${encodeURIComponent(svg)}")}`
+    }),
+  )
+).join('\n')
 const gitStyles = postcss.parse(
   await readFile(resolve(dependencyRoot('@tomplum/react-git-log'), 'dist/index.css'), 'utf8'),
 )
@@ -102,6 +125,8 @@ await writeFile(
     (await readFile(resolve(root, 'apps/obsidian/paper.css'), 'utf8')) +
     '\n' +
     dockCss +
+    '\n' +
+    folderCss +
     '\n' +
     (await buildStyles()),
 )

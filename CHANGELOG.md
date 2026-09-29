@@ -5,6 +5,11 @@ release tag is that same number with no `v` prefix.
 
 ## 0.3.14
 
+### Added
+
+- Customize folders with ten bundled Remix line icons and ten preset colors;
+  keep those choices when folders move or are renamed.
+
 ### Fixed
 
 - Satisfy the community-plugin manifest rules with a neutral, punctuated
@@ -17,6 +22,9 @@ release tag is that same number with no `v` prefix.
 
 ### Changed
 
+- Show cache hits as a compact percentage, make the Markdown action copy raw
+  Markdown, keep the jump-to-bottom button visually stable on hover, and reveal
+  otherwise transparent scrollbar thumbs on interaction.
 - Scope the GitHub Star invitation to opening the Catea sidebar instead of
   Obsidian startup, add a Support prompt off switch in settings, and disclose
   it in both README languages, as the Obsidian developer policies require for

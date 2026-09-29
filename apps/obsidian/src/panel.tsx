@@ -958,7 +958,6 @@ export function Panel({ plugin }: { plugin: Catea }) {
                                 : undefined
                             }
                             onExpand={() => plugin.showDetail(t('回复'), m.text)}
-                            onViewMarkdown={() => plugin.showDetail('Markdown', m.text)}
                             labels={{
                               copy: t('复制'),
                               copied: t('已复制'),

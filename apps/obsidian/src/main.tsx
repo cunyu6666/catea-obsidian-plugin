@@ -1,11 +1,12 @@
 /**
  * [WHO]: Provides Catea, default
- * [FROM]: Depends on ./GitHistoryPanel, ./global-byok, ./updates, ./theme, ./note-thumbnails, ./note-previews, ./locale, ./selection, ./session-drafts, ./support-prompt, ../../../packages/agent-core/src/types, obsidian, react-dom/client, ./paper.cjs, ../../../packages/agent-core/src, ../../../packages/integrations/src/storage, ../../../packages/integrations/src/legacy-snapshots, ./panel, ./obsidian-tools, ./skills/obsidian.md, catea-components, ./settings, ./composition, node:fs/promises
- * [TO]: Consumed by apps/obsidian/src/note-previews.ts, apps/obsidian/src/note-thumbnails.ts,
+ * [FROM]: Depends on ./folder-icons, ./GitHistoryPanel, ./global-byok, ./updates, ./theme, ./note-thumbnails, ./note-previews, ./locale, ./selection, ./session-drafts, ./support-prompt, ../../../packages/agent-core/src/types, obsidian, react-dom/client, ./paper.cjs, ../../../packages/agent-core/src, ../../../packages/integrations/src/storage, ../../../packages/integrations/src/legacy-snapshots, ./panel, ./obsidian-tools, ./skills/obsidian.md, catea-components, ./settings, ./composition, node:fs/promises
+ * [TO]: Consumed by apps/obsidian/src/folder-icons.ts, apps/obsidian/src/note-previews.ts, apps/obsidian/src/note-thumbnails.ts,
  *   apps/obsidian/src/obsidian-tools.ts, apps/obsidian/src/panel.tsx,
  *   apps/obsidian/src/selection.ts, apps/obsidian/src/settings.ts, apps/obsidian/src/GitHistoryPanel.tsx
  * [HERE]: apps/obsidian/src/main.tsx - plugin entry: class Catea extends Paper, wiring config, secure secrets, ObsidianTools, session tabs, settings and sidebar; 60 s memory interval
  */
+import { installFolderIcons, type FolderAppearance } from './folder-icons'
 import { GitHistoryPanel } from './GitHistoryPanel'
 import { UpdateChecker, type UpdatePreferences } from './updates'
 import { GlobalByokStore, mergeByokProfiles } from './global-byok'
@@ -75,6 +76,7 @@ export default class Catea extends Base {
       theme?: ThemeMode
       supportPromptMonth?: string
       supportPrompt?: boolean
+      folderIcons?: Record<string, FolderAppearance>
     } = {
     language: 'zh',
     enabled: true,
@@ -205,6 +207,7 @@ export default class Catea extends Base {
     await this.addMiniMaxModels()
     this.installRibbonHover()
     this.installScrollbarVisibility()
+    installFolderIcons(this)
     installSelectionAction(this)
     registerNotePreviews(this)
     this.refreshThumbnails = installNoteThumbnails(this)
