@@ -464,7 +464,54 @@ test('Anthropic SSE retains signed blocks and complete initial tool input', asyn
   assert.equal(reply.anthropicContent[0].signature, 'signed')
   assert.equal(reasoning.join(''), 'reason')
   assert.equal(reply.calls[0].args.path, 'note.md')
-  assert.equal(reply.usage.inputTokens, 12)
+  assert.equal(reply.usage.inputTokens, 10)
+})
+test('usage keeps the four cache buckets orthogonal, as CatUI defines them', async () => {
+  const { reply } = await parse(
+    'anthropic',
+    stream([
+      {
+        type: 'message_start',
+        message: {
+          usage: {
+            input_tokens: 10,
+            cache_read_input_tokens: 200,
+            cache_creation_input_tokens: 30,
+            output_tokens: 0,
+          },
+        },
+      },
+      { type: 'message_delta', delta: { stop_reason: 'end_turn' }, usage: { output_tokens: 5 } },
+    ]),
+  )
+  // input_tokens is already the uncached remainder; cache buckets never fold into it.
+  assert.equal(reply.usage.inputTokens, 10)
+  assert.equal(reply.usage.cachedInputTokens, 200)
+  assert.equal(reply.usage.cacheWriteInputTokens, 30)
+  assert.equal(reply.usage.outputTokens, 5)
+})
+test('OpenAI usage nets cached tokens out of input', async () => {
+  const { reply } = await parse(
+    'openai',
+    stream([
+      { choices: [{ delta: { content: 'Hi' } }] },
+      {
+        choices: [],
+        usage: {
+          prompt_tokens: 100,
+          completion_tokens: 8,
+          prompt_tokens_details: { cached_tokens: 60 },
+          completion_tokens_details: { reasoning_tokens: 4 },
+        },
+      },
+      '[DONE]',
+    ]),
+  )
+  assert.equal(reply.usage.inputTokens, 40)
+  assert.equal(reply.usage.cachedInputTokens, 60)
+  // reasoning_tokens is a breakdown *inside* completion_tokens, so it is not added:
+  // CatUI sums the two and double-counts reasoning here.
+  assert.equal(reply.usage.outputTokens, 8)
 })
 test('OpenAI compatible reasoning streams separately from answer text', async () => {
   const { reply, deltas, reasoning } = await parse(

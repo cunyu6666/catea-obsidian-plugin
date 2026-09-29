@@ -781,11 +781,15 @@ Internal note references use [[path|label]]. Only call listed tools. Preserve ra
           if (m.role !== 'assistant' || (m.stopReason !== 'error' && m.stopReason !== 'aborted'))
             this.session.transcript.push(toTranscript(m))
           if (m.role === 'assistant') {
-            if (m.usage && (m.usage.input || m.usage.output || m.usage.cacheRead)) {
-              const usage = reply.usage || { input: 0, output: 0, cacheRead: 0 }
+            if (
+              m.usage &&
+              (m.usage.input || m.usage.output || m.usage.cacheRead || m.usage.cacheWrite)
+            ) {
+              const usage = reply.usage || { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 }
               usage.input += m.usage.input
               usage.output += m.usage.output
               usage.cacheRead += m.usage.cacheRead
+              usage.cacheWrite = (usage.cacheWrite || 0) + (m.usage.cacheWrite || 0)
               reply.usage = usage
             }
             const part = m.content

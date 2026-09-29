@@ -190,14 +190,21 @@ export function providerStream(
             totalMs: Date.now() - started,
           }
           message.anthropicContent = result.anthropicContent
-          if (result.usage)
+          if (result.usage) {
+            const cacheRead = result.usage.cachedInputTokens || 0
+            const cacheWrite = result.usage.cacheWriteInputTokens || 0
             message.usage = {
               ...emptyUsage(),
               input: result.usage.inputTokens,
               output: result.usage.outputTokens,
-              cacheRead: result.usage.cachedInputTokens || 0,
-              totalTokens: result.usage.inputTokens + result.usage.outputTokens,
+              cacheRead,
+              cacheWrite,
+              // The old folded input already carried both cache buckets, so this sum
+              // keeps the compaction threshold firing at the same context size.
+              totalTokens:
+                result.usage.inputTokens + result.usage.outputTokens + cacheRead + cacheWrite,
             }
+          }
           message.stopReason =
             result.stopReason === 'length' ? 'length' : result.calls.length ? 'toolUse' : 'stop'
           stream.push({ type: 'done', reason: message.stopReason, message })

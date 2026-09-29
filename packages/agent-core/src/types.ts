@@ -80,9 +80,11 @@ export interface Source {
 }
 
 export interface TokenUsage {
+  /** Uncached input only; the cache buckets stay orthogonal and never fold in here. */
   inputTokens: number
   outputTokens: number
   cachedInputTokens?: number
+  cacheWriteInputTokens?: number
 }
 
 export interface ToolEvent {

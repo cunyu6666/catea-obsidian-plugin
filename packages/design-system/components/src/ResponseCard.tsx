@@ -15,6 +15,7 @@ interface ResponseCardProps {
     input: number
     output: number
     cacheRead: number
+    cacheWrite?: number
     labels: { input: string; output: string; cacheRead: string }
   }
   onExpand: () => void
@@ -62,9 +63,14 @@ export function ResponseCard({
   const reduceMotion = useReducedMotion()
   const sourcesId = useId()
   const safeSources = sources.filter((source) => /^https?:\/\//i.test(source.url))
+  // `input` is the uncached remainder, so the share served from cache divides by the
+  // whole input this turn consumed, not by `input` alone.
+  const cacheReadBasis = tokenUsage
+    ? tokenUsage.input + tokenUsage.cacheRead + (tokenUsage.cacheWrite || 0)
+    : 0
   const cacheHitPercent =
-    tokenUsage && tokenUsage.input > 0
-      ? Math.round(Math.min(1, Math.max(0, tokenUsage.cacheRead / tokenUsage.input)) * 100)
+    tokenUsage && cacheReadBasis > 0
+      ? Math.round(Math.min(1, Math.max(0, tokenUsage.cacheRead / cacheReadBasis)) * 100)
       : 0
   const streamingLabels = labels.streaming
   const streamingLabelCount = typeof streamingLabels === 'string' ? 0 : streamingLabels.length

@@ -43,38 +43,38 @@ function tokenCount(value: unknown): number | undefined {
   return typeof value === 'number' && Number.isSafeInteger(value) && value >= 0 ? value : undefined
 }
 
+// Anthropic reports input_tokens as the uncached remainder already, so the three
+// input buckets stay orthogonal and totalTokens is where they are summed.
 function anthropicInputTokens(value: unknown): number | undefined {
-  const data = record(value)
-  const input = tokenCount(data.input_tokens)
-  const cacheCreation = tokenCount(data.cache_creation_input_tokens)
-  const cacheRead = tokenCount(record(value).cache_read_input_tokens)
-  if (input === undefined && cacheCreation === undefined && cacheRead === undefined)
-    return undefined
-  return (input || 0) + (cacheCreation || 0) + (cacheRead || 0)
+  return tokenCount(record(value).input_tokens)
 }
 
 function anthropicUsage(value: unknown): TokenUsage | undefined {
-  const input = anthropicInputTokens(value)
-  const output = tokenCount(record(value).output_tokens)
+  const data = record(value)
+  const input = tokenCount(data.input_tokens)
+  const output = tokenCount(data.output_tokens)
   if (input === undefined || output === undefined) return undefined
-  const cached = tokenCount(record(value).cache_read_input_tokens)
+  const cached = tokenCount(data.cache_read_input_tokens)
+  const wrote = tokenCount(data.cache_creation_input_tokens)
   return {
     inputTokens: input,
     outputTokens: output,
     ...(cached === undefined ? {} : { cachedInputTokens: cached }),
+    ...(wrote === undefined ? {} : { cacheWriteInputTokens: wrote }),
   }
 }
 
 function openAiUsage(value: unknown): TokenUsage | undefined {
-  const input = tokenCount(record(value).prompt_tokens ?? record(value).input_tokens)
-  const output = tokenCount(record(value).completion_tokens ?? record(value).output_tokens)
-  if (input === undefined || output === undefined) return undefined
-  const cached = tokenCount(
-    record(record(value).prompt_tokens_details).cached_tokens ??
-      record(record(value).input_tokens_details).cached_tokens,
-  )
+  const data = record(value)
+  const gross = tokenCount(data.prompt_tokens ?? data.input_tokens)
+  const output = tokenCount(data.completion_tokens ?? data.output_tokens)
+  if (gross === undefined || output === undefined) return undefined
+  const details = record(data.prompt_tokens_details ?? data.input_tokens_details)
+  const cached = tokenCount(details.cached_tokens)
+  // OpenAI reports cached tokens *inside* prompt_tokens, unlike Anthropic, so netting
+  // them is what makes `input` mean the same thing across both providers.
   return {
-    inputTokens: input,
+    inputTokens: Math.max(0, gross - (cached ?? 0)),
     outputTokens: output,
     ...(cached === undefined ? {} : { cachedInputTokens: cached }),
   }
@@ -388,6 +388,7 @@ export async function streamModel(
     let inputTokens: number | undefined
     let outputTokens: number | undefined
     let cachedInputTokens: number | undefined
+    let cacheWriteInputTokens: number | undefined
     const blocks = new Map<number, { id: string; name: string; input: string }>()
     const content = new Map<number, Record<string, unknown>>()
     for await (const frame of sse(response, signal)) {
@@ -406,6 +407,9 @@ export async function streamModel(
         cachedInputTokens =
           tokenCount(record(record(data.message).usage).cache_read_input_tokens) ??
           cachedInputTokens
+        cacheWriteInputTokens =
+          tokenCount(record(record(data.message).usage).cache_creation_input_tokens) ??
+          cacheWriteInputTokens
       }
       if (data.type === 'message_delta') {
         if (record(data.delta).stop_reason === 'max_tokens') stopReason = 'length'
@@ -413,6 +417,8 @@ export async function streamModel(
         outputTokens = tokenCount(record(data.usage).output_tokens) ?? outputTokens
         cachedInputTokens =
           tokenCount(record(data.usage).cache_read_input_tokens) ?? cachedInputTokens
+        cacheWriteInputTokens =
+          tokenCount(record(data.usage).cache_creation_input_tokens) ?? cacheWriteInputTokens
       }
       const index =
         typeof data.index === 'number' && Number.isInteger(data.index) && data.index >= 0
@@ -465,6 +471,7 @@ export async function streamModel(
               inputTokens,
               outputTokens,
               ...(cachedInputTokens === undefined ? {} : { cachedInputTokens }),
+              ...(cacheWriteInputTokens === undefined ? {} : { cacheWriteInputTokens }),
             },
     }
   }

@@ -26,7 +26,7 @@ export interface Message {
   startedAt?: number
   completedAt?: number
   model?: string
-  usage?: { input: number; output: number; cacheRead: number }
+  usage?: { input: number; output: number; cacheRead: number; cacheWrite?: number }
   error?: string
   sources?: Array<{ title: string; url: string }>
 }
