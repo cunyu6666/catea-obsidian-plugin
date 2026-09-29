@@ -13,7 +13,7 @@ GitHistoryPanel.tsx: Opt-in sidebar with a themed React Git Log graph, bounded h
 folder-icons.ts: Folder context-menu picker with ten Remix line icons and ten colors, persisted per path, tracking folder rename and deletion.
 git-history.ts: Shell-free Git inspection with timeout and output caps; history and commit stats are scoped to the vault.
 global-byok.ts: Stores BYOK model profiles in an encrypted machine-local file under Obsidian userData, with migration from vault-local profiles and deletion tombstones.
-composition.ts: Creates shared conversation storage and memory, then injects them into each tab's Agent at the Obsidian boundary.
+composition.ts: Creates shared conversation storage and memory, routes background memory diagnostics to the console without toast notifications, then injects them into each tab's Agent at the Obsidian boundary.
 DiagramDialog.tsx: Portals children into a native `<dialog>` opened with `showModal()`, giving Escape handling, focus trap and focus restore for diagram zoom.
 MermaidDiagram.tsx: Renders Mermaid through Obsidian `loadMermaid` after a 180 ms debounce; zoom clamped to 0.25-4x.
 StreamingChatResponse.tsx: requestAnimationFrame typewriter reveal for streamed text that never splits surrogate pairs; auto-follows scroll within 40 px in a card and 80 px in chat.

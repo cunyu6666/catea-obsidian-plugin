@@ -180,7 +180,17 @@ function activityPreview(
   )
   const running = [...visible].reverse().find((tool) => tool.result === undefined && !tool.error)
   if (running) return `${toolPresenters.title(running, t)}…`
-  if (status === 'streaming') return ''
+  if (status === 'streaming') {
+    if (
+      tools.some(
+        (tool) => tool.name === 'AskUserQuestion' && tool.result === undefined && !tool.error,
+      )
+    )
+      return t('等待你的回答')
+    return t(
+      activities.some((item) => item.type === 'thinking' && item.active) ? '正在思考' : '正在生成',
+    )
+  }
   if (status === 'complete' && startedAt !== undefined && completedAt !== undefined) {
     const seconds = Math.max(0, Math.floor((completedAt - startedAt) / 1000))
     return t('猫咪奔跑了 {elapsed}').replace(

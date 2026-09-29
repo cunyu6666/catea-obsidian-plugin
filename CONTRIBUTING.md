@@ -18,6 +18,7 @@ enforce, so a change can be checked before it is proposed.
 |---|---|---|
 | `npm ci` | reproducible workspace install | npm and network access |
 | `npm test` | contracts, isomorphism, governance and storage regressions | yes |
+| `npm run check:marketplace` | Node-type availability, unsafe-value rules (including vendored runtime source), declaration provenance and CSS compiler inputs | yes |
 | `npm run typecheck` | `tsc`, scoped to owned code | yes |
 | `npm run lint` | official Obsidian rules over host and adapters | yes |
 | `npm run format:check` | Prettier check over owned TypeScript and JavaScript | yes |

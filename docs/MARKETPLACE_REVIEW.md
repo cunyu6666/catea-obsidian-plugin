@@ -1,5 +1,68 @@
 # Marketplace review follow-up
 
+## September 30 scorecard regression
+
+The [public scorecard](https://community.obsidian.md/plugins/catea-paper) for
+release 0.3.17, commit `d713ab0d1f35ba8c23abd63e026cf6e721462309`, reports **442**
+findings: 434 unsafe-type findings, two CSS compiler-directive warnings, and six
+capability notices. The exact rule counts and source links are preserved in
+[the captured inventory](./reviews/2026-09-30-scorecard.json).
+
+| Rule | Published scan | Current source with installed Node types hidden, before fix | After fix |
+| --- | ---: | ---: | ---: |
+| `no-unsafe-call` | 187 | 187 | 0 |
+| `no-unsafe-member-access` | 115 | 115 | 0 |
+| `no-unsafe-assignment` | 95 | 95 | 0 |
+| `no-unsafe-argument` | 23 | 22 | 0 |
+| `no-unsafe-return` | 14 | 14 | 0 |
+
+The working source already differed from the scanned commit when this review
+started; the one-argument difference is not counted as a new fix. Local lint
+with npm-installed declarations already passed. A read-only TypeScript compiler
+host hiding `node_modules/@types/node` and `node_modules/undici-types` reproduces
+the remaining failures. This strongly identifies missing Node declarations as
+the source of the cascading diagnostics, rather than hundreds of unsafe runtime
+operations. The marketplace scanner implementation itself was not inspected.
+
+Complete, unmodified official Node and Undici declarations now live in `typings/`,
+with original licenses and package metadata. TypeScript resolves them from the
+source tree, including in source-only scan environments. `npm run check:marketplace`
+checks snapshot provenance byte-for-byte against the lockfile installation,
+typechecks with installed Node declarations hidden, and runs all five unsafe-value
+rules on owned and vendored runtime TypeScript. It is required by CI, release
+preflight and `npm run check`; no unsafe rules were disabled.
+
+The Tailwind `@source` and `@theme` configuration now lives in the compiler entry
+in `packages/design-system/scripts/build.mjs`. Browser CSS source contains only
+standard CSS. The generated design-system stylesheet was compared byte-for-byte
+against the output before this change and is identical.
+
+### What cannot honestly be called zero
+
+These changes address the 436 actionable type/CSS reports locally. The six
+capability notices describe supported behavior: environment access, filesystem
+access, Shell, vault enumeration, clipboard writes, and Ajv runtime validation
+compilation. They are not removed or hidden to change a score. See the capability
+analysis below and SECURITY.md. The seven informational notices are separate from
+the headline 442 and include the GPL license, network usage and unavailable scans.
+
+The online scorecard has not been rescanned against these local changes. A new
+release and the marketplace rescan are required to measure its new count. This
+review does not claim that the website is already at zero or that every private
+scanner check is reproduced locally.
+
+### Local validation
+
+`npm run check` passed after these changes: 378 tests, 40 adapter behavior
+regressions, formatting, lint, typecheck, the new marketplace regression and build.
+The dependency-poor regression covers 147 runtime source files with zero unsafe
+findings and zero TypeScript diagnostics. `main.js` is 4,396,893 bytes. The generated
+design-system CSS remains byte-identical to the pre-change working-tree build.
+Existing uncommitted application changes were preserved; these counts describe
+the complete working tree, not an isolated release. No new release was published.
+
+## Earlier review
+
 Reviewed on 2026-09-28 against the signed-in Catea Paper review page for release
 0.3.3. The fixes below are local source changes; the marketplace has not yet
 scanned a release containing them.

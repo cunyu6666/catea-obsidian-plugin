@@ -25,3 +25,11 @@ Its license and those of its bundled dependencies (`@uidotdev/usehooks`,
 as `REACT-GIT-LOG-LICENSE.txt` in the built distribution.
 The component is styled for Catea; repository access is implemented separately
 using bounded, local, read-only Git commands.
+
+## Compile-time Node declarations
+
+The source repository includes unmodified `@types/node` and `undici-types`
+declarations under `typings/`, both MIT licensed. Their original license files
+and package metadata are retained there. They enable source-only marketplace
+type analysis and are not bundled into runtime JavaScript. See `typings/README.md`
+for versions and the byte-for-byte provenance gate.

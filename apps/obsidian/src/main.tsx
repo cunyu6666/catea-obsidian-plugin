@@ -219,11 +219,7 @@ export default class Catea extends Base {
     this.obsidian = new ObsidianTools(this, (title, detail, signal) =>
       this.confirm(title, detail, signal),
     )
-    const create = createAgentFactory(
-      this.vaultPath,
-      () => this.agentSettings,
-      (text) => new Notice(humanizeError(text, this.agentSettings.language)),
-    )
+    const create = createAgentFactory(this.vaultPath, () => this.agentSettings)
     this.createTabAgent = () => {
       let agent!: Agent
       agent = create({

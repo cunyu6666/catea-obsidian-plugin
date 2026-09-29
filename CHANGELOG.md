@@ -3,6 +3,24 @@
 Notable changes per release. The version is the one in `manifest.json`; the GitHub
 release tag is that same number with no `v` prefix.
 
+## 0.3.18
+
+### Fixed
+
+- Ship official Node and Undici type declarations with the source so source-only
+  marketplace analysis can resolve Node APIs. Add a CI and release regression gate
+  that hides npm-installed Node types and verifies declaration provenance.
+- Move Tailwind compiler directives out of browser CSS source while preserving
+  the generated stylesheet byte-for-byte.
+- Keep background memory failures in diagnostic logs instead of interrupting
+  conversations with toast notifications.
+- Show thinking, generating and waiting-for-answer status in streaming activity
+  summaries, and reveal the expand control on hover or keyboard focus.
+
+Marketplace capability notices still describe supported filesystem, shell,
+clipboard and other agent behavior. The next scorecard scan will determine the
+published finding count; local validation is not an online clearance claim.
+
 ## 0.3.17
 
 ### Added

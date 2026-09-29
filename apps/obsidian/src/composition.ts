@@ -13,14 +13,14 @@ import { MemoryService } from '../../../packages/memory/src'
 export function createAgentFactory(
   vault: string,
   settings: () => Settings,
-  notice: Hooks['notice'],
 ): (hooks: Hooks) => Agent {
   const conversations = new VaultConversationStore(vault)
   const modelClient = new DirectModelClient()
   const memory = new MemoryService(
     vault,
     (id) => configuredModels(settings().models).find((model) => model.id === id),
-    notice,
+    // Background memory failures must never interrupt the conversation with a toast.
+    (error) => console.warn('[Catea memory]', error),
     modelClient,
   )
   return (hooks) => new Agent(vault, settings, hooks, { conversations, memory, modelClient })

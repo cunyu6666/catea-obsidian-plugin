@@ -45,7 +45,7 @@ export function AgentActivities({
     return thinking ? <ThinkingIndicator active labels={labels} startedAt={startedAt} /> : null
   const latest = items.at(-1)
   const pendingThinking = thinking && latest?.type === 'tool' && latest.status !== 'running'
-  const countSize = Math.max(20, 12 + String(items.length).length * 6)
+  const countSize = Math.max(18, 6 + String(items.length).length * 6)
 
   return (
     <section className="anno-activities" aria-label={preview || labels.thought}>
@@ -57,16 +57,16 @@ export function AgentActivities({
         onClick={() => setManual({ phase: autoExpand, expanded: !expanded })}
       >
         <span
-          className={`anno-activities__chevron ${expanded ? 'is-expanded' : ''}`}
-          aria-hidden="true"
-        >
-          <Icon name="chevron-right" size={12} />
-        </span>
-        <span
           className="anno-activities__indicator"
           style={{ width: countSize, height: countSize }}
         >
           <span className="anno-activities__count">{items.length}</span>
+          <span
+            className={`anno-activities__chevron ${expanded ? 'is-expanded' : ''}`}
+            aria-hidden="true"
+          >
+            <Icon name="chevron-right" size={12} />
+          </span>
         </span>
         {preview && <span className="anno-activities__preview">{preview}</span>}
       </button>

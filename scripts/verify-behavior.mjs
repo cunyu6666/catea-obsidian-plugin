@@ -1524,3 +1524,27 @@ test('Disabling or unloading while checking prevents late results from publishin
     assert.equal(f.stats().changes, changes)
   }
 })
+
+test('Background memory diagnostics never use conversation notices', async () => {
+  const warnings = []
+  const notices = []
+  const { createAgentFactory } = await load(
+    'apps/obsidian/src/composition.ts',
+    {
+      '../../../packages/agent-core/src':
+        'export class Agent { constructor(_vault, _settings, hooks, ports) { this.hooks = hooks; this.memory = ports.memory } }',
+      '../../../packages/agent-core/src/model-client': 'export class DirectModelClient {}',
+      '../../../packages/integrations/src/conversation-store':
+        'export class VaultConversationStore {}',
+      '../../../packages/memory/src':
+        'export class MemoryService { constructor(_vault, _model, report) { this.report = report } }',
+    },
+    { console: { warn: (...args) => warnings.push(args) } },
+  )
+  const create = createAgentFactory('/unused', () => ({ models: [] }))
+  const agent = create({ notice: (text) => notices.push(text) })
+  for (const error of ['recall failed', 'extraction retry pending', 'queue unavailable'])
+    agent.memory.report(error)
+  assert.equal(warnings.length, 3)
+  assert.equal(notices.length, 0)
+})

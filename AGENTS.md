@@ -104,6 +104,7 @@ docs/specs/                  # Approved design specifications
 docs/skills/                 # Skill templates users copy into <vault>/.catea/skills/
 .github/                     # CI, the release workflow, and issue and PR templates
 scripts/                     # Build tooling, the scoped typecheck gate, and the release script
+typings/                     # Official Node/Undici declarations for source-only marketplace analysis
 tests/                       # DIP harness: contract parser, verify gate, governance gate
 ```
 
@@ -124,6 +125,7 @@ npm run typecheck  # scoped tsc over owned code only
 npm run lint       # official Obsidian rules for host and adapter source
 npm run format:check # Prettier check over owned TypeScript and JavaScript
 npm run test:behavior # runtime adapter regressions; requires npm install
+npm run check:marketplace # type/lint regression without installed Node declarations
 ```
 
 `npm run build` writes `dist/catea-paper/`, an installable Obsidian plugin

@@ -54,6 +54,7 @@ jobs:
           npm run format:check
           npm run typecheck
           npm run lint
+          npm run check:marketplace
           npm run test:behavior
 
       - name: Build
@@ -87,5 +88,6 @@ jobs:
             dist/catea-paper/main.js \
             dist/catea-paper/manifest.json \
             dist/catea-paper/styles.css \
+            --target "$GITHUB_SHA" \
             --title "$version" \
             --generate-notes

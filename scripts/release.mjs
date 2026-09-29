@@ -67,6 +67,7 @@ for (const [label, argv] of [
   ['contracts and governance', ['test']],
   ['typecheck', ['run', 'typecheck']],
   ['official plugin lint', ['run', 'lint']],
+  ['marketplace type regression', ['run', 'check:marketplace']],
   ['adapter regressions', ['run', 'test:behavior']],
 ]) {
   const result = run('npm', argv)

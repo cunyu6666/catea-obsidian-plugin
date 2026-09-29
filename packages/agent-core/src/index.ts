@@ -877,7 +877,10 @@ Internal note references use [[path|label]]. Only call listed tools. Preserve ra
             tools: reply.tools,
           })
           .catch((e: unknown) =>
-            this.hooks.notice(`记忆入队失败：${e instanceof Error ? e.message : String(e)}`),
+            console.warn(
+              '[Catea memory] Failed to enqueue turn:',
+              e instanceof Error ? e.message : String(e),
+            ),
           )
     } catch (e: unknown) {
       reply.status = signal.aborted ? 'stopped' : 'error'
