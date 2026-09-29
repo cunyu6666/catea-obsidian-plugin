@@ -19,11 +19,11 @@ Everything below is a description of the current implementation, not a promise.
 
 ### Local data
 
-The plugin writes into the user's own vault, never into the plugin directory:
+Vault-specific data is written into the user's own vault, never into the plugin directory:
 
 | Path | Contents |
 |---|---|
-| `.catea/config.json` | model metadata, toggles, MCP server configuration. **Never contains API keys or tokens** |
+| `.catea/config.json` | vault toggles, selected model, MCP server configuration; model metadata only when global BYOK encryption is unavailable. **Never contains API keys or tokens** |
 | `.catea/sessions/<id>.json` | the raw conversation and tool transcript for one session |
 | `.catea/memory/` | extracted memory, including per-persona engine directories |
 | `.catea/skills/<id>/SKILL.md` | skill packages the user installed and enabled |
@@ -34,11 +34,17 @@ queue of turns awaiting extraction.
 
 ### Credentials
 
-API keys and MCP bearer tokens are held in Obsidian's secret storage, keyed
-`catea-<id>` and `catea-mcp-<id>`. They are never written to `.catea/config.json`:
-the save path explicitly strips them before writing. When secret storage is
-unavailable the key is held only in memory for the current session and the UI says
-so, rather than silently persisting it.
+When Electron's OS-backed safeStorage is available, Catea encrypts the BYOK model
+profile, including API keys, at `<Obsidian userData>/catea/byok.enc`. This is a
+machine-local file shared by vaults, not a synced vault file. On Linux, Catea
+rejects the `basic_text` fallback. Existing vault-local models are imported on
+first open; the vault copy of model metadata is then cleared. A vault's selected
+model remains in its `.catea/config.json`.
+
+MCP bearer tokens remain in Obsidian's vault-scoped secret storage, keyed
+`catea-mcp-<id>`. If global encryption is unavailable, API keys also remain in
+that store under `catea-<id>`. Neither is written to `.catea/config.json`.
+When secret storage is unavailable, keys remain in memory for the current session.
 
 ### Network
 
@@ -48,6 +54,7 @@ network only in these ways:
 | Destination | When |
 |---|---|
 | The model endpoint you configure (any OpenAI- or Anthropic-compatible URL) | every conversation |
+| `api.github.com`, `github.com` and release asset delivery hosts | public stable-release metadata, at most once daily automatically or on manual check; independently disabled in settings; no vault content or keys |
 | `mcp.exa.ai` | web search, as the primary provider |
 | `r.jina.ai`, `s.jina.ai` | web search fallback and page reading |
 | `html.duckduckgo.com`, `api.duckduckgo.com` | final search fallback |

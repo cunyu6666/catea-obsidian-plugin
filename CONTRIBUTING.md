@@ -72,7 +72,8 @@ why the change is needed rather than restating the diff.
 - **Documentation and code comments: English.** Includes P1/P2/P3 and `docs/`.
 - **The product UI is bilingual by design.** User-facing strings resolve through
   `apps/obsidian/src/locale.ts` and `packages/agent-core/src/i18n.ts`; Chinese is a
-  supported UI language. `README_CN.md` is the intentional Chinese README.
+  supported UI language. `README.md` is intentionally bilingual, with English
+  first and Chinese second in one document.
 - **The persona documents are not translated.** `packages/personas/src/*.md` are
   agent-facing prompt content; translating them changes runtime behaviour.
 

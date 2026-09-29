@@ -1,216 +1,95 @@
 # Catea
 
-<div align="center">
+**The only Obsidian Agent plugin you need.**
 
-<pre>
-     _______________________________
-    |                               |
-    |        C A T E A              |
-    |         P A P E R             |
-    |_______________________________|
-</pre>
+[中文](#中文)
 
+Your knowledge should do more than sit in a folder. Catea brings an agent into Obsidian that can read your notes, research the web, write in your vault, and carry what it learns into the next conversation.
 
-<p><strong>The world-class Obsidian plugin that gives your vault a mind.</strong></p>
+Give it an outcome. Shape the work as it happens. Build something worth keeping.
 
-<p>
-  <img src="https://img.shields.io/badge/version-0.3.4-blue?style=flat-square" alt="version">
-  <img src="https://img.shields.io/badge/Obsidian-1.8.0%2B-7C3AED?style=flat-square&logo=obsidian&logoColor=white" alt="Obsidian">
-  <img src="https://img.shields.io/badge/TypeScript-5.9-3178C6?style=flat-square&logo=typescript&logoColor=white" alt="TypeScript">
-  <img src="https://img.shields.io/badge/React-19-61DAFB?style=flat-square&logo=react&logoColor=black" alt="React">
-  <img src="https://img.shields.io/badge/License-GPL--3.0--blue?style=flat-square" alt="License">
-</p>
+## Put your knowledge to work
 
-<p>
-  <a href="#-why-catea">Why Catea?</a> •
-  <a href="#-features">Features</a> •
-  <a href="#-quick-start">Quick Start</a> •
-  <a href="#-architecture">Architecture</a> •
-  <a href="#-configuration-byok">Configuration</a> •
-  <a href="#-network-use">Network Use</a> •
-  <a href="#-credits">Credits</a>
-</p>
+- **From a request to real work.** Find connections across notes, draft an article, organize a project, or turn scattered research into a document. Catea can search, create, edit, and organize files inside your vault.
+- **An agent that can keep going.** Multi-step execution, working notes, context handoffs, and long-term memory support work that takes more than one reply. You can add direction while it works.
+- **Research where you write.** Search the web, read pages, and bring sources into the same conversation as your own material.
+- **Your models. Your tools.** Bring an OpenAI- or Anthropic-compatible provider, configure OpenRouter, and extend the agent with Skills and MCP servers.
+- **A workspace you want to stay in.** A paper-style editor, streaming conversations, parallel chat tabs, and light, dark, or system appearance. Everything lives alongside your notes.
 
-<p>
-  <a href="./README.md"><img src="https://img.shields.io/badge/English-Active-blue?style=flat-square" alt="English"></a>
-  <a href="./README_CN.md"><img src="https://img.shields.io/badge/中文-切换-orange?style=flat-square" alt="中文"></a>
-</p>
+Try a task with an outcome:
 
-</div>
+> Read my project notes, identify the unresolved decisions, and draft a plan for next week.
 
----
+> Research this topic, compare it with my existing notes, and write a brief with sources.
 
-## 🌟 Why Catea?
+> Turn these scattered ideas into a first draft. Ask me about the gaps before you fill them in.
 
-> **Your vault, reborn.** A native Catea agent lives inside Obsidian — it reads, writes, searches, and remembers, turning a folder of notes into a living workspace.
+Our ambition is simple: make Obsidian the place where your knowledge becomes action. Catea brings the reading, reasoning, research, and writing into one workflow. You bring the direction.
 
-Catea is not another chat sidebar bolted onto Obsidian. It is a **Paper workspace with a native Catea agent** — an agent that operates your vault with first-class tools, asks before it writes, carries memory across sessions, and runs long-horizon tasks to completion.
+## Get started
 
-### What Makes It Different?
+Requires **Obsidian desktop 1.8.0 or newer** and access to a compatible model provider.
 
-| | Typical AI plugins | Catea |
-| --- | --- | --- |
-| **Workspace** | A chat box beside your notes | A first-class Paper panel that streams work straight into your vault |
-| **Vault access** | Copy and paste in and out | Native `obsidian-workspace` tools with confirmation-gated writes |
-| **Memory** | Forgotten between sessions | NanoMem — recall, episodes, consolidation, and reinforcement |
-| **Long tasks** | One-shot answers | CatUI agent loop: 256 turns / 512 tool calls, checkpoints, and context handoff |
-| **Models** | Locked to one provider | BYOK — any OpenAI- or Anthropic-compatible endpoint |
-| **Web** | None | Search: Exa MCP → Jina → DuckDuckGo; optional Agent Reach diagnostics and approved CLI calls |
-| **Safety** | Blind edits | `raw/` write-protected, `wiki/log.md` append-only, every write confirmed |
+1. Download `main.js`, `manifest.json`, and `styles.css` from the [latest release](https://github.com/cunyu6666/catea-obsidian-plugin/releases/latest). Place them in `<your-vault>/.obsidian/plugins/catea-paper/`.
+2. Enable **Catea** in **Settings → Community plugins**.
+3. Open **Catea settings → BYOK models**, add your provider and API key, then open the Catea sidebar and give it a task.
 
-## ✨ Features
+Catea can check for new releases and show an update banner. Automatic checks and a manual check are available in its settings. Building from source? See [Contributing](./CONTRIBUTING.md).
 
-- 🤖 **Native agent, not a prompt wrapper** — a full CatUI-style agent loop runs inside the plugin
-- 🔁 **Long-horizon execution** — up to 256 turns and 512 tool calls per run, with checkpoints, continuation, and stall detection
-- 🧵 **Context handoff** — `session_history`, `working_notes`, and `new_context` are stitched across window switches, so the thread is never lost
-- 🌊 **Streaming responses** — smooth incremental output via ANNO `StreamingChatResponse`, with markdown and Mermaid rendering
-- ❓ **AskUserQuestion** — the agent pauses and asks (single/multi select, custom input, previews) instead of guessing
-- 🧠 **NanoMem memory** — episodic recall, structured extraction, reinforcement, dedup, and an automatic dream lifecycle
-- 🧩 **Skills & MCP** — the bundled `obsidian-workspace` skill, drop-in skills in `.catea/skills`, and MCP servers enabled explicitly in settings
-- 🔑 **BYOK** — OpenAI- and Anthropic-compatible providers with draft-based model editing; keys live in Obsidian's secure storage
-- 🎭 **Personas** — Vex, Aria, and Pencil, each with a distinct voice
-- 🌐 **Web search & page reading** — layered fallback chain; sources expandable right in the reply card; page content treated as untrusted
-- 🔍 **Observable runs** — run traces, tool summaries, and loop progress you can inspect
+## Your vault. Your choice.
 
-## 🚀 Quick Start
+No Catea account, telemetry, or Catea-operated backend. The agent runs inside Obsidian; conversations, memory, and vault settings stay in your vault. On desktops with OS-backed encryption, BYOK models and API keys are encrypted in Obsidian's machine-local data directory and shared across vaults. Existing vault models are imported when opened. If secure encryption is unavailable, models remain vault-local and keys use Obsidian's secret storage when available, otherwise they stay in memory for the current session.
 
-### Requirements
+Model requests send relevant prompts, notes, and tool results to your chosen provider. Web search and page reading use Exa, Jina, or DuckDuckGo; enabled MCP servers receive the inputs needed for their tools. GitHub update checks run at most once daily automatically and send no notes or keys. Web search and automatic update checks have separate off switches.
 
-- **Obsidian desktop** ≥ 1.8.0 — Catea is desktop-only (`isDesktopOnly: true`)
-- **Node.js 18+** with npm workspaces
-- Nothing else. The design system is vendored under `packages/design-system`, so a clone of this repository is the whole build input.
+The default **Assist** mode asks for approval for file changes and other sensitive actions. **Full access** skips those approvals; Bash commands can access files beyond your vault. See the [security model](./SECURITY.md) for details.
 
-### Build the Plugin
-
-```bash
-git clone https://github.com/cunyu6666/catea-obsidian-plugin.git catea
-cd catea
-
-# the design system is vendored under packages/design-system,
-# so this clone is the entire build input.
-
-npm install
-npm run build
-```
-
-The build bundles everything into `dist/catea-paper/`:
-
-```
-dist/catea-paper/
-├── main.js         # bundled plugin (esbuild)
-├── manifest.json   # id: catea-paper · minAppVersion: 1.8.0 · desktop only
-└── styles.css      # generated stylesheet
-```
-
-> `npm run build` only produces output — it never overwrites an installed plugin.
-
-### Install Into Your Vault
-
-```bash
-cp -R dist/catea-paper "<YourVault>/.obsidian/plugins/catea-paper"
-```
-
-Then open **Settings → Community plugins** in Obsidian and enable **Catea**. Keep the folder name `catea-paper` to match the manifest id.
-
-### First Run
-
-Add a model in **Catea settings** — protocol, base URL, model ID, and API key — then click the **Catea Agent** icon in the sidebar. No CatUI account or service is required.
-
-## 📐 Architecture
-
-Catea is a monorepo (`catea-source`) that cleanly separates the plugin host, the agent, and everything the agent can touch.
-
-```
-catea/
-├── apps/
-│   └── obsidian/          # Plugin host + Paper UI
-│                          #   React panel, streaming chat renderer, Mermaid diagrams,
-│                          #   note previews & thumbnails, Obsidian tool bindings
-├── packages/
-│   ├── agent-core/        # CatUI agent loop + BYOK providers + context control
-│   │   └── upstream/      # Vendored upstream loop machinery (pinned revision)
-│   ├── integrations/      # Vault tools, Skills, MCP, web search, storage
-│   ├── memory/            # NanoMem core + host adapter (upstream, GPL-3.0)
-│   └── personas/          # Vex · Aria · Pencil
-├── docs/ARCHITECTURE.md   # deeper design notes
-└── scripts/build.mjs      # esbuild pipeline → dist/catea-paper
-```
-
-Design components and tokens live in this repository under `packages/design-system`, linked through npm workspaces — no absolute local paths, and no dependency on a local ANNO or CatUI checkout.
-
-Deeper design notes: [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md).
-
-## 🔁 Inside the CatUI Agent Loop
-
-The heart of the plugin is a CatUI agent loop pinned to a fixed upstream revision, built for long, real tasks:
-
-- **Execution budget** — 256 turns and 512 tool calls per run, with tool-argument validation, read-only concurrency, stop handling, result backfill, and duplicate-stall detection
-- **Mid-run steering** — add requirements while the agent is still working
-- **Context handoff** — when a window fills up, `session_history`, `working_notes`, and a rebuilt `new_context` take over; the raw journal is kept in full, the latest tool chain and newest request are preserved, and working notes survive restarts
-- **Streaming throughout** — real SSE at the network layer, ANNO `StreamingChatResponse` at the UI layer, with stop shown immediately and reduced-motion support
-
-## 🧠 NanoMem — Memory That Persists
-
-Your agent gets a memory system, not a transcript:
-
-- **Episodic memory** — sessions sync into episodes with embeddings
-- **Recall & scoring** — structured extraction, relevance scoring, reinforcement, dedup, and eviction keep memory sharp
-- **Dream lifecycle** — consolidation runs automatically in the background; tasks are queued durably and asynchronously
-- **Privacy-aware** — local sessions and memory can contain private notes and are never shipped as plugin files
-
-## 🔐 Obsidian Integration & Safety
-
-The agent acts on your vault through the bundled `obsidian-workspace` skill — no installation needed, with guardrails built in:
-
-- **Confirmation before writes** — every mutation is proposed first, and content is re-checked for changes made during confirmation
-- **`raw/` is write-protected** — source material stays untouched
-- **`wiki/log.md` is append-only** — the ledger cannot be rewritten
-- **First-class native tools** — current note and selection, search by heading / body / tag / property, open in tab or split, sectioned reading, unique-match edits, create, move, and trash
-- **Scoped settings** — only safe UI toggles (toolbar, Tabler icons, hide properties / ribbon / status, web, memory) are exposed; arbitrary Obsidian config, secrets, and plugin management are off-limits; changes need confirmation
-
-## 🔑 Configuration (BYOK)
-
-Catea is bring-your-own-key:
-
-- **OpenRouter quick setup** — choose **Add OpenRouter**, enter an API key, then use **Free automatic routing** or paste a model ID such as `provider/model`; Catea selects the saved model immediately. Free uses `openrouter/free`, so the selected model and availability may change between requests.
-- **Draft-based editing** — adding or editing a model uses an independent draft; cancelling never mutates your config
-- **Validated on save** — display name, model ID, API key, and HTTP(S) base URL
-- **Two protocols** — OpenAI-compatible and Anthropic-compatible; switching protocol fills the matching default endpoint, which you can replace with your own compatible service
-- **Key storage** — model metadata goes to `.catea/config.json`; API keys are kept in Obsidian's secure storage (when unavailable, they live only in memory for the session)
-- **No lock-in** — the sidebar lists only fully configured models and remembers your last choice; no preset model list, no Catea account
-
-## 🌐 Network Use
-
-Catea reaches the network only in visible, user-initiated ways — there is no telemetry, no analytics, and no Catea-operated backend.
-
-| Destination | When | Purpose |
-| --- | --- | --- |
-| Your model endpoint — `api.openai.com`, `api.anthropic.com`, `openrouter.ai`, or any OpenAI/Anthropic-compatible URL you configure | Every conversation | Prompts, context, and tool results out; model output back. OpenRouter may forward them to its selected model provider. |
-| Exa MCP (`mcp.exa.ai`) | When the agent searches the web | Primary web search provider |
-| Jina (`r.jina.ai`, `s.jina.ai`) | Web search fallback and page reading | Search fallback and page extraction |
-| DuckDuckGo (`html.duckduckgo.com`, `api.duckduckgo.com`) | Web search fallback | Final search fallback |
-
-- Web search can be turned off in settings; the agent searches only when a task needs it.
-- Fetched web content is treated as untrusted.
-- Vault data, memory, and `.catea/config.json` stay local; API keys live in Obsidian's secure storage. Nothing is sent to O-Pencil or Catea.
-- The only credentials involved are the API keys you configure for your own providers.
-
-## 📦 Credits
-
-Catea stands on excellent open-source work — full details in [THIRD_PARTY_NOTICES.md](./THIRD_PARTY_NOTICES.md):
-
-- **ANNO** — streaming provider, input, response cards, activity components, and persona foundations
-- **CatUI** — memory core (GPL-3.0, vendored in `packages/memory/upstream`), link-world web layer, and the agent loop (pinned revision `d6d110aa`)
-- **Craft Agents UI** — design-system foundations behind `catea-design-system`
-- **Tabler Icons** — Outline 3.48.0 (MIT), see [TABLER-LICENSE.txt](./TABLER-LICENSE.txt)
-
-## 📄 License
-
-Catea is released under the **GNU General Public License v3.0** — see [LICENSE](./LICENSE). Vendored and third-party components keep their original licenses — most notably the GPL-3.0 memory core under `packages/memory/upstream`. Full inventory in [THIRD_PARTY_NOTICES.md](./THIRD_PARTY_NOTICES.md).
+[GPL-3.0](./LICENSE). Built on open-source work including CatUI, ANNO, and Tabler Icons. [Credits and third-party licenses](./THIRD_PARTY_NOTICES.md).
 
 ---
 
-<div align="center">
-  <sub>Built with ✎ by <a href="https://github.com/cunyu6666">Cunyu</a> — your vault deserves a mind.</sub><br>
-  <sub>Catea is an independent project, not affiliated with or endorsed by Obsidian.</sub>
-</div>
+## 中文
+
+**唯一一个你需要的 Obsidian Agent 插件。**
+
+你积累的知识，应该成为推动事情前进的力量。Catea 把 Agent 带进 Obsidian：读懂你的笔记，搜索外部资料，直接在知识库中写作，并把学到的东西带进下一次对话。
+
+给它一个目标，在过程中调整方向，把想法推进成值得留下的成果。
+
+### 让知识真正参与工作
+
+- **从一句要求，到实际成果。** 串联笔记、起草文章、整理项目，把零散研究变成完整文档。Catea 可以在知识库中搜索、新建、编辑和整理文件。
+- **让复杂任务继续向前。** 多步骤执行、工作笔记、上下文交接和长期记忆，支撑需要持续推进的工作。它执行时，你仍然可以补充要求。
+- **研究与写作，在同一个地方。** 搜索网页、阅读资料，把外部来源与你已有的积累放进同一场对话。
+- **模型与能力，由你选择。** 接入 OpenAI 或 Anthropic 兼容服务，快速配置 OpenRouter，通过 Skills 和 MCP 扩展 Agent 能做的事。
+- **一个愿意长时间使用的工作区。** 纸张式编辑界面、流式对话、并行会话标签，以及亮色、暗色、跟随系统三种外观。工作就在笔记身边展开。
+
+试着直接交给它一个目标：
+
+> 阅读我的项目笔记，找出还没做出的决定，起草下周的行动计划。
+
+> 研究这个主题，对照我已有的笔记，写一份带来源的简报。
+
+> 把这些零散想法整理成初稿。遇到缺失的信息，先问我。
+
+我们的野心很明确：让 Obsidian 成为知识转化为行动的地方。阅读、思考、研究、写作，由 Catea 串成一条完整的工作流。方向，由你掌握。
+
+### 开始使用
+
+需要 **Obsidian 桌面版 1.8.0 或更新版本**，以及可用的兼容模型服务。
+
+1. 从[最新 Release](https://github.com/cunyu6666/catea-obsidian-plugin/releases/latest) 下载 `main.js`、`manifest.json` 和 `styles.css`，放入 `<你的知识库>/.obsidian/plugins/catea-paper/`。
+2. 在 **设置 → 第三方插件** 中启用 **Catea**。
+3. 打开 **Catea 设置 → BYOK 模型**，添加模型服务和 API Key，然后打开侧栏，把第一个任务交给它。
+
+Catea 可检查新版本，并在顶部横幅提醒更新。设置中可以关闭自动检查，也可以手动检查。源码构建请参阅[贡献指南](./CONTRIBUTING.md)。
+
+### 你的知识库，你做主
+
+无需 Catea 账号，没有遥测，也没有 Catea 运营的后端。Agent 在 Obsidian 内运行，对话、记忆和知识库设置保存在当前知识库。若本机支持系统级安全加密，BYOK 模型和 API Key 会加密保存在 Obsidian 的本机数据目录，并在知识库间共享；打开旧知识库时会导入已有模型。若安全加密不可用，模型仍按知识库保存，密钥优先使用 Obsidian 安全存储，否则仅保留在当前会话的内存里。
+
+模型请求会把相关提示词、笔记和工具结果发送给你选择的服务商。网络搜索与网页读取使用 Exa、Jina 或 DuckDuckGo；你启用的 MCP 服务会收到执行工具所需的输入。GitHub 自动更新检查每天最多一次，不发送笔记或密钥。网络搜索与自动检查更新各有独立开关。
+
+默认的「帮我批准」模式会对文件修改等敏感操作请求确认。「完全访问」会跳过这些审批；Bash 命令可以访问知识库之外的文件。详情见[安全说明](./SECURITY.md)。
+
+采用 [GPL-3.0](./LICENSE) 许可证。感谢 CatUI、ANNO、Tabler Icons 等开源项目。[完整致谢与第三方许可](./THIRD_PARTY_NOTICES.md)。

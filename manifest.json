@@ -3,7 +3,7 @@
   "name": "Catea",
   "version": "0.3.11",
   "minAppVersion": "1.8.0",
-  "description": "Paper workspace with a native Catea Agent.",
+  "description": "The only Obsidian Agent plugin you need. 唯一一个你需要的 Obsidian Agent 插件。",
   "author": "Cunyu",
   "isDesktopOnly": true
 }

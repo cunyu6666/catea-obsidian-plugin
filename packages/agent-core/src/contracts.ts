@@ -10,7 +10,7 @@ import type {ChatAttachment,ModelConfig,ToolEvent,TranscriptItem} from './types'
 import type {RuntimeMessage} from './upstream-stream'
 import type {ModelReply,ToolDefinition} from './providers'
 
-export interface Message {attachmentIds?:string[];id:string;role:'user'|'assistant';text:string;reasoning?:string;tools:ToolEvent[];status:'complete'|'streaming'|'error'|'stopped';delivery?:'queued'|'delivered'|'deferred';snapshotId?:string;snapshotSessionId?:string;startedAt?:number;completedAt?:number;model?:string;usage?:{input:number;output:number;cacheRead:number};error?:string;sources?:Array<{title:string;url:string}>}
+export interface Message {attachmentIds?:string[];id:string;role:'user'|'assistant';text:string;reasoning?:string;activities?:Array<{type:'thinking';id:string;content:string;startedAt:number;completed?:boolean}|{type:'tool';id:string;toolId:string}>;tools:ToolEvent[];status:'complete'|'streaming'|'error'|'stopped';delivery?:'queued'|'delivered'|'deferred';startedAt?:number;completedAt?:number;model?:string;usage?:{input:number;output:number;cacheRead:number};error?:string;sources?:Array<{title:string;url:string}>}
 export type JournalEntry = {id:string;timestamp:string} & (
   {type:'message';message:RuntimeMessage} |
   {type:'compaction';summary:string;firstKeptEntryId:string;tokensBefore:number;details:unknown} |

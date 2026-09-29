@@ -12,17 +12,16 @@ ask-user-question.ts: Declares, validates and formats the AskUserQuestion tool; 
 attachments.ts: Converts dropped or picked files into base64 ChatAttachment data URLs with MIME inference; rejects dot and node_modules paths; 10 MB each, 32 MB total, 64 files, depth 16.
 byok.ts: Validates ModelConfig and resolves configured and selected models; provides the fixed OpenRouter endpoint and Free model template; requires name, model and key; contextWindow integer 4096-2000000; credential-free HTTP(S) URL.
 context.ts: WorkingContext keeps the full journal while presenting a checkpoint-windowed message view; estimates prompt tokens as `(system + tools) / 3`.
-compaction.ts: Chooses complete-turn cuts, checks the current model budget and coordinates threshold or overflow compaction through narrow ports.
+compaction.ts: Chooses safe user-turn or completed tool-cycle cuts, checks the current model budget and coordinates threshold or overflow compaction through narrow ports.
 compaction-summary.ts: Calls the injected BYOK model client to generate iterative context checkpoint summaries.
-contracts.ts: Host-neutral session data and conversation/memory ports used for dependency injection.
+contracts.ts: Host-neutral session data and conversation/memory ports used for dependency injection; assistant messages retain ordered thinking and tool activity records.
 i18n.ts: Flat error-label map, `t()` interpolation and `textValue()` for safe formatting of unknown values.
-index.ts: `class Agent` owns one session, saves through `ConversationStore`, repairs interrupted tool calls, publishes pending turns before note and snapshot preparation, assembles tools, combines operational and model-privacy instructions with the selected persona, drives `agentLoop` and enqueues memory.
+index.ts: `class Agent` owns one session, saves through `ConversationStore`, repairs interrupted tool calls, publishes pending turns before note preparation, assembles tools, records thinking, tool events and per-write file changes in order, enforces model-identity privacy in the system prompt, drives `agentLoop` and enqueues memory.
 model-client.ts: Adapts direct BYOK answer and provider reasoning streams into abortable events behind `ModelClient`.
 model-capabilities.ts: Resolves configured and known model capabilities and validates binary attachment support for UI and provider requests.
 permission-policy.ts: Evaluates read, write and execution requests under assist or full mode and gates approvals through one host-neutral function.
 providers.ts: `streamModel` maps transcripts to OpenAI or Anthropic requests and parses answer and available reasoning deltas from SSE or buffered JSON; retries once without usage on 400/422.
 protocol-repair.ts: Places interrupted tool results immediately after their calls in saved transcripts and journals before a session resumes.
-snapshot.ts: Captures vault file checkpoints for user messages, previews differences, and restores files after a validated confirmation with a recovery snapshot.
 transport.ts: `serviceFetch` streams over Node http/https with a 120 s timeout and rejects redirects; falls back to Electron net only on X.509 chain errors, then to buffered requestUrl.
 types.ts: Shared type declarations for models, transcripts, attachments, tools and search configuration; type-only, emits no runtime code, and holds several currently unreferenced interfaces.
 upstream-stream.ts: Defines the RuntimeMessage adapter contract and converts provider answer and reasoning deltas into CatUI messages; `providerStream` retries 3x at 500*2^n ms and records delivery diagnostics; `streamSimple` throws to force host injection.

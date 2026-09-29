@@ -105,7 +105,7 @@ export interface CodeBlockProps {
   labels: { copy: string; copied: string; plainText: string; writing: string }
 }
 
-// Craft Agents' code surface, with beui's stable line updates and scroll following.
+// Code surface with beui's stable line updates and scroll following.
 export function CodeBlock({ code, language = 'text', showHeader = true, streaming = false, maxHeight = 280, labels }: CodeBlockProps) {
   const resolvedLanguage = aliases[language.toLowerCase()] || language.toLowerCase()
   const shikiLanguage = resolvedLanguage in languages ? resolvedLanguage : 'text'

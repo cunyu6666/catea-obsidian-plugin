@@ -2,7 +2,7 @@
  * [WHO]: Provides CompactionCoordinator, CompactionEvent, planCompaction
  * [FROM]: Depends on ../upstream/context/boundaries, ./contracts, ./upstream-stream
  * [TO]: Consumed by packages/agent-core/src/index.ts
- * [HERE]: packages/agent-core/src/compaction.ts - host-neutral budget decisions, complete-turn cuts, summary orchestration and bounded overflow recovery
+ * [HERE]: packages/agent-core/src/compaction.ts - host-neutral budget decisions, safe user-turn and completed tool-cycle cuts, summary orchestration and bounded overflow recovery
  */
 import {estimateTokens} from '../upstream/context/boundaries'
 import type {JournalEntry} from './contracts'
@@ -23,27 +23,28 @@ export function planCompaction(rows:JournalEntry[],keepRecentTokens:number):Comp
   const prior=lastCheckpoint>=0?rows[lastCheckpoint]:undefined
   const first=prior?.type==='compaction'?rows.findIndex(row=>row.id===prior.firstKeptEntryId):0
   const active=rows.slice(Math.max(0,first)).filter(row=>row.type==='message')
-  const starts=active.flatMap((row,index)=>row.type==='message'&&row.message.role==='user'?[index]:[])
-  if(starts.length<2)return undefined
-  let cut=starts.at(-1)!
+  const cuts:number[]=[]
+  const pending=new Set<string>()
+  for(let index=0;index<active.length;index++){
+    const row=active[index]
+    if(row.type!=='message')continue
+    const previous=index>0?active[index-1]:undefined
+    // A checkpoint's synthetic user message can precede either a new user turn
+    // or a later assistant/tool cycle from the same long-running turn.
+    if(index>0&&pending.size===0&&(row.message.role==='user'||row.message.role==='assistant'&&previous?.type==='message'&&previous.message.role==='toolResult'))cuts.push(index)
+    if(row.message.role==='assistant')for(const block of row.message.content)if(block.type==='toolCall')pending.add(block.id)
+    if(row.message.role==='toolResult')pending.delete(row.message.toolCallId)
+  }
+  if(!cuts.length)return undefined
+  let cut=cuts.at(-1)!
   let kept=0
   for(let i=active.length-1;i>=0;i--){
     const row=active[i]
     if(row.type==='message')kept+=count(row.message)
-    if(starts.includes(i)&&kept>=keepRecentTokens){cut=i;break}
+    if(cuts.includes(i)&&kept>=keepRecentTokens){cut=i;break}
   }
-  // The newest user turn is always kept. A cut only at a user entry also keeps
-  // assistant calls and their tool results together, including pending calls.
-  if(cut===starts[0])cut=starts[1]
-  const results=new Set(active.flatMap(row=>row.type==='message'&&row.message.role==='toolResult'?[row.message.toolCallId]:[]))
-  for(let i=0;i<cut;i++){
-    const row=active[i]
-    if(row.type!=='message'||row.message.role!=='assistant')continue
-    if(row.message.content.some(block=>block.type==='toolCall'&&!results.has(block.id))){
-      cut=starts.filter(start=>start<=i).at(-1)??0
-      break
-    }
-  }
+  // Every candidate begins after all earlier tool calls have results, so a
+  // checkpoint never separates a call from its result or discards a pending call.
   const discarded=active.slice(0,cut).filter((row):row is Extract<JournalEntry,{type:'message'}>=>row.type==='message')
   if(!discarded.length)return undefined
   return {firstKeptEntryId:active[cut].id,messages:discarded.map(row=>row.message),previousSummary:prior?.type==='compaction'?prior.summary:undefined,tokensBefore:active.reduce((n,row)=>n+count(row.message),0)}
@@ -73,7 +74,10 @@ export class CompactionCoordinator {
     if(fingerprint===this.failedFingerprint)return undefined
     const keep=Math.min(20000,Math.max(512,Math.floor((this.contextWindow-this.reserve())*0.4)))
     const plan=planCompaction(this.context.journal(),keep)
-    if(!plan){this.failedFingerprint=fingerprint;this.event({type:'failure',reason,error:'No complete earlier turn can be compacted'});return undefined}
+    // A new or still-active conversation may fill the budget before it has an
+    // earlier complete turn. There is nothing to summarize yet; the provider
+    // will report a real context overflow if the request cannot fit.
+    if(!plan){this.failedFingerprint=fingerprint;return undefined}
     this.event({type:'start',reason})
     try{
       const summary=await this.summary.summarize(plan.messages,plan.previousSummary,this.signal)

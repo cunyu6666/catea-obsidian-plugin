@@ -24,8 +24,8 @@ the web, call MCP servers, and keep a long-term memory of the user's notes.
   host process; no ACP subprocess, no relay server. Model traffic goes straight to
   the configured endpoint over Node HTTP(S).
 - **Bring your own key, no backend** — there is no Catea account, no telemetry, and
-  no vendor backend. Model metadata lives in `.catea/config.json`; API keys live in
-  Obsidian's secure storage and are never written to that file.
+  no vendor backend. On machines with OS-backed encryption, models and keys live in
+  encrypted Obsidian userData shared across vaults. `.catea/config.json` never holds keys.
 - **Retained memory core** — the CatUI `mem-core` is vendored rather than
   reimplemented, with the host adapter replaced. Recall, extraction, consolidation,
   and forgetting are durable and queued.
@@ -216,11 +216,11 @@ failure instead of a silent inconsistency.
 
 ## Configuration Paths
 
-All runtime data is written inside the user's vault, never into the plugin.
+Vault-specific runtime data is written inside the user's vault, never into the plugin.
 
 | Path | Purpose |
 |------|---------|
-| `.catea/config.json` | Model metadata, toggles, MCP servers. **Never contains API keys** |
+| `.catea/config.json` | Vault toggles, selected model, MCP servers; model metadata only when global encryption is unavailable. **Never contains API keys** |
 | `.catea/sessions/index.json` | Session list, capped at 500 entries |
 | `.catea/sessions/<id>.json` | Raw conversation and tool transcript for one session |
 | `.catea/skills/<id>/SKILL.md` | User-installed skill packages, enabled explicitly |
@@ -228,10 +228,12 @@ All runtime data is written inside the user's vault, never into the plugin.
 | `.catea/memory/global/` | Shared memory engine directory |
 | `.catea/memory/aria/`, `.catea/memory/vex/`, `.catea/memory/pencil/` | Per-persona memory isolation |
 
-API keys and MCP bearer tokens are held in Obsidian's secure storage, keyed
-`catea-<id>`. When secure storage is unavailable they exist only for the current
-session, and the UI says so. `.catea/` is git-ignored because it may contain
-private note content.
+BYOK models and API keys are held in encrypted `<Obsidian userData>/catea/byok.enc`
+when OS-backed Electron safeStorage is available (Linux `basic_text` is rejected).
+Otherwise models remain vault-local and keys use Obsidian's vault-scoped secure
+storage, keyed `catea-<id>`; when that is unavailable they exist only for the
+current session. MCP tokens remain vault-scoped. `.catea/` is git-ignored because
+it may contain private note content.
 
 ---
 
@@ -245,8 +247,8 @@ private note content.
 
 **Product UI**: bilingual by design, not by omission. User-facing strings are
 resolved through `apps/obsidian/src/locale.ts` and `packages/agent-core/src/i18n.ts`,
-and Chinese remains a supported UI language. `README_CN.md` is the intentional
-Chinese README. The Chinese persona documents under `packages/personas/src/` are
+and Chinese remains a supported UI language. `README.md` is intentionally
+bilingual, with English first and Chinese second in one document. The Chinese persona documents under `packages/personas/src/` are
 runtime prompt content and are deliberately not translated here.
 
 ### Commit Convention

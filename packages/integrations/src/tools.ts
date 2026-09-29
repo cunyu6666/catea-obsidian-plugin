@@ -1,9 +1,9 @@
 /**
  * [WHO]: Provides Approve, VaultTools, fileTools
- * [FROM]: Depends on ../../agent-core/src/i18n, ../../agent-core/src/permission-policy, node:fs/promises, node:path, node:child_process, ./storage, ../../agent-core/src/providers
+ * [FROM]: Depends on ../../agent-core/src/i18n, ../../agent-core/src/permission-policy, node:fs/promises, node:path, node:child_process, ./storage, ../../agent-core/src/providers, ../../agent-core/src/types
  * [TO]: Consumed by apps/obsidian/src/obsidian-tools.ts, packages/agent-core/src/index.ts,
  *   packages/integrations/src/index.ts
- * [HERE]: packages/integrations/src/tools.ts - filesystem tool surface (time/read/ls/find/grep/write/edit/bash); 1 MB text cap, 10000-file walk, 300-line read, 80 grep hits, 100 KB write, 60 s bash
+ * [HERE]: packages/integrations/src/tools.ts - filesystem tool surface (time/read/ls/find/grep/write/edit/bash) with per-write original/modified records; 1 MB text cap, 10000-file walk, 300-line read, 80 grep hits, 100 KB write, 60 s bash
  */
 import {textValue} from '../../agent-core/src/i18n'
 import {requirePermission} from '../../agent-core/src/permission-policy'
@@ -12,6 +12,7 @@ import {dirname} from 'node:path'
 import {spawn} from 'node:child_process'
 import {within} from './storage'
 import type {ToolDefinition} from '../../agent-core/src/providers'
+import type {FileChange} from '../../agent-core/src/types'
 export type Approve=(title:string,detail:string,signal:AbortSignal)=>Promise<boolean>
 const string={type:'string'}
 const tool=(name:string,description:string,properties:Record<string,unknown>,required:string[]=[]):ToolDefinition=>({name,description,parameters:{type:'object',properties,required,additionalProperties:false}})
@@ -28,7 +29,7 @@ export const fileTools=[
 ]
 const textExtensions=/\.(md|txt|json|ya?ml|csv|ts|js|css|html)$/i
 export class VaultTools {
-  constructor(private vault:string,private approve:Approve,private ask:(q:string,signal:AbortSignal)=>Promise<string>,private permissionMode:()=>'assist'|'full'=()=>'assist'){}
+  constructor(private vault:string,private approve:Approve,private ask:(q:string,signal:AbortSignal)=>Promise<string>,private permissionMode:()=>'assist'|'full'=()=>'assist',private changed?:(change:FileChange)=>void){}
   private async text(path:string){const p=await within(this.vault,path);if((await stat(p)).size>1_000_000)throw new Error('文件超过 1 MB，请缩小范围');return readFile(p,'utf8')}
   private async files(){
     const result:string[]=[]
@@ -81,7 +82,9 @@ export class VaultTools {
       signal.throwIfAborted();await within(this.vault,path)
       let current:string|null=null;try{current=await this.text(path)}catch(e:unknown){if((e as NodeJS.ErrnoException).code!=='ENOENT')throw e}
       if(current!==before)throw new Error('文件在确认期间发生变化，请重新读取')
-      await mkdir(dirname(target),{recursive:true});await writeFile(target,after,'utf8');return `已写入 ${path}`
+      await mkdir(dirname(target),{recursive:true});await writeFile(target,after,'utf8')
+      this.changed?.({filePath:path,toolType:name==='edit'?'Edit':'Write',original:before,modified:after})
+      return `已写入 ${path}`
     }
     if(name==='bash'){
       const command=textValue(a.command||'');if(!command.trim())throw new Error('命令不能为空')

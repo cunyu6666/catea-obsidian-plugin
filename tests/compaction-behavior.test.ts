@@ -25,6 +25,36 @@ test('an unanswered tool call remains in the retained window',async()=>{
  assert.equal(planCompaction(rows,1),undefined)
 })
 
+test('a long single user turn can compact completed tool cycles',async()=>{
+ const [{planCompaction}]=await runtime()
+ const rows=[row('u1',user('fetch the wiki')),row('a1',assistant('',[{id:'first'}])),row('r1',{role:'toolResult',toolCallId:'first',content:[{type:'text',text:'old result'}]}),row('a2',assistant('',[{id:'second'}])),row('r2',{role:'toolResult',toolCallId:'second',content:[{type:'text',text:'new result'}]}),row('a3',assistant('working'))]
+ const plan=planCompaction(rows,1)
+ assert.equal(plan.firstKeptEntryId,'a3')
+ assert.deepEqual(plan.messages.map((message:{role:string})=>message.role),['user','assistant','toolResult','assistant','toolResult'])
+})
+
+test('parallel tool calls must all finish before a single-turn cut',async()=>{
+ const [{planCompaction}]=await runtime()
+ const rows=[row('u1',user('inspect files')),row('a1',assistant('',[{id:'first'},{id:'second'}])),row('r1',{role:'toolResult',toolCallId:'first',content:[{type:'text',text:'one'}]}),row('a2',assistant('still waiting'))]
+ assert.equal(planCompaction(rows,1),undefined)
+ rows.splice(3,0,row('r2',{role:'toolResult',toolCallId:'second',content:[{type:'text',text:'two'}]}))
+ assert.equal(planCompaction(rows,1)?.firstKeptEntryId,'a2')
+})
+
+test('no eligible earlier turn skips compaction without a failure notice',async()=>{
+ const [{CompactionCoordinator}]=await runtime()
+ const rows=[row('u1',user('a'.repeat(24000)))]
+ const events:unknown[]=[]
+ let attempts=0
+ const context={journal:()=>rows,messages:()=>rows.map(r=>r.message),checkpoint:async()=>{throw new Error('unexpected checkpoint')}}
+ const coordinator=new CompactionCoordinator(context,{summarize:async()=>{attempts++;return 'summary'}},4096,'system',[],(event:unknown)=>events.push(event),new AbortController().signal)
+ assert.equal(await coordinator.check('threshold',rows.map(r=>r.message)),undefined)
+ assert.equal(await coordinator.check('threshold',rows.map(r=>r.message)),undefined)
+ assert.equal(await coordinator.check('overflow',rows.map(r=>r.message)),undefined)
+ assert.equal(attempts,0)
+ assert.deepEqual(events,[])
+})
+
 test('a later compaction can summarize turns retained by the previous checkpoint',async()=>{
  const [{planCompaction}]=await runtime()
  const rows=[row('u1',user('old')),row('a1',assistant('done')),row('u2',user('retained')),row('a2',assistant('done')), {type:'compaction',id:'cp',timestamp:new Date().toISOString(),summary:'earlier goals',firstKeptEntryId:'u2',tokensBefore:100,details:{}},row('u3',user('latest'))]
@@ -75,6 +105,17 @@ test('saved checkpoint rebuilds window while original journal stays complete',as
  assert.equal(restored.messages().length,2)
  assert.match(restored.messages()[0].content,/goal and next step/)
  assert.equal(session.journal.length,4)
+})
+
+test('a checkpoint inside one user turn resumes with its later tool calls',async()=>{
+ const [, {WorkingContext}]=await runtime()
+ const rows=[row('u1',user('fetch the wiki')),row('a1',assistant('',[{id:'old'}])),row('r1',{role:'toolResult',toolCallId:'old',content:[{type:'text',text:'old result'}]}),row('a2',assistant('',[{id:'recent'}])),row('r2',{role:'toolResult',toolCallId:'recent',content:[{type:'text',text:'recent result'}]})]
+ const session={id:'s',journal:rows,transcript:[],messages:[]}
+ const context=new WorkingContext(session,4096,0,async()=>{})
+ await context.checkpoint('Fetch the wiki; old result reviewed. Continue with recent call.',rows[3].id,100)
+ const resumed=new WorkingContext(structuredClone(session),4096,0,async()=>{})
+ assert.deepEqual(resumed.messages().map((message:{role:string})=>message.role),['user','assistant','toolResult'])
+ assert.equal(resumed.messages()[1].content[1].id,'recent')
 })
 
 test('resuming skips aborted, failed, and empty assistant records without erasing the journal',async()=>{

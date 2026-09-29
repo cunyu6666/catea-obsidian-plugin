@@ -78,7 +78,7 @@ test('Permission policy makes assist, full and disabled decisions consistently',
   await assert.rejects(()=>requirePermission({...request,disabled:true},approve,'write','detail',signal),/disabled/)
 })
 
-test('Vault writes obey the shared permission policy without losing path checks',async()=>{
+test('Vault writes obey the shared permission policy and retain reviewable file changes',async()=>{
   const {VaultTools}=await load('packages/integrations/src/tools.ts')
   const root=await mkdtemp(join(tmpdir(),'catea-policy-'))
   try{
@@ -88,9 +88,15 @@ test('Vault writes obey the shared permission policy without losing path checks'
     const assist=new VaultTools(root,approve,async()=>'',()=>'assist')
     await assert.rejects(()=>assist.run('write',{path:'note.md',content:'text'},signal),/Permission denied/)
     assert.equal(approvals,1)
-    const full=new VaultTools(root,approve,async()=>'',()=>'full')
+    const changes=[]
+    const full=new VaultTools(root,approve,async()=>'',()=>'full',change=>changes.push(change))
     await full.run('write',{path:'note.md',content:'text'},signal)
-    assert.equal(await readFile(join(root,'note.md'),'utf8'),'text')
+    await full.run('edit',{path:'note.md',oldText:'text',newText:'updated'},signal)
+    assert.equal(await readFile(join(root,'note.md'),'utf8'),'updated')
+    assert.equal(JSON.stringify(changes),JSON.stringify([
+      {filePath:'note.md',toolType:'Write',original:null,modified:'text'},
+      {filePath:'note.md',toolType:'Edit',original:'text',modified:'updated'},
+    ]))
     assert.equal(approvals,1)
     await assert.rejects(()=>full.run('write',{path:'raw/source.md',content:'no'},signal),/raw/)
   }finally{await rm(root,{recursive:true,force:true})}
@@ -280,63 +286,6 @@ test('Plugin and bundled design-system styles avoid the reported CSS patterns',a
   }
 })
 
-test('Send publishes immediately while context and checkpoint are pending, and restores on preparation failure',async()=>{
-  let releaseContext,releaseSnapshot,snapshotStarted=false,modelCalls=0,systemPrompt='',snapshotError
-  const context=new Promise(resolve=>{releaseContext=resolve})
-  const checkpoint=new Promise(resolve=>{releaseSnapshot=resolve})
-  const {Agent}=await load('packages/agent-core/src/index.ts',{
-    '../../agent-core/src/transport':'export const serviceFetch=async()=>{throw new Error("Unexpected network request")}',
-    '../../integrations/src/mcp':'export class McpPool {async connect(){return []}}',
-    '../../integrations/src/skills':'export const loadSkills=async()=>[];export const readSkillResource=()=>{}',
-    './transport':'export const serviceFetch=async()=>{throw new Error("Unexpected network request")}',
-    '../upstream/loop/agent-loop':'export const agentLoop=async function*(_prompts,context){globalThis.modelStarted(context.systemPrompt);yield {type:"agent_end"}}',
-    './snapshot':'export const captureVaultSnapshot=globalThis.checkpoint;export const previewVaultRestore=()=>{};export const restoreVaultSnapshot=()=>{}',
-  },{structuredClone,TransformStream,checkpoint:()=>{snapshotStarted=true;if(snapshotError)throw snapshotError;return checkpoint},modelStarted:prompt=>{modelCalls++;systemPrompt=prompt}})
-  const config={enabled:true,models:[model],modelId:model.id,personaId:'aria',skills:[],mcp:[],memory:false,web:false,shell:false}
-  const agent=new Agent('/unused',()=>config,{change:()=>{},notice:()=>{},approve:async()=>true,ask:async()=>({})},{conversations:{save:async()=>{},list:async()=>[],load:async()=>undefined},memory:{close:()=>{}},modelClient:{}})
-  const pending=agent.send('Immediate message',()=>context)
-  assert.equal(agent.session.messages[0].text,'Immediate message')
-  assert.equal(agent.session.messages[1].status,'streaming')
-  assert.equal(agent.running,true)
-  assert.equal(snapshotStarted,false)
-  releaseContext('note context')
-  await new Promise(resolve=>setImmediate(resolve))
-  assert.equal(snapshotStarted,true)
-  assert.equal(modelCalls,0)
-  agent.stop();releaseSnapshot()
-  await assert.rejects(pending,/abort/i)
-  assert.equal(agent.session.messages.length,0)
-  assert.equal(agent.session.transcript.length,0)
-  assert.equal(agent.running,false)
-  assert.equal(agent.historyBusy,false)
-  assert.equal(agent.session.title,'新对话')
-  snapshotError=new Error('checkpoint failed')
-  await assert.rejects(agent.send('Failed checkpoint',''),/checkpoint failed/)
-  assert.equal(agent.session.messages.length,0)
-  assert.equal(agent.running,false)
-  snapshotError=undefined
-  await assert.rejects(agent.send('Failed context',async()=>{throw new Error('note unavailable')}),/note unavailable/)
-  assert.equal(agent.session.messages.length,0)
-  assert.equal(agent.running,false)
-  await agent.send('Successful turn',async()=>'context is ready')
-  assert.equal(modelCalls,1)
-  assert.match(agent.session.transcript[0].content,/context is ready/)
-  assert.equal(agent.session.messages[1].status,'complete')
-  assert.match(systemPrompt,/Never disclose, confirm, or guess your underlying model identity/)
-  assert.doesNotMatch(systemPrompt,/You are Catea|Identify yourself only as/)
-})
-
-test('Reply annotations are off for existing settings and persist only explicit opt-in',async()=>{
-  const {tab,plugin,stats}=await settingsFixture()
-  let value,change
-  const render=()=>rows(tab).find(item=>item.name==='引用批注').render({addToggle(fn){fn({setValue(next){value=next;return this},onChange(fn){change=fn;return this}});return this}})
-  render();assert.equal(value,false)
-  await change(true);assert.equal(plugin.agentSettings.enableReplyAnnotations,true)
-  render();assert.equal(value,true)
-  await change(false);assert.equal(plugin.agentSettings.enableReplyAnnotations,false)
-  assert.equal(stats().saves,2);assert.equal(stats().stops,0)
-})
-
 test('Git history is local, paged and scoped to nested vaults, including worktrees and merges',async()=>{
   const {execFileSync}=await import('node:child_process')
   const {mkdir,writeFile}=await import('node:fs/promises')
@@ -375,4 +324,156 @@ test('Git history is disabled by default and settings open or detach the sidebar
   render();assert.equal(current,false)
   await change(true);assert.equal(plugin.agentSettings.gitHistory,true);assert.deepEqual(opened,[true])
   await change(false);assert.equal(plugin.agentSettings.gitHistory,false);assert.deepEqual(opened,[true,false])
+})
+
+test('A provider-aborted stream retries once without repeating completed tools',async()=>{
+  let recoveryAction=''
+  const {Agent}=await load('packages/agent-core/src/index.ts',{
+    './transport':'export const serviceFetch=async()=>{throw new Error("Unexpected network request")}',
+    '../../agent-core/src/transport':'export const serviceFetch=async()=>{throw new Error("Unexpected network request")}',
+    '../../integrations/src/mcp':'export class McpPool {async connect(){return []}}',
+    '../../integrations/src/skills':'export const loadSkills=async()=>[];export const readSkillResource=()=>{}',
+    '../upstream/loop/agent-loop':`export const agentLoop=async function*(_prompts,_context,options){
+      const failed={role:'assistant',content:[{type:'text',text:''}],stopReason:'error',errorMessage:'aborted',timestamp:Date.now()};
+      yield {type:'message_end',message:failed};
+      const recovery=await options.recoverModelError({message:failed,messages:[failed],errorSubtype:'model_error',attempt:1});
+      globalThis.recordRecovery(recovery.action);
+      if(recovery.action==='retry'){
+        const answer={role:'assistant',content:[{type:'text',text:'Finished after retry.'}],stopReason:'stop',timestamp:Date.now()};
+        yield {type:'message_update',message:answer};yield {type:'message_end',message:answer};
+      }
+      yield {type:'agent_end'};
+    }`,
+  },{structuredClone,TransformStream,recordRecovery:action=>{recoveryAction=action}})
+  const config={enabled:true,models:[model],modelId:model.id,personaId:'aria',skills:[],mcp:[],memory:false,web:false,shell:false}
+  const agent=new Agent('/unused',()=>config,{change:()=>{},notice:()=>{},approve:async()=>true,ask:async()=>({})},{conversations:{save:async()=>{},list:async()=>[],load:async()=>undefined},memory:{close:()=>{}},modelClient:{}})
+  await agent.send('Continue the task','')
+  assert.equal(recoveryAction,'retry')
+  assert.equal(agent.session.messages[1].status,'complete')
+  assert.equal(agent.session.messages[1].text,'Finished after retry.')
+  assert.equal(agent.session.messages[1].error,undefined)
+})
+
+test('Thinking steps stay in event order around tool calls and persist separately',async()=>{
+  const {Agent}=await load('packages/agent-core/src/index.ts',{
+    './transport':'export const serviceFetch=async()=>{throw new Error("Unexpected network request")}',
+    '../../agent-core/src/transport':'export const serviceFetch=async()=>{throw new Error("Unexpected network request")}',
+    '../../integrations/src/mcp':'export class McpPool {async connect(){return []}}',
+    '../../integrations/src/skills':'export const loadSkills=async()=>[];export const readSkillResource=()=>{}',
+    '../upstream/loop/agent-loop':`export const agentLoop=async function*(){
+      const first={role:'assistant',content:[{type:'thinking',thinking:'Find the note.'}],stopReason:'toolUse',timestamp:Date.now()};
+      yield {type:'message_update',message:first};yield {type:'message_end',message:first};
+      yield {type:'tool_execution_start',toolCallId:'read-1',toolName:'read',args:{path:'note.md'}};
+      yield {type:'tool_execution_end',toolCallId:'read-1',isError:false,result:{content:[{text:'Found it'}]}};
+      const second={role:'assistant',content:[{type:'thinking',thinking:'Summarize the note.'},{type:'text',text:'Done.'}],stopReason:'stop',timestamp:Date.now()};
+      yield {type:'message_update',message:second};yield {type:'message_end',message:second};yield {type:'agent_end'};
+    }`,
+  },{structuredClone,TransformStream})
+  const config={enabled:true,models:[model],modelId:model.id,personaId:'aria',skills:[],mcp:[],memory:false,web:false,shell:false}
+  let persisted
+  const agent=new Agent('/unused',()=>config,{change:()=>{},notice:()=>{},approve:async()=>true,ask:async()=>({})},{conversations:{save:async session=>{persisted=structuredClone(session)},list:async()=>[],load:async()=>undefined},memory:{close:()=>{}},modelClient:{}})
+  await agent.send('Read the note','')
+  const activities=agent.session.messages[1].activities
+  assert.equal(activities.map(item=>item.type).join(','),'thinking,tool,thinking')
+  assert.equal(activities.filter(item=>item.type==='thinking').map(item=>item.content).join('|'),'Find the note.|Summarize the note.')
+  assert.equal(activities[1].toolId,'read-1')
+  assert.equal(JSON.stringify(persisted.messages[1].activities),JSON.stringify(activities))
+})
+
+test('Themes follow each window system preference, honor overrides and clean up listeners',async()=>{
+  const {ThemeController}=await load('apps/obsidian/src/theme.ts')
+  const fixture=(matches,previous)=>{
+    const listeners=new Set()
+    const media={matches,addEventListener(_name,fn){listeners.add(fn)},removeEventListener(_name,fn){listeners.delete(fn)}}
+    const doc={body:{dataset:previous?{cateaTheme:previous}:{}},defaultView:{matchMedia:()=>media}}
+    return {doc,listeners,change(value){media.matches=value;for(const fn of listeners)fn()}}
+  }
+  const light=fixture(false),dark=fixture(true,'light'),controller=new ThemeController()
+  controller.attach(light.doc);controller.attach(dark.doc);controller.attach(light.doc)
+  assert.equal(light.listeners.size,1)
+  assert.equal(light.doc.body.dataset.cateaTheme,'light')
+  assert.equal(dark.doc.body.dataset.cateaTheme,'dark')
+  controller.setMode('light');dark.change(false);dark.change(true)
+  assert.equal(dark.doc.body.dataset.cateaTheme,'light')
+  controller.setMode('dark');light.change(false)
+  assert.equal(light.doc.body.dataset.cateaTheme,'dark')
+  controller.setMode('system');light.change(true)
+  assert.equal(light.doc.body.dataset.cateaTheme,'dark')
+  controller.setMode('invalid');light.change(false)
+  assert.equal(light.doc.body.dataset.cateaTheme,'light')
+  controller.dispose()
+  assert.equal(light.listeners.size,0);assert.equal(dark.listeners.size,0)
+  assert.equal(light.doc.body.dataset.cateaTheme,undefined)
+  assert.equal(dark.doc.body.dataset.cateaTheme,'light')
+})
+test('Theme setting offers three modes, defaults to system and persists each choice',async()=>{
+  const {tab,plugin,stats}=await settingsFixture()
+  const row=rows(tab).find(item=>item.name==='主题')
+  const options=[];let initial,change,applied=0
+  plugin.applyTheme=()=>applied++
+  row.render({addDropdown(fn){fn({addOption(value){options.push(value);return this},setValue(value){initial=value;return this},onChange(fn){change=fn;return this}})}})
+  assert.deepEqual(options,['light','dark','system']);assert.equal(initial,'system')
+  for(const mode of options){await change(mode);assert.equal(plugin.agentSettings.theme,mode)}
+  assert.equal(applied,3);assert.equal(stats().saves,3)
+})
+
+async function updateFixture(preferences={},releaseChanges={},manifestChanges={}){
+  let requests=0,saves=0,changes=0,fail=false,gate
+  const release={tag_name:'0.10.0',draft:false,prerelease:false,assets:['main.js','styles.css','manifest.json'].map(name=>({name,state:'uploaded',size:100})),...releaseChanges}
+  const manifest={id:'catea-paper',version:'0.10.0',minAppVersion:'1.8.0',...manifestChanges}
+  const {UpdateChecker}=await load('apps/obsidian/src/updates.ts',{'obsidian':'export const requestUrl=globalThis.updateRequest;export const requireApiVersion=globalThis.compatible'}, {
+    compatible:value=>value==='1.8.0',
+    updateRequest:async options=>{
+      requests++;assert.equal(options.headers.Authorization,undefined)
+      if(gate)await gate
+      if(fail)throw new Error('offline')
+      const isRelease=options.url==='https://api.github.com/repos/cunyu6666/catea-obsidian-plugin/releases/latest'
+      if(!isRelease)assert.equal(options.url,`https://github.com/cunyu6666/catea-obsidian-plugin/releases/download/${release.tag_name}/manifest.json`)
+      return {status:200,text:JSON.stringify(isRelease?release:manifest)}
+    },
+  })
+  const checker=new UpdateChecker(preferences,'0.9.0','catea-paper',async()=>{saves++},()=>{changes++})
+  return {checker,preferences,release,manifest,stats:()=>({requests,saves,changes}),offline:()=>{fail=true},block:()=>{let unblock;gate=new Promise(resolve=>{unblock=resolve});return unblock}}
+}
+test('Updates compare numeric versions, cache across reloads, and dismiss only the selected version',async()=>{
+  const f=await updateFixture()
+  assert.equal(await f.checker.check(),'available');assert.equal(f.checker.bannerVersion,'0.10.0')
+  await f.checker.check();assert.equal(f.stats().requests,2)
+  await f.checker.dismiss();assert.equal(f.checker.bannerVersion,undefined);assert.equal(f.checker.available,'0.10.0')
+  const reloaded=await updateFixture(f.preferences)
+  await reloaded.checker.check();assert.equal(reloaded.stats().requests,0);assert.equal(reloaded.checker.bannerVersion,undefined)
+  f.release.tag_name='0.11.0';f.manifest.version='0.11.0';f.preferences.updateLastChecked=Date.now()-25*60*60*1000
+  await f.checker.check();assert.equal(f.checker.bannerVersion,'0.11.0')
+})
+test('Updates reject prereleases, incomplete assets, mismatched manifests and incompatible hosts',async()=>{
+  for(const [release,manifest,expected] of [
+    [{prerelease:true},{},'failed'],[{draft:true},{},'failed'],[{tag_name:'v0.10.0'},{},'failed'],
+    [{assets:[]},{},'failed'],[{}, {id:'other-plugin'},'failed'],[{}, {version:'0.11.0'},'failed'],
+    [{}, {minAppVersion:'99.0.0'},'current'],[{tag_name:'0.8.0'},{},'current'],[{tag_name:'0.9.0'},{},'current'],
+  ]){
+    const f=await updateFixture({},release,manifest)
+    assert.equal(await f.checker.check(),expected);assert.equal(f.checker.bannerVersion,undefined)
+  }
+})
+test('Disabled update checks make no requests; manual checks remain available',async()=>{
+  const f=await updateFixture({autoCheckUpdates:false})
+  assert.equal(await f.checker.check(),'disabled');assert.equal(f.stats().requests,0)
+  assert.equal(await f.checker.check(true),'available');assert.equal(f.checker.available,'0.10.0');assert.equal(f.checker.bannerVersion,undefined)
+  await f.checker.setEnabled(true);assert.equal(f.checker.bannerVersion,'0.10.0')
+})
+test('Offline update checks retain verified metadata, throttle retries, and deduplicate concurrent requests',async()=>{
+  const f=await updateFixture()
+  const first=f.checker.check(),second=f.checker.check()
+  assert.equal(first,second);await first;assert.equal(f.stats().requests,2)
+  f.offline();assert.equal(await f.checker.check(true),'failed');assert.equal(f.checker.bannerVersion,'0.10.0')
+  await f.checker.check();assert.equal(f.stats().requests,3)
+})
+test('Disabling or unloading while checking prevents late results from publishing',async()=>{
+  for(const dispose of [true,false]){
+    const f=await updateFixture(),unblock=f.block(),pending=f.checker.check()
+    if(dispose)f.checker.dispose();else await f.checker.setEnabled(false)
+    const saves=f.stats().saves,changes=f.stats().changes
+    unblock();assert.equal(await pending,'disabled')
+    assert.equal(f.checker.available,undefined);assert.equal(f.stats().saves,saves);assert.equal(f.stats().changes,changes)
+  }
 })

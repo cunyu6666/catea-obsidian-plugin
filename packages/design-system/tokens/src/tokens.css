@@ -32,3 +32,18 @@ color-scheme: light;
   --font-sans: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
 --background:#f9faf9;--surface:var(--background);--conversation-canvas:#edf0ed;--accent:#164b38;--foreground:#292d2b;--foreground-rgb:41,45,43;
 }
+
+/* Body scope includes portalled dialogs and popout agent views. */
+body[data-catea-theme="dark"] .catea-ui {
+  color-scheme:dark;
+  --catea-canvas:#191e1c;--catea-paper:#232a26;--catea-ink:#e0e8e2;
+  --catea-muted:#a3b1a7;--catea-accent:#94c9ad;--catea-accent-hover:#b3dec6;
+  --catea-border:rgba(204,224,210,.16);--catea-selected:rgba(148,201,173,.14);
+  --catea-danger:#f18b82;
+  --background:#232a26;--surface:var(--background);--conversation-canvas:#191e1c;
+  --foreground:#e0e8e2;--foreground-rgb:224,232,226;--accent:#94c9ad;
+  --border:rgba(204,224,210,.16);--danger:#f18b82;--shadow-blur-opacity:.22;
+}
+
+body[data-catea-theme="dark"] .catea-ui .anno-code-block__token {color:var(--anno-code-dark);}
+body[data-catea-theme="light"] .catea-ui .anno-code-block__token {color:var(--anno-code-light);}

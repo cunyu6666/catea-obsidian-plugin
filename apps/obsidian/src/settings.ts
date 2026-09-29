@@ -35,7 +35,7 @@ export class CateaSettings extends PluginSettingTab {
     this.containerEl.addClass('catea-settings')
     const intro=this.containerEl.createDiv({cls:'catea-settings__intro'})
     new Setting(intro).setName(this.owner.t('设置')).setHeading()
-    intro.createEl('p',{text:this.owner.t('调整纸张界面、Agent 和连接。设置保存在当前知识库中。')})
+    intro.createEl('p',{text:this.owner.t('调整纸张界面、Agent 和连接。BYOK 模型可在本机跨知识库共享；其他设置保存在当前知识库中。')})
     for(const section of this.sections()){
       const group=this.containerEl.createDiv({cls:'catea-settings__group'})
       if(section.heading)new Setting(group).setName(section.heading).setHeading().settingEl.addClass('catea-settings__section-title')
@@ -50,6 +50,7 @@ export class CateaSettings extends PluginSettingTab {
   private sections(): SettingsSection[] {
     const p=this.owner,tr=p.t,c=p.agentSettings
     const appearance:SettingsRow[]=[{name:tr('语言 / Language'),render:s=>{s.addDropdown(d=>d.addOption('zh',tr('简体中文')).addOption('en','English').setValue(c.language||'zh').onChange(async value=>{c.language=value==='en'?'en':'zh';await p.saveAgentSettings();p.refreshPaperLanguage();this.refresh()}))}}]
+    appearance.push({name:tr('主题'),desc:tr('选择亮色、暗色，或跟随操作系统外观。'),render:s=>{s.addDropdown(d=>d.addOption('light',tr('亮色')).addOption('dark',tr('暗色')).addOption('system',tr('跟随系统')).setValue(c.theme||'system').onChange(async value=>{c.theme=value==='light'||value==='dark'?value:'system';p.applyTheme();await p.saveAgentSettings()}))}})
     for(const [key,label] of [['enabled','启用纸张界面'],['toolbar','格式工具栏'],['tablerIcons','Tabler 图标'],['hideProperties','隐藏正文属性'],['hideRibbon','隐藏导航栏'],['hideStatus','隐藏状态栏']] as const){
       appearance.push({name:tr(label),render:s=>{s.addToggle(t=>t.setValue(p.settings[key]).onChange(async value=>{p.settings[key]=value;await p.saveData(p.settings);p.apply()}))}})
     }
@@ -66,15 +67,16 @@ export class CateaSettings extends PluginSettingTab {
       {name:tr('显示 Token 用量'),desc:tr('在每条回复下显示输入、输出和缓存命中的 Token 数。默认关闭。'),render:s=>{s.addToggle(t=>t.setValue(c.showTokenUsage===true).onChange(async value=>{c.showTokenUsage=value;await p.saveAgentSettings()}))}},
       {name:tr('权限模式'),desc:tr('帮我批准：自动放行 pwd、ls 等简单目录查看，其余操作请求确认。完全访问：跳过 Bash、文件修改、MCP 和记忆更新的审批，命令可访问知识库之外。'),render:s=>{s.addDropdown(d=>d.addOption('assist',tr('帮我批准')).addOption('full',tr('完全访问')).setValue(c.permissionMode||'assist').onChange(async value=>{p.stopAgents();c.permissionMode=value==='full'?'full':'assist';await p.saveAgentSettings()}))}},
     ]
-    const models:SettingsRow[]=c.models.map(model=>({name:model.name,desc:`${isOpenRouterModel(model)?'OpenRouter':model.protocol==='openai'?tr('OpenAI 兼容'):tr('Anthropic 兼容')} · ${model.model} · ${model.baseUrl}${model.apiKey?'':tr(' · 请补充 API Key')}`,render:s=>{
+    const models:SettingsRow[]=[{name:tr('本机共享'),desc:tr(p.globalByok?'BYOK 模型和密钥已加密保存在本机，切换知识库后可使用。':'本机安全加密不可用；BYOK 模型保存在当前知识库，密钥优先使用 Obsidian 安全存储。'),render:()=>{}}]
+    models.push(...c.models.map(model=>({name:model.name,desc:`${isOpenRouterModel(model)?'OpenRouter':model.protocol==='openai'?tr('OpenAI 兼容'):tr('Anthropic 兼容')} · ${model.model} · ${model.baseUrl}${model.apiKey?'':tr(' · 请补充 API Key')}`,render:(s:Setting)=>{
       s.addButton(b=>b.setButtonText(tr('编辑')).onClick(()=>(isOpenRouterModel(model)?new OpenRouterModal(p,model,()=>this.refresh()):new ModelModal(p,model,()=>this.refresh())).open()))
       s.addButton(b=>b.setButtonText(tr('移除')).onClick(async()=>{
         const previous=c.models,previousId=c.modelId
         c.models=c.models.filter(m=>m.id!==model.id);c.modelId=selectedModel(c.models,c.modelId)?.id||''
-        try{await p.saveAgentSettings();p.saveSecret(model.id,'');this.refresh()}
-        catch{c.models=previous;c.modelId=previousId;new Notice(tr('模型移除失败，请重试'))}
+        try{await p.saveModels(model.id);if(!p.globalByok)p.saveSecret(model.id,'');this.refresh()}
+        catch(error){c.models=previous;c.modelId=previousId;new Notice(tr(error instanceof Error?error.message:'模型移除失败，请重试'))}
       }))
-    }}))
+    }})))
     models.push({name:tr('添加 OpenRouter'),desc:tr('只需 API Key；选择 Free 自动路由，或填写模型 ID。'),render:s=>{s.addButton(b=>b.setButtonText(tr('添加 OpenRouter')).setCta().onClick(()=>new OpenRouterModal(p,{id:crypto.randomUUID(),name:'',protocol:'openai',baseUrl:OPENROUTER_BASE_URL,apiKey:'',model:OPENROUTER_FREE_MODEL},()=>this.refresh()).open()))}})
     models.push({name:tr('添加其他模型'),desc:tr('使用自己的 API Key，直接连接 OpenAI / Anthropic 兼容服务。仅显示你配置的模型。'),render:s=>{s.addButton(b=>b.setButtonText(tr('添加其他模型')).onClick(()=>new ModelModal(p,{id:crypto.randomUUID(),name:'',protocol:'openai',baseUrl:defaultBaseUrl('openai'),apiKey:'',model:''},()=>this.refresh()).open()))}})
     const skills:SettingsRow[]=[
@@ -103,7 +105,20 @@ export class CateaSettings extends PluginSettingTab {
       mcp.push({name:tr('移除 MCP'),render:s=>{s.addButton(b=>b.setButtonText(tr('移除 MCP')).onClick(async()=>{c.mcp=c.mcp.filter(item=>item!==server);await p.saveAgentSettings();this.refresh()}))}})
     }
     mcp.push({name:tr('添加 MCP'),render:s=>{s.addButton(b=>b.setButtonText(tr('添加 MCP')).onClick(async()=>{c.mcp.push({id:crypto.randomUUID(),enabled:false,transport:'http',url:''});await p.saveAgentSettings();this.refresh()}))}})
-    return [{heading:tr('外观'),rows:appearance},{heading:'Agent',rows:agent},{heading:tr('BYOK 模型'),rows:models},{heading:'Skills',rows:skills},{heading:'MCP',rows:mcp}]
+    const updates:SettingsRow[]=[
+      {name:tr('自动检查更新'),desc:tr('每天从 GitHub 检查一次正式版本，不发送笔记或密钥。'),render:s=>{s.addToggle(toggle=>toggle.setValue(c.autoCheckUpdates!==false).onChange(async value=>{await p.updates.setEnabled(value);this.refresh()}))}},
+      {name:tr('插件更新'),desc:p.updates?.available?`${tr('Catea 有新版本')} ${p.updates.available}`:tr('检查是否有兼容当前 Obsidian 的新版本。'),render:s=>{
+        s.addButton(button=>button.setButtonText(tr('检查更新')).onClick(async()=>{
+          button.setDisabled(true);button.setButtonText(tr('正在检查…'))
+          try{
+            const result=await p.updates.check(true)
+            new Notice(tr(result==='failed'?'暂时无法检查更新，请稍后重试':result==='available'?'Catea 有新版本':'没有可用的兼容更新'))
+          }finally{button.setDisabled(false);button.setButtonText(tr('检查更新'));this.refresh()}
+        }))
+        if(p.updates?.available)s.addButton(button=>button.setButtonText(tr('前往更新')).onClick(()=>p.openPluginUpdates()))
+      }},
+    ]
+    return [{heading:tr('更新'),rows:updates},{heading:tr('外观'),rows:appearance},{heading:'Agent',rows:agent},{heading:tr('BYOK 模型'),rows:models},{heading:'Skills',rows:skills},{heading:'MCP',rows:mcp}]
   }
 }
 
@@ -111,7 +126,7 @@ async function storeModel(owner:Catea,model:ModelConfig,select=false){
   const c=owner.agentSettings,previous=c.models,previousId=c.modelId
   c.models=c.models.filter(m=>m.id!==model.id).concat(model)
   c.modelId=select?model.id:selectedModel(c.models,c.modelId)?.id||model.id
-  try{await owner.saveAgentSettings();owner.saveSecret(model.id,model.apiKey);await owner.addMiniMaxModels()}
+  try{await owner.saveModels();if(!owner.globalByok)owner.saveSecret(model.id,model.apiKey);await owner.addMiniMaxModels()}
   catch(error){c.models=previous;c.modelId=previousId;owner.emit();throw error}
 }
 
@@ -134,7 +149,7 @@ class OpenRouterModal extends Modal {
     }))
     const modelSetting=new Setting(el).setName(tr('模型 ID')).setDesc(tr('例如 openai/gpt-oss-120b:free；从 OpenRouter 模型页复制完整 ID。')).addText(input=>input.setPlaceholder('Provider/model').setValue(this.modelId).onChange(value=>{this.modelId=value}))
     modelSetting.settingEl.style.display=this.free?'none':''
-    new Setting(el).setName('API key').setDesc(tr('在 OpenRouter 创建 Key；优先保存到 Obsidian 安全存储，不写入知识库配置。')).addText(input=>{
+    new Setting(el).setName('API key').setDesc(tr(this.owner.globalByok?'在 OpenRouter 创建 Key；加密保存在本机，跨知识库共享。':'在 OpenRouter 创建 Key；优先保存到 Obsidian 安全存储，不写入知识库配置。')).addText(input=>{
       input.inputEl.type='password';input.inputEl.autocomplete='off';input.setValue(this.key).onChange(value=>{this.key=value})
     })
     new Setting(el).setDesc(tr('Free 会自动选择可用的免费模型；可用性、工具支持和请求限额由 OpenRouter 决定。笔记内容会发送给 OpenRouter 及其选定的模型提供方。'))
@@ -144,7 +159,7 @@ class OpenRouterModal extends Modal {
       try{model=createOpenRouterModel(this.draft.id,this.key,this.free?OPENROUTER_FREE_MODEL:this.modelId)}catch(reason){error.setText(tr(reason instanceof Error?reason.message:'请检查配置'));return}
       button.setDisabled(true)
       try{await storeModel(this.owner,model,true);this.saved();this.close()}
-      catch{error.setText(tr('保存失败，请重试'));button.setDisabled(false)}
+      catch(reason){error.setText(tr(reason instanceof Error?reason.message:'保存失败，请重试'));button.setDisabled(false)}
     }))
   }
   onClose(){this.contentEl.empty();this.key=''}
@@ -164,7 +179,7 @@ class ModelModal extends Modal {
     new Setting(el).setName(tr('API 地址')).addText(t=>{address=t;t.setValue(d.baseUrl).onChange(v=>{d.baseUrl=v})})
     new Setting(el).setName(tr('模型 ID')).addText(t=>t.setValue(d.model).onChange(v=>{d.model=v}))
     new Setting(el).setName(tr('上下文窗口（tokens）')).setDesc(tr('按模型实际上限填写；用于自动提示交接，默认 128000。')).addText(t=>t.setValue(String(d.contextWindow||128000)).onChange(v=>{d.contextWindow=Number(v)}))
-    new Setting(el).setName('API key').setDesc(tr('优先保存到 Obsidian 安全存储；不可用时仅本次运行有效，不写入 .catea。')).addText(t=>{
+    new Setting(el).setName('API key').setDesc(tr(this.owner.globalByok?'加密保存在本机，跨知识库共享；不写入 .catea。':'优先保存到 Obsidian 安全存储；不可用时仅本次运行有效，不写入 .catea。')).addText(t=>{
       t.inputEl.type='password';t.inputEl.autocomplete='off';t.setValue(d.apiKey).onChange(v=>{d.apiKey=v})
     })
     const error=el.createEl('p',{attr:{role:'alert'}})
@@ -175,7 +190,7 @@ class ModelModal extends Modal {
       try{
         await storeModel(this.owner,model)
         this.saved();this.close()
-      }catch{error.setText(tr('保存失败，请重试'));b.setDisabled(false)}
+      }catch(reason){error.setText(tr(reason instanceof Error?reason.message:'保存失败，请重试'));b.setDisabled(false)}
     }))
   }
   onClose(){this.contentEl.empty();this.draft.apiKey=''}

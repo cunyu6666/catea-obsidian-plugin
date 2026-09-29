@@ -1,6 +1,6 @@
 /**
  * [WHO]: Provides ObsidianTools, obsidianTools
- * [FROM]: Depends on ../../../packages/agent-core/src/i18n, ../../../packages/agent-core/src/permission-policy, obsidian, ./main, ../../../packages/agent-core/src/providers, ../../../packages/integrations/src/tools
+ * [FROM]: Depends on ../../../packages/agent-core/src/i18n, ../../../packages/agent-core/src/permission-policy, ../../../packages/agent-core/src/types, obsidian, ./main, ../../../packages/agent-core/src/providers, ../../../packages/integrations/src/tools
  * [TO]: Consumed by apps/obsidian/src/main.tsx
  * [HERE]: apps/obsidian/src/obsidian-tools.ts - eight obsidian_* tools over the Obsidian API with hidden-path guards; search 50 hits, read 300 lines x 2000 chars, note cap 2 MB, write cap 100 KB
  */
@@ -9,6 +9,7 @@ import {requirePermission} from '../../../packages/agent-core/src/permission-pol
 import {TFile,TFolder,MarkdownView,getAllTags,getFrontMatterInfo,parseYaml} from 'obsidian'
 import type Catea from './main'
 import type {ToolDefinition} from '../../../packages/agent-core/src/providers'
+import type {FileChange} from '../../../packages/agent-core/src/types'
 import type {Approve} from '../../../packages/integrations/src/tools'
 const str={type:'string'},integer={type:'integer',minimum:0}
 const tool=(name:string,description:string,properties:Record<string,unknown>,required:string[]=[]):ToolDefinition=>({name,description,parameters:{type:'object',properties,required,additionalProperties:false}})
@@ -54,7 +55,7 @@ export class ObsidianTools {
  current(){const recent=this.app.workspace.getMostRecentLeaf()?.view;const file=recent instanceof MarkdownView&&recent.file?recent.file:this.app.vault.getAbstractFileByPath(this.lastPath);return file instanceof TFile?file:null}
  async context(){const file=this.current();if(!file)return {path:null};const view=this.view(file);return {path:file.path,title:file.basename,type:file.extension,mode:view?.getMode()||null,selection:view?.editor?.getSelection()?.slice(0,16000)||'',cursor:view?.editor?.getCursor()||null,...(file.extension==='md'?{excerpt:(await this.content(file)).slice(0,12000)}:{notice:'非 Markdown 文件，仅返回元信息'})}}
  private async approved(title:string,detail:unknown,signal:AbortSignal){await requirePermission({mode:this.plugin.agentSettings.permissionMode||'assist',capability:'obsidian',operation:'write'},this.approve,title,JSON.stringify(detail,null,2),signal)}
- async run(name:string,a:Record<string,unknown>,signal:AbortSignal):Promise<string>{
+ async run(name:string,a:Record<string,unknown>,signal:AbortSignal,changed?:(change:FileChange)=>void):Promise<string>{
   signal.throwIfAborted()
   if(name==='obsidian_context')return JSON.stringify(await this.context())
   if(name==='obsidian_search'){
@@ -85,7 +86,7 @@ export class ObsidianTools {
   if(name==='obsidian_manage'&&a.action==='create'){
    const path=this.path(a.path);this.writable(path);const content=textValue(a.content||'');if(content.length>100000)throw new Error('单次写入最多 100 KB');if(this.app.vault.getAbstractFileByPath(path))throw new Error('路径已存在')
    const parent=path.includes('/')?path.slice(0,path.lastIndexOf('/')):'';if(parent&&!this.app.vault.getAbstractFileByPath(parent))throw new Error('请使用已有文件夹')
-   await this.approved('新建笔记',{path,before:null,after:content},signal);await this.app.vault.create(path,content);return JSON.stringify({created:path})
+   await this.approved('新建笔记',{path,before:null,after:content},signal);await this.app.vault.create(path,content);changed?.({filePath:path,toolType:'Write',original:null,modified:content});return JSON.stringify({created:path})
   }
   const file=this.file(a.path),path=file.path
   if(name==='obsidian_open'){
@@ -116,8 +117,9 @@ export class ObsidianTools {
     if(action==='set')fields[key]=value
     else delete fields[key]
    })
-   const saved=properties(await this.app.vault.read(file))
+   const modified=await this.app.vault.read(file),saved=properties(modified)
    if(JSON.stringify(Object.hasOwn(saved,key)?saved[key]:undefined)!==JSON.stringify(value))throw new Error('属性写入后未能确认结果，请重新读取笔记')
+   changed?.({filePath:path,toolType:'Edit',original:before,modified})
    return JSON.stringify({path,key,value:action==='set'?value:null,action})
   }
   this.writable(path)
@@ -127,7 +129,7 @@ export class ObsidianTools {
    const after=before.replace(oldText,()=>newText);if(after.length>100000)throw new Error('单次修改最多 100 KB');if(path==='wiki/log.md'&&!after.startsWith(before))throw new Error('日志只允许追加')
    await this.approved('修改笔记',{path,before,after},signal)
    if(file.path!==path||await this.content(file)!==before)throw new Error('笔记已变化，请重新读取并确认')
-   await this.app.vault.process(file,current=>{if(current!==before)throw new Error('文件尚未同步或已变化，请稍后重试');return after});return JSON.stringify({updated:path})
+   await this.app.vault.process(file,current=>{if(current!==before)throw new Error('文件尚未同步或已变化，请稍后重试');return after});changed?.({filePath:path,toolType:'Edit',original:before,modified:after});return JSON.stringify({updated:path})
   }
   if(name==='obsidian_manage'){
    if(path==='wiki/log.md')throw new Error('不可移动或删除操作日志')

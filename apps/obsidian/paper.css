@@ -44,16 +44,17 @@ body.gp-enabled .workspace-tab-header.is-active {box-shadow:none;border-radius:7
 body.gp-enabled .workspace-tab-header::before,body.gp-enabled .workspace-tab-header::after {display:none;}
 body.gp-enabled .mod-root .workspace-leaf {background:transparent;padding:0 9px 12px;}
 body.gp-enabled .mod-root .workspace-leaf-content {
-  background:#fff;border:1px solid rgba(60,72,64,.12);border-radius:12px;
+  background:var(--background-primary);border:1px solid rgba(60,72,64,.12);border-radius:12px;
   /* Keep the shadow inside the existing 9px gutter, as on response cards. */
   box-shadow:0 1px 2px rgba(30,42,34,.04),0 3px 4px -1px rgba(30,42,34,.06);overflow:hidden;
 }
-body.gp-enabled .mod-root :is(.view-header,.view-content,.markdown-source-view,.markdown-preview-view,.cm-editor,.cm-scroller) {background:#fff;}
-/* Obsidian renders Mermaid colors into the SVG using its dark theme before Paper paints the note white. */
-body.gp-enabled.theme-dark .workspace-leaf-content[data-type="markdown"] .mermaid svg {
+body.gp-enabled .mod-root :is(.view-header,.view-content,.markdown-source-view,.markdown-preview-view,.cm-editor,.cm-scroller) {background:var(--background-primary);}
+/* Compensate when native Mermaid rendering and the paper palette differ. */
+body.gp-enabled.theme-dark[data-catea-theme="light"] .workspace-leaf-content[data-type="markdown"] .mermaid svg,
+body.gp-enabled.theme-light[data-catea-theme="dark"] .workspace-leaf-content[data-type="markdown"] .mermaid svg {
   filter: invert(1) hue-rotate(180deg);
 }
-body.gp-enabled .mod-root .view-header {height:40px;border-bottom:1px solid #f1f3f1;}
+body.gp-enabled .mod-root .view-header {height:40px;border-bottom:1px solid var(--background-modifier-border);}
 body.gp-enabled .view-header-title-container {font-size:11px;color:var(--text-muted);}
 body.gp-enabled .inline-title {font-family:var(--font-text-theme);font-size:1.85em;font-weight:700;letter-spacing:-.035em;line-height:1.35;margin-bottom:28px;}
 /* Bring Synara's assistant-markdown rhythm into the note editor itself.
@@ -172,13 +173,13 @@ body.gp-enabled.gp-enabled.gp-hide-properties .mod-root .metadata-container {dis
 body.gp-enabled.gp-enabled.gp-toolbar-on :is(#editingToolbarModalBar,#editingToolbarPopoverBar) {display:none;}
 body.gp-enabled .workspace-leaf-content[data-type="markdown"]>.view-content {display:flex;flex-direction:column;padding:0;}
 body.gp-enabled .workspace-leaf-content[data-type="markdown"]>.view-content>:is(.markdown-source-view,.markdown-preview-view) {flex:1;min-height:0;}
-body.gp-enabled .gp-toolbar {display:flex;align-items:center;justify-content:center;gap:4px;min-height:46px;padding:7px 16px;border-bottom:1px solid #eff1ef;background:#fff;flex-shrink:0;overflow-x:auto;}
+body.gp-enabled .gp-toolbar {display:flex;align-items:center;justify-content:center;gap:4px;min-height:46px;padding:7px 16px;border-bottom:1px solid var(--background-modifier-border);background:var(--background-primary);flex-shrink:0;overflow-x:auto;}
 body.gp-enabled .gp-toolbar[hidden] {display:none;}
-body.gp-enabled .gp-toolbar .gp-tool {background:transparent;border:0;box-shadow:none;color:#616961;border-radius:5px;min-width:30px;height:30px;padding:6px 7px;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;font-size:12px;cursor:pointer;}
+body.gp-enabled .gp-toolbar .gp-tool {background:transparent;border:0;box-shadow:none;color:var(--text-muted);border-radius:5px;min-width:30px;height:30px;padding:6px 7px;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;font-size:12px;cursor:pointer;}
 body.gp-enabled .gp-toolbar .gp-tool:hover {background:#edf1ed;color:#222b24;}
 body.gp-enabled .gp-toolbar .gp-tool:focus-visible {outline:2px solid #60846f;outline-offset:1px;}
 body.gp-enabled .gp-toolbar svg {width:16px;height:16px;stroke-width:1.7;}
-body.gp-enabled .gp-divider {height:13px;width:1px;background:#e6eae6;margin:0 7px;flex-shrink:0;}
+body.gp-enabled .gp-divider {height:13px;width:1px;background:var(--background-modifier-border);margin:0 7px;flex-shrink:0;}
 /* Native code-copy controls contain only an icon; remove baseline offset. */
 body.gp-enabled button.copy-code-button {
   display:inline-flex;align-items:center;justify-content:center;
@@ -186,7 +187,7 @@ body.gp-enabled button.copy-code-button {
 }
 body.gp-enabled button.copy-code-button svg {display:block;margin:0;}
 @media(max-width:900px){body.gp-enabled .gp-toolbar{justify-content:flex-start;}body.gp-enabled{--file-margins:24px;}}
-@media(prefers-reduced-transparency:reduce){body.gp-enabled :is(.mod-left-split,.mod-right-split){background:#edf0ed;backdrop-filter:none;}}
+@media(prefers-reduced-transparency:reduce){body.gp-enabled :is(.mod-left-split,.mod-right-split){background:var(--gp-shell-background);backdrop-filter:none;}}
 
 /* A single shell surface for navigation, explorer and extension panels. */
 body.gp-enabled :is(.workspace-sidedock-vault-profile,.workspace-ribbon.mod-left:before) {background:var(--gp-shell-background);}
@@ -200,7 +201,7 @@ body.gp-enabled {
   --nav-item-children-padding-start:4px;
 }
 
-/* Craft desktop reference: a separate, airy tab strip above the paper.
+/* A separate, airy desktop tab strip above the paper.
    Scope to ordinary center panes; sidebar tabs and stacked tabs stay native. */
 body.gp-enabled .mod-root .workspace-tabs:not(.mod-stacked) > .workspace-tab-header-container {
   height:56px;min-height:56px;padding:12px 10px;
@@ -223,14 +224,14 @@ body.gp-enabled .mod-root .workspace-tabs:not(.mod-stacked) > .workspace-tab-hea
   padding:0 10px;gap:8px;border-radius:7px;
 }
 body.gp-enabled .mod-root .workspace-tabs:not(.mod-stacked) > .workspace-tab-header-container .workspace-tab-header-inner-title {
-  font-size:12px;font-weight:500;line-height:18px;color:#4b514d;
+  font-size:12px;font-weight:500;line-height:18px;color:var(--text-normal);
 }
 body.gp-enabled .mod-root .workspace-tabs:not(.mod-stacked) > .workspace-tab-header-container .workspace-tab-header.is-active .workspace-tab-header-inner-title {
-  font-weight:600;color:#303632;
+  font-weight:600;color:var(--text-normal);
 }
 body.gp-enabled .mod-root .workspace-tabs:not(.mod-stacked) > .workspace-tab-header-container .workspace-tab-header-inner-close-button {
   order:-1;flex:0 0 16px;width:16px;height:16px;padding:2px;
-  border-radius:4px;--icon-size:12px;color:#8a908b;
+  border-radius:4px;--icon-size:12px;color:var(--text-faint);
 }
 body.gp-enabled .mod-root .workspace-tabs:not(.mod-stacked) > .workspace-tab-header-container :is(.workspace-tab-header-new-tab,.workspace-tab-header-tab-list) {
   padding:0;margin:0;height:30px;flex:0 0 28px;
@@ -242,7 +243,7 @@ body.gp-enabled .mod-root .workspace-tabs:not(.mod-stacked) > .workspace-tab-hea
   flex:0 1 auto;width:0;min-width:0;margin-inline-end:auto;
 }
 
-/* Craft-style explorer: consistent rows, quiet hierarchy, no connector rails. */
+/* File explorer: consistent rows, quiet hierarchy, no connector rails. */
 body.gp-enabled .nav-files-container {
   --nav-item-padding:6px 10px 6px 24px;
   --nav-item-parent-padding:var(--nav-item-padding);
@@ -254,14 +255,14 @@ body.gp-enabled .nav-files-container {
 }
 body.gp-enabled .nav-files-container :is(.nav-folder-title,.nav-file-title) {
   min-height:34px;line-height:20px;font-size:14px;margin-block:1px;
-  border-radius:6px;font-weight:400;letter-spacing:0;color:#4b534d;
+  border-radius:6px;font-weight:400;letter-spacing:0;color:var(--text-normal);
 }
-body.gp-enabled .nav-files-container .nav-folder-title {font-weight:500;color:#535e55;}
+body.gp-enabled .nav-files-container .nav-folder-title {font-weight:500;color:var(--text-normal);}
 body.gp-enabled .nav-files-container .nav-file-title.is-active {
-  background:rgba(61,76,65,.07);box-shadow:none;color:#242d27;font-weight:500;
+  background:rgba(61,76,65,.07);box-shadow:none;color:var(--text-normal);font-weight:500;
 }
 body.gp-enabled .nav-files-container .tree-item-children {border-inline-start-color:transparent;}
-body.gp-enabled .nav-files-container .collapse-icon {color:#909a92;opacity:.8;}
+body.gp-enabled .nav-files-container .collapse-icon {color:var(--text-faint);opacity:.8;}
 body.gp-enabled .nav-files-container .collapse-icon svg {width:12px;height:12px;stroke-width:1.7;}
 body.gp-enabled.gp-tabler-on .nav-files-container :is(.nav-folder-title-content,.nav-file-title-content)::before {
   content:"";display:inline-block;width:16px;height:16px;margin-inline-end:8px;
@@ -270,7 +271,7 @@ body.gp-enabled.gp-tabler-on .nav-files-container :is(.nav-folder-title-content,
   -webkit-mask:var(--gp-document-icon) center/contain no-repeat;
 }
 body.gp-enabled.gp-tabler-on .nav-files-container .nav-folder-title-content::before {
-  mask-image:var(--gp-folder-icon);-webkit-mask-image:var(--gp-folder-icon);color:#7b897e;
+  mask-image:var(--gp-folder-icon);-webkit-mask-image:var(--gp-folder-icon);color:var(--text-muted);
 }
 body.gp-enabled .gp-tabler-icon {stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;}
 body.gp-enabled .nav-header .clickable-icon {width:28px;height:28px;padding:6px;border-radius:6px;--icon-size:16px;}
@@ -286,7 +287,7 @@ body.gp-enabled.gp-enabled {
   --color-accent-2:#28745a;--color-accent-hsl:158.5,54.6%,19%;
   --interactive-accent-hsl:158.5,54.6%,19%;
   --interactive-accent:var(--gp-accent);--interactive-accent-hover:var(--gp-accent-hover);
-  --interactive-normal:#fff;--interactive-hover:#f2f6f3;
+  --interactive-normal:var(--background-primary);--interactive-hover:#f2f6f3;
   --text-accent:var(--gp-accent);--text-accent-hover:var(--gp-accent-hover);
   --text-on-accent:#fff;--text-on-accent-inverted:#fff;
   --text-selection:var(--gp-accent-selection);--text-highlight-bg:rgba(82,143,105,.20);
@@ -294,7 +295,7 @@ body.gp-enabled.gp-enabled {
   --background-modifier-active-hover:var(--gp-accent-soft);
   --background-modifier-border-focus:var(--gp-accent);
   --background-modifier-border-hover:rgba(22,75,56,.28);
-  --background-modifier-form-field-highlighted:#f5f8f5;
+  --background-modifier-form-field-highlighted:var(--background-primary-alt);
   --background-modifier-message:var(--gp-accent);
   --icon-color-active:var(--gp-accent);--icon-color-focused:var(--gp-accent);
   --nav-item-color-active:var(--gp-accent);--nav-item-color-selected:var(--gp-accent);
@@ -332,10 +333,10 @@ body.gp-enabled.gp-enabled {
   --claude-paper-accent-text:var(--gp-accent);--claude-paper-accent-soft:var(--gp-accent-soft);
   --claude-paper-accent-softer:var(--gp-accent-softer);
   --claude-paper-selection:var(--gp-accent-selection);--claude-paper-highlight:var(--text-highlight-bg);
-  --claude-paper-surface:#fff;--claude-paper-surface-alt:#f5f8f5;
+  --claude-paper-surface:var(--background-primary);--claude-paper-surface-alt:var(--background-primary-alt);
   --claude-paper-surface-secondary:var(--gp-shell-background);--claude-paper-surface-tertiary:var(--gp-shell-background);
-  --claude-paper-surface-raised:#fff;--claude-paper-surface-code:#f3f6f3;
-  --claude-paper-ink:#292d2b;--claude-paper-ink-secondary:#536057;--claude-paper-ink-tertiary:#7d8980;
+  --claude-paper-surface-raised:var(--background-primary);--claude-paper-surface-code:var(--code-background);
+  --claude-paper-ink:var(--text-normal);--claude-paper-ink-secondary:var(--text-muted);--claude-paper-ink-tertiary:var(--text-faint);
   --claude-paper-border:rgba(22,75,56,.12);--claude-paper-border-strong:rgba(22,75,56,.26);
 }
 body.gp-enabled .nav-files-container .nav-file-title.is-active {
@@ -651,3 +652,51 @@ body.gp-enabled .catea-editor-zoom-label { position: absolute; width: 1px; heigh
 .catea-git-panel .catea-git-graph [data-testid*="-line"] { box-sizing: content-box; transform: translateY(-1px); }
 
 .catea-git-node { position: absolute; top: 50%; left: 50%; width: 7px; height: 7px; border-radius: 50%; transform: translate(-50%, -50%); z-index: 1; pointer-events: none; }
+.catea-file-changes-modal.modal {width:min(760px,calc(100vw - 32px));max-width:calc(100vw - 32px)}
+.catea-file-changes {display:flex;max-height:68vh;flex-direction:column;gap:12px;overflow:auto;padding:2px}
+
+/* The preference only paints Paper while its master switch is enabled. */
+body.gp-enabled[data-catea-theme="light"] { color-scheme:light; }
+body.gp-enabled.gp-enabled[data-catea-theme="dark"] {
+  color-scheme:dark;
+  --gp-shell-background:#191e1c;
+  --background-primary:#232a26;--background-primary-alt:#29312c;
+  --background-secondary:#1d2420;--background-secondary-alt:#27302a;
+  --background-modifier-border:rgba(204,224,210,.16);
+  --background-modifier-hover:rgba(204,224,210,.08);
+  --background-modifier-form-field:#29312c;--background-modifier-cover:rgba(0,0,0,.55);
+  --background-modifier-form-field-highlighted:#303c33;
+  --text-normal:#e0e8e2;--text-muted:#a3b1a7;--text-faint:#84988b;
+  --nav-item-color:var(--text-normal);
+  --h1-color:var(--text-normal);--h2-color:var(--text-normal);--h3-color:var(--text-normal);
+  --code-background:#1b221e;--code-normal:#c1d5c7;
+  --gp-accent:#94c9ad;--gp-accent-hover:#b3dec6;--gp-accent-rgb:148,201,173;
+  --gp-accent-soft:rgba(148,201,173,.14);--gp-accent-softer:rgba(148,201,173,.08);
+  --gp-accent-selection:rgba(148,201,173,.25);
+  --interactive-normal:#303c33;--interactive-hover:#3a493e;
+  --text-on-accent:#17271e;--text-on-accent-inverted:#17271e;
+  --checkbox-marker-color:#17271e;--graph-text:var(--text-normal);
+  --icon-color:var(--text-muted);--icon-color-hover:var(--text-normal);
+}
+body.gp-enabled[data-catea-theme="dark"] :is(button.mod-cta,.checkbox-container.is-enabled) {color:var(--text-on-accent);}
+body.gp-enabled[data-catea-theme="dark"] .workspace-leaf-content[data-type="markdown"] {--blockquote-border-color:var(--gp-accent);}
+body.gp-enabled[data-catea-theme="dark"] .catea-note-preview__tabs button[aria-pressed=true] {background:var(--gp-accent-soft);color:var(--gp-accent);}
+
+/* Keep Catea's own scrollbars quiet until their viewport moves. */
+:is(.catea-ui,.catea-ui *,.catea-detail-modal,.catea-detail-modal *,.catea-note-preview,.catea-note-preview *,.catea-file-changes,.catea-file-changes *) {
+  scrollbar-width:thin;
+  scrollbar-color:transparent transparent;
+}
+:is(.catea-ui,.catea-ui *,.catea-detail-modal,.catea-detail-modal *,.catea-note-preview,.catea-note-preview *,.catea-file-changes,.catea-file-changes *)[data-catea-scrolling] {
+  scrollbar-color:color-mix(in srgb,var(--foreground,var(--text-muted)) 38%,transparent) transparent;
+}
+:is(.catea-ui,.catea-ui *,.catea-detail-modal,.catea-detail-modal *,.catea-note-preview,.catea-note-preview *,.catea-file-changes,.catea-file-changes *)::-webkit-scrollbar {
+  width:7px;
+  height:7px;
+  background:transparent;
+}
+:is(.catea-ui,.catea-ui *,.catea-detail-modal,.catea-detail-modal *,.catea-note-preview,.catea-note-preview *,.catea-file-changes,.catea-file-changes *)::-webkit-scrollbar-track {background:transparent;}
+:is(.catea-ui,.catea-ui *,.catea-detail-modal,.catea-detail-modal *,.catea-note-preview,.catea-note-preview *,.catea-file-changes,.catea-file-changes *)::-webkit-scrollbar-thumb {background:transparent;border-radius:999px;}
+:is(.catea-ui,.catea-ui *,.catea-detail-modal,.catea-detail-modal *,.catea-note-preview,.catea-note-preview *,.catea-file-changes,.catea-file-changes *)[data-catea-scrolling]::-webkit-scrollbar-thumb {
+  background:color-mix(in srgb,var(--foreground,var(--text-muted)) 38%,transparent);
+}

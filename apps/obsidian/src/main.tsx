@@ -1,18 +1,21 @@
 /**
  * [WHO]: Provides Catea, default
- * [FROM]: Depends on ./GitHistoryPanel, ./note-thumbnails, ./note-previews, ./locale, ./selection, ./session-drafts, ../../../packages/agent-core/src/types, obsidian, react-dom/client, ./paper.cjs, ../../../packages/agent-core/src, ../../../packages/integrations/src/storage, ./panel, ./obsidian-tools, ./skills/obsidian.md, catea-components, ./settings, ./composition, node:fs/promises
+ * [FROM]: Depends on ./GitHistoryPanel, ./global-byok, ./updates, ./theme, ./note-thumbnails, ./note-previews, ./locale, ./selection, ./session-drafts, ../../../packages/agent-core/src/types, obsidian, react-dom/client, ./paper.cjs, ../../../packages/agent-core/src, ../../../packages/integrations/src/storage, ./panel, ./obsidian-tools, ./skills/obsidian.md, catea-components, ./settings, ./composition, node:fs/promises
  * [TO]: Consumed by apps/obsidian/src/note-previews.ts, apps/obsidian/src/note-thumbnails.ts,
  *   apps/obsidian/src/obsidian-tools.ts, apps/obsidian/src/panel.tsx,
  *   apps/obsidian/src/selection.ts, apps/obsidian/src/settings.ts, apps/obsidian/src/GitHistoryPanel.tsx
  * [HERE]: apps/obsidian/src/main.tsx - plugin entry: class Catea extends Paper, wiring config, secure secrets, ObsidianTools, session tabs, settings and sidebar; 60 s memory interval
  */
 import {GitHistoryPanel} from './GitHistoryPanel'
+import {UpdateChecker,type UpdatePreferences} from './updates'
+import {GlobalByokStore,mergeByokProfiles} from './global-byok'
+import {ThemeController,type ThemeMode} from './theme'
 import {installNoteThumbnails} from './note-thumbnails'
 import {registerNotePreviews} from './note-previews'
-import {translate} from './locale'
+import {humanizeError,translate} from './locale'
 import {installSelectionAction} from './selection'
 import {SessionDraftStore,type SelectedQuote} from './session-drafts'
-import type {AskUserQuestion,AskUserQuestionAnswer} from '../../../packages/agent-core/src/types'
+import type {AskUserQuestion,AskUserQuestionAnswer,FileChange} from '../../../packages/agent-core/src/types'
 import {Plugin,ItemView,Modal,Setting,FileSystemAdapter,Notice,WorkspaceLeaf,MarkdownView,setIcon} from 'obsidian'
 import {createRoot,type Root} from 'react-dom/client'
 import Paper from './paper.cjs'
@@ -47,9 +50,21 @@ interface PaperSurface {
 const Base=Paper as unknown as {new(...args: ConstructorParameters<typeof Plugin>): Plugin & PaperSurface}
 export default class Catea extends Base {
   declare settings:Record<string,boolean>
-  agentSettings:Settings & {includeCurrentNote:boolean}={language:"zh",enabled:true,web:true,models:[],modelId:'',personaId:'aria',skills:[],mcp:[],memory:true,shell:true,includeCurrentNote:true,gitHistory:false,enableReplyAnnotations:false,permissionMode:"assist"}
+  agentSettings:Settings & UpdatePreferences & {includeCurrentNote:boolean;theme?:ThemeMode}={language:"zh",enabled:true,web:true,models:[],modelId:'',personaId:'aria',skills:[],mcp:[],memory:true,shell:true,includeCurrentNote:true,gitHistory:false,enableReplyAnnotations:false,permissionMode:"assist"}
   private editorZoom=new Map<MarkdownView,{scale:number;restore:()=>void}>()
+  updates!:UpdateChecker
+  openPluginUpdates(){
+    if(this.tabs.some(agent=>agent.running)){new Notice(this.t('请先停止当前回复再更新插件'));return}
+    const settings=(this.app as typeof this.app & {setting?:{open():void;openTabById(id:string):void}}).setting
+    if(!settings){new Notice(this.t('请打开设置 → 第三方插件，检查更新并更新 Catea。'));return}
+    settings.open();settings.openTabById('community-plugins')
+    new Notice(this.t('在已安装插件中检查更新，然后更新 Catea。'))
+  }
+  private themeController=new ThemeController()
+  applyTheme(){this.themeController.setMode(this.agentSettings.theme)}
   drafts=new SessionDraftStore()
+  globalByok:GlobalByokStore|null=null
+  private deletedModelIds:string[]=[]
   refreshThumbnails:()=>void=()=>{}
   obsidian!:ObsidianTools;agent!:Agent;tabs:Agent[]=[];vaultPath='';private createTabAgent!:()=>Agent;private configWrites=new Serial();private listeners=new Set<()=>void>();private dialogs=new Set<Modal>()
   async onload(){
@@ -60,6 +75,17 @@ export default class Catea extends Base {
     const directory=await within(this.vaultPath,'.catea');await mkdir(directory,{recursive:true})
     for(const part of ['skills','memory','sessions'])await mkdir(await within(this.vaultPath,`.catea/${part}`),{recursive:true})
     this.agentSettings={...this.agentSettings,...await readJson(await within(this.vaultPath,'.catea/config.json'),{})}
+    this.updates=new UpdateChecker(this.agentSettings,this.manifest.version,this.manifest.id,()=>this.saveAgentSettings(),()=>this.emit())
+    this.register(()=>this.updates.dispose())
+    this.applyTheme()
+    const bindTheme=()=>{
+      this.themeController.attach(document)
+      this.app.workspace.iterateAllLeaves(leaf=>this.themeController.attach(leaf.view.containerEl.ownerDocument))
+    }
+    bindTheme()
+    this.registerEvent(this.app.workspace.on('layout-change',bindTheme))
+    this.registerEvent(this.app.workspace.on('window-open',(_win,win)=>this.themeController.attach(win.document)))
+    this.register(()=>this.themeController.dispose())
     if(!this.agentSettings.permissionDefaultsVersion){
       this.agentSettings.shell=true
       this.agentSettings.permissionMode='assist'
@@ -69,17 +95,31 @@ export default class Catea extends Base {
     const secrets=this.secretStore()
     for(const model of this.agentSettings.models)model.apiKey=secrets?.getSecret(this.key(model.id))||''
     for(const server of this.agentSettings.mcp)server.token=secrets?.getSecret(this.key(`mcp-${server.id}`))||''
+    const global=GlobalByokStore.open()
+    if(global){
+      try{
+        const profile=await global.load()
+        const localModels=this.agentSettings.models
+        const merged=mergeByokProfiles(profile,localModels)
+        if(!profile||JSON.stringify(merged)!==JSON.stringify(profile))await global.save(merged)
+        this.agentSettings.models=merged.models
+        this.deletedModelIds=merged.deletedIds
+        this.globalByok=global
+        if(localModels.length)await this.saveAgentSettings()
+      }catch{this.globalByok=null;new Notice(this.t('无法读取本机共享 BYOK，继续使用当前知识库配置'))}
+    }
     this.refreshPaperLanguage()
     await this.addMiniMaxModels()
     this.installRibbonHover()
+    this.installScrollbarVisibility()
     installSelectionAction(this)
     registerNotePreviews(this)
     this.refreshThumbnails=installNoteThumbnails(this)
     this.obsidian=new ObsidianTools(this,(title,detail,signal)=>this.confirm(title,detail,signal))
-    const create=createAgentFactory(this.vaultPath,()=>this.agentSettings,text=>new Notice(text))
+    const create=createAgentFactory(this.vaultPath,()=>this.agentSettings,text=>new Notice(humanizeError(text,this.agentSettings.language)))
     this.createTabAgent=()=>{
       let agent!:Agent
-      agent=create({host:{tools:obsidianTools,skill:obsidianSkill,configDir:this.app.vault.configDir,run:(name,args,signal)=>this.obsidian.run(name,args,signal)},change:()=>this.emit(),notice:text=>new Notice(text),approve:(title,detail,signal)=>this.confirm(title,detail,signal),ask:(q,signal)=>this.ask(agent.session.id,q,signal)})
+      agent=create({host:{tools:obsidianTools,skill:obsidianSkill,configDir:this.app.vault.configDir,run:(name,args,signal,changed)=>this.obsidian.run(name,args,signal,changed)},change:()=>this.emit(),notice:text=>new Notice(humanizeError(text,this.agentSettings.language)),approve:(title,detail,signal)=>this.confirm(title,detail,signal),ask:(q,signal)=>this.ask(agent.session.id,q,signal)})
       return agent
     }
     this.agent=this.createTabAgent();this.agent.session.personaId=this.agentSettings.personaId;this.tabs=[this.agent]
@@ -93,6 +133,9 @@ export default class Catea extends Base {
     agentRibbon.dataset.cateaDockIcon='gemini'
     this.addCommand({id:'open-agent',name:this.t("打开 Agent"),callback:()=>void this.openAgent()})
     this.addCommand({id:'memory-insights',name:this.t("查看记忆概览"),callback:()=>void this.agent.memory.run('memory_insights',{},this.agentSettings.personaId,this.agentSettings.modelId).then(data=>this.showDetail(this.t("记忆概览"),data)).catch((e:unknown)=>new Notice(e instanceof Error?e.message:String(e)))})
+    const updateTimer=window.setTimeout(()=>void this.updates.check(),10000)
+    this.register(()=>window.clearTimeout(updateTimer))
+    this.registerInterval(window.setInterval(()=>void this.updates.check(),60*60*1000))
     this.registerInterval(window.setInterval(()=>{if(this.agentSettings.enabled&&this.agentSettings.memory)void this.agent.memory.process()},60000))
   }
   sync(){
@@ -142,6 +185,22 @@ export default class Catea extends Base {
       const render=()=>{const scale=this.editorZoom.get(view)?.scale||1;value.textContent=`${Math.round(scale*100)}%`;smaller.disabled=scale<=.5;larger.disabled=scale>=2}
       render()
     }
+  }
+  private installScrollbarVisibility(){
+    const documents=new Set<Document>(),timers=new Map<HTMLElement,number>()
+    const onScroll=(event:Event)=>{
+      const target=event.target as HTMLElement|null
+      if(!target||typeof target.closest!=='function'||!target.closest('.catea-ui, .catea-detail-modal, .catea-note-preview, .catea-file-changes'))return
+      target.dataset.cateaScrolling='true'
+      const previous=timers.get(target)
+      if(previous!==undefined)window.clearTimeout(previous)
+      timers.set(target,window.setTimeout(()=>{delete target.dataset.cateaScrolling;timers.delete(target)},900))
+    }
+    const attach=(doc:Document)=>{if(documents.has(doc))return;documents.add(doc);doc.addEventListener('scroll',onScroll,true)}
+    attach(document)
+    this.app.workspace.iterateAllLeaves(leaf=>attach(leaf.view.containerEl.ownerDocument))
+    this.registerEvent(this.app.workspace.on('window-open',(_win,win)=>attach(win.document)))
+    this.register(()=>{for(const doc of documents)doc.removeEventListener('scroll',onScroll,true);for(const [target,timer] of timers){window.clearTimeout(timer);delete target.dataset.cateaScrolling}})
   }
   private installRibbonHover(){
     const documents=new Set<Document>()
@@ -235,18 +294,27 @@ export default class Catea extends Base {
     if(!source)return
     for(const [model,contextWindow] of [['MiniMax-M2.7',204800],['MiniMax-M3',1000000]] as const){
       if(this.agentSettings.models.some(m=>m.model===model&&m.baseUrl===source.baseUrl))continue
-      const id=crypto.randomUUID();this.saveSecret(id,source.apiKey)
+      const id=crypto.randomUUID();if(!this.globalByok)this.saveSecret(id,source.apiKey)
       this.agentSettings.models.push({...source,id,name:model.replace('MiniMax-','MiniMax '),model,contextWindow})
     }
     this.agentSettings.miniMaxPresetsAdded=true
-    await this.saveAgentSettings()
+    await this.saveModels()
   }
   key(id:string){return `catea-${id.toLowerCase().replace(/[^a-z0-9-]/g,'-')}`.slice(0,64)}
   async saveAgentSettings(){
     const clone=structuredClone(this.agentSettings)
     for(const m of clone.models)m.apiKey=''
+    if(this.globalByok)clone.models=[]
     for(const m of clone.mcp){m.token='';delete m.env}
     await this.configWrites.run(async()=>writeJson(await within(this.vaultPath,'.catea/config.json'),clone));this.emit()
+  }
+  async saveModels(removedId?:string){
+    if(this.globalByok){
+      const deletedIds=removedId&&!this.deletedModelIds.includes(removedId)?[...this.deletedModelIds,removedId]:this.deletedModelIds
+      await this.globalByok.save({models:this.agentSettings.models,deletedIds})
+      this.deletedModelIds=deletedIds
+    }
+    await this.saveAgentSettings()
   }
   private secretStore(){
     // Optional host capability: Obsidian 1.8 lacks secure storage, so keys stay
@@ -279,26 +347,15 @@ export default class Catea extends Base {
     return JSON.stringify(await this.obsidian.context())
   }
   showDetail(title:string,detail:string){const modal=new Modal(this.app);modal.modalEl.addClass('catea-detail-modal');modal.titleEl.setText(title);modal.contentEl.createEl('pre',{text:detail});modal.open()}
-  confirmRevert(plan:{added:string[];changed:string[];removed:string[]}):Promise<boolean>{
-    return new Promise(resolve=>{
-      const modal=new Modal(this.app);let settled=false
-      const done=(value:boolean)=>{if(settled)return;settled=true;this.dialogs.delete(modal);resolve(value);modal.close()}
-      modal.onClose=()=>done(false);modal.modalEl.addClass('catea-revert-modal')
-      modal.titleEl.setText(this.t('回滚到消息发送前'))
-      modal.contentEl.createEl('p',{text:this.t('将恢复知识库文件和对话历史。回滚前会自动保留恢复备份。')})
-      const summary=modal.contentEl.createDiv({cls:'catea-revert-summary'})
-      for(const [label,paths] of [[this.t('删除新增文件'),plan.added],[this.t('恢复修改文件'),plan.changed],[this.t('重建已删文件'),plan.removed]] as const){
-        if(!paths.length)continue
-        const block=summary.createDiv({cls:'catea-revert-summary__block'})
-        block.createEl('strong',{text:`${label} · ${paths.length}`})
-        const list=block.createEl('ul')
-        for(const path of paths.slice(0,12))list.createEl('li',{text:path})
-        if(paths.length>12)list.createEl('li',{text:`+${paths.length-12}`})
-      }
-      if(!plan.added.length&&!plan.changed.length&&!plan.removed.length)summary.createEl('p',{text:this.t('知识库文件没有变化；只回退对话历史。')})
-      new Setting(modal.contentEl).addButton(button=>button.setButtonText(this.t('取消')).onClick(()=>done(false))).addButton(button=>button.setButtonText(this.t('确认回滚')).onClick(()=>done(true)).buttonEl.addClass('catea-revert-confirm'))
-      this.dialogs.add(modal);modal.open()
-    })
+  showFileChanges(changes:FileChange[]){
+    const modal=new Modal(this.app);let root:Root|undefined
+    modal.modalEl.addClass('catea-file-changes-modal')
+    modal.titleEl.setText(`${this.t('文件更改')} · ${changes.length}`)
+    modal.onClose=()=>{root?.unmount();this.dialogs.delete(modal)}
+    const container=modal.contentEl.createDiv({cls:'catea-file-changes anno-auto-scrollbar'})
+    root=createRoot(container)
+    root.render(<>{changes.map(change=><ChangePreview key={change.filePath} language={this.agentSettings.language} path={change.filePath} before={change.original} after={change.modified}/>)}</>)
+    this.dialogs.add(modal);modal.open()
   }
   private confirm(title:string,detail:string,signal:AbortSignal):Promise<boolean>{
     signal.throwIfAborted()
