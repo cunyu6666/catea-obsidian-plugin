@@ -1,6 +1,6 @@
 # Catea Architecture
 
-Status: 2026-09-29, version 0.3.14.
+Status: 2026-09-29, version 0.3.15.
 
 Catea is a desktop-only Obsidian plugin. The agent loop, model transport, tools,
 memory adapter, and UI all run inside the Obsidian host process. There is no Catea

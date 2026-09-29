@@ -1,9 +1,9 @@
 {
   "id": "catea-paper",
   "name": "Catea",
-  "version": "0.3.14",
+  "version": "0.3.15",
   "minAppVersion": "1.8.0",
-  "description": "A local BYOK agent for your notes. 本地运行、自带密钥的笔记智能助手.",
+  "description": "Paper workspace with a native Catea Agent.",
   "author": "Cunyu",
   "isDesktopOnly": true
 }

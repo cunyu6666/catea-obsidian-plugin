@@ -1,8 +1,8 @@
 /**
- * [WHO]: Provides the version-consistency governance gate
+ * [WHO]: Provides the release-metadata governance gate
  * [FROM]: Depends on ../packages/agent-core/src/version.ts for PLUGIN_VERSION, ./dip-contract.ts for the repo index, node:fs and node:test
  * [TO]: Consumed by `npm test`; (entry) otherwise
- * [HERE]: tests/governance.test.ts - enforces one version across manifest.json, package.json, versions.json and the runtime constant, so a release cannot be cut from a half-bumped tree
+ * [HERE]: tests/governance.test.ts - enforces directory-safe metadata and one version across release inputs, so a release cannot be cut from a drifted tree
  */
 
 import { readFileSync, existsSync } from 'node:fs'
@@ -37,6 +37,11 @@ test('governance | manifest.json is a valid plugin manifest', () => {
     'manifest version must be a bare semver with no v prefix',
   )
   assert.match(manifestMinApp, /^\d+\.\d+\.\d+$/, 'minAppVersion must be a bare semver')
+  assert.equal(
+    manifest.description,
+    'Paper workspace with a native Catea Agent.',
+    'manifest description must match the Obsidian directory entry exactly or the mirror will remove the plugin',
+  )
 })
 
 test('governance | the runtime constant equals manifest.json', () => {

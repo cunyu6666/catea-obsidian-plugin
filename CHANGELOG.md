@@ -3,6 +3,13 @@
 Notable changes per release. The version is the one in `manifest.json`; the GitHub
 release tag is that same number with no `v` prefix.
 
+## 0.3.15
+
+### Fixed
+
+- Restore the directory-approved plugin description exactly so the automated
+  Obsidian mirror does not remove Catea for manifest metadata drift.
+
 ## 0.3.14
 
 ### Added
