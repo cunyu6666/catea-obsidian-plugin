@@ -26,9 +26,10 @@ the web, call MCP servers, and keep a long-term memory of the user's notes.
 - **Bring your own key, no backend** — there is no Catea account, no telemetry, and
   no vendor backend. On machines with OS-backed encryption, models and keys live in
   encrypted Obsidian userData shared across vaults. `.catea/config.json` never holds keys.
-- **Retained memory core** — the CatUI `mem-core` is vendored rather than
-  reimplemented, with the host adapter replaced. Recall, extraction, consolidation,
-  and forgetting are durable and queued.
+- **Unified writing memory** — one canonical store per scope holds writing
+  preferences, projects, concepts, materials, methods and editorial decisions.
+  Prior NanoMem formats are imported once with backups; extraction is durable
+  and queued. Local hashing and PII helpers retain their upstream provenance.
 - **Vault data stays in the vault** — sessions, memory, and skills are written under
   `.catea/` inside the user's own vault and are never distributed with the plugin.
 
@@ -58,7 +59,7 @@ the web, call MCP servers, and keep a long-term memory of the user's notes.
 |                        CAPABILITY LAYER                                |
 |  |------------------|  |-------------------|  |--------------------|   |
 |  | VaultTools       |  | ObsidianTools     |  | MemoryService      |   |
-|  | fs + bash tools  |  | native vault API  |  | mem-core adapter   |   |
+|  | fs + bash tools  |  | native vault API  |  | writing memory     |   |
 |  |------------------|  |-------------------|  |--------------------|   |
 |  | McpPool          |  | web_search/fetch  |  | personas           |   |
 |  | HTTP + stdio     |  | Exa/Jina/DDG      |  | Vex / Aria / Pencil|   |
@@ -92,8 +93,8 @@ packages/agent-core/src/     # Hand-written core (the only package app code impo
 packages/agent-core/upstream/ # Vendored CatUI loop and AI layer (excluded)
 packages/integrations/       # Vault tools, skills loader, MCP pool, web tools
 packages/integrations/src/   # Integration sources
-packages/memory/             # CatUI mem-core snapshot plus the host adapter
-packages/memory/src/         # MemoryService adapter (excluded upstream alongside)
+packages/memory/             # Unified memory implementation and upstream provenance
+packages/memory/src/         # Canonical memory store, extraction, tools and migration
 packages/memory/upstream/    # Vendored CatUI mem-core, GPL-3.0 (excluded)
 packages/personas/           # Persona definitions and registry
 packages/personas/src/       # Persona prompt documents plus index.ts
@@ -192,9 +193,10 @@ and a buffered fallback when a provider does not return `text/event-stream`.
 
 ### `MemoryService` (`packages/memory/src/index.ts`)
 
-Adapts the vendored mem-core to this host: per-persona engine directories, recall
-injection bounded on the first-token path, and a durable job file
-(`.catea/memory/pending-turns.json`) that survives restarts with backoff.
+Owns unified writing and knowledge memory: one `memories.json` per persona/global
+scope, one-time backed-up migration from prior formats, bounded recall and a
+durable job file (`.catea/memory/pending-turns.json`) with atomic turn receipts
+and retry backoff. See [Memory model and migration](./docs/MEMORY.md).
 
 ### `VaultTools` (`packages/integrations/src/tools.ts`) and `ObsidianTools` (`apps/obsidian/src/obsidian-tools.ts`)
 
@@ -227,8 +229,8 @@ Vault-specific runtime data is written inside the user's vault, never into the p
 | `.catea/sessions/<id>.json` | Raw conversation and tool transcript for one session |
 | `.catea/skills/<id>/SKILL.md` | User-installed skill packages, enabled explicitly |
 | `.catea/memory/pending-turns.json` | Durable queue of turns awaiting memory extraction |
-| `.catea/memory/global/` | Shared memory engine directory |
-| `.catea/memory/aria/`, `.catea/memory/vex/`, `.catea/memory/pencil/` | Per-persona memory isolation |
+| `.catea/memory/global/memories.json` | Canonical shared writing and knowledge memory |
+| `.catea/memory/aria/`, `.catea/memory/vex/`, `.catea/memory/pencil/` | Per-persona isolation; each contains one canonical `memories.json` |
 
 BYOK models and API keys are held in encrypted `<Obsidian userData>/catea/byok.enc`
 when OS-backed Electron safeStorage is available (Linux `basic_text` is rejected).
@@ -316,7 +318,7 @@ the contributor-facing procedure and [SECURITY.md](./SECURITY.md) for the threat
 - [P2: apps/obsidian/src/](./apps/obsidian/src/AGENTS.md) — Obsidian host: entry point, sidebar UI, native vault tools
 - [P2: packages/agent-core/src/](./packages/agent-core/src/AGENTS.md) — Agent loop wiring, providers, context handoff
 - [P2: packages/integrations/src/](./packages/integrations/src/AGENTS.md) — Vault tools, skill loader, MCP pool, web tools
-- [P2: packages/memory/src/](./packages/memory/src/AGENTS.md) — mem-core adapter, recall injection, durable job queue
+- [P2: packages/memory/src/](./packages/memory/src/AGENTS.md) — unified memory, migration, recall and durable job queue
 - [P2: packages/personas/src/](./packages/personas/src/AGENTS.md) — Persona prompts and registry
 
 ### P3 — File Contracts
@@ -346,6 +348,7 @@ Four deliberate exclusions:
 - [Contributing, the gates and the release procedure](./CONTRIBUTING.md)
 - [Security model and how to report a vulnerability](./SECURITY.md)
 - [Changelog](./CHANGELOG.md)
+- [Writing memory and migration](./docs/MEMORY.md)
 - [Architecture decisions and acceptance record](./docs/ARCHITECTURE.md)
 - [Module boundaries and UI migration status](./docs/MODULARIZATION.md)
 - [DIP bootstrap design spec](./docs/specs/2026-09-28-dip-bootstrap-design.md)

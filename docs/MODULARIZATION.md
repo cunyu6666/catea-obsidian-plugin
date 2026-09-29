@@ -4,7 +4,7 @@ The Obsidian host is the composition root. It creates the vault conversation
 store, direct BYOK model client and memory service, then injects their ports into
 `Agent`. The ports in `packages/agent-core/src/contracts.ts` have no Obsidian or
 UI types. Session files and the session index belong to `VaultConversationStore`;
-memory reads completed sessions through that store. `Agent` saves a completed
+memory receives completed turns with session/turn source references. `Agent` saves a completed
 reply before enqueueing its memory job.
 
 The vendored CatUI loop remains byte-for-byte identical to its recorded source.
@@ -18,7 +18,7 @@ behavior check bundles the same patched code.
 | --- | --- | --- |
 | Conversation persistence | `VaultConversationStore` behind `ConversationStore` | Move remaining conversation lifecycle decisions out of `Agent`. |
 | Model traffic | `DirectModelClient` behind `ModelClient.stream(request, signal)` | Make the provider adapter's retry policy independently configurable. |
-| Memory | `MemoryService` behind `MemoryPort`; session reads use `ConversationStore`; native tool discovery is bounded on the first-token path | Isolate its queue storage behind a memory store. |
+| Memory | `MemoryService` behind `MemoryPort`; one canonical store and tool surface, bounded recall, backed-up migration and durable extraction | Project-aware note refresh and richer memory browsing. |
 | Tools and approval | CatUI loop plus tool-specific adapters | Add a host-neutral `ToolExecutor` that owns results, approval state and cancellation for every call. Move the concrete Vault, Web and MCP routing out of `Agent`. |
 | Agent loop | Original upstream plus reviewed build-time patch; Catea compaction decisions live in `CompactionCoordinator` and use an injected summary port | Extract Catea-specific prompt assembly and event persistence after the tool contract settles. |
 

@@ -1,39 +1,32 @@
 /**
  * [WHO]: Provides MemoryService
- * [FROM]: Depends on ../../agent-core/src/i18n, ../../agent-core/upstream/ai/utils/validation, ./host, node:path, node:fs/promises, ../upstream/engine, @sinclair/typebox, ../../agent-core/src/contracts, ../../integrations/src/storage, ../../agent-core/src/types, ../../agent-core/src/providers
+ * [FROM]: Depends on ../../integrations/src/storage, ../../agent-core/src/contracts, ../../agent-core/src/types, ./engine, ./store, ./extraction, ./model
  * [TO]: Consumed by apps/obsidian/src/composition.ts
- * [HERE]: packages/memory/src/index.ts - hosts per-persona mem-core engines, races recall injection against a 600 ms cache timeout, and drains the durable pending-turns queue with backoff
+ * [HERE]: packages/memory/src/index.ts - shared memory service with bounded recall and a durable, idempotent extraction queue
  */
-import { textValue } from '../../agent-core/src/i18n'
-import { validateToolArguments } from '../../agent-core/upstream/ai/utils/validation'
-import { MemoryHost } from './host'
-import { join } from 'node:path'
-import { mkdir } from 'node:fs/promises'
-import { NanoMemEngine } from '../upstream/engine'
-import type { TSchema } from '@sinclair/typebox'
-import type { ConversationStore, ModelClient, ModelRequest } from '../../agent-core/src/contracts'
 import { Serial, readJson, writeJson, within } from '../../integrations/src/storage'
-import type { ModelConfig, ToolEvent } from '../../agent-core/src/types'
-import type { ModelReply } from '../../agent-core/src/providers'
-interface Job {
-  id: string
-  sessionId: string
-  persona: string
-  modelId: string
-  user: string
-  assistant: string
-  tools: ToolEvent[]
-  stage: number
+import type { MemoryJob, ModelClient } from '../../agent-core/src/contracts'
+import type { ModelConfig } from '../../agent-core/src/types'
+import { MemoryEngine } from './engine'
+import { MemoryStore } from './store'
+import { extractWritingMemories } from './extraction'
+import { validateMemoryInput } from './model'
+
+interface Job extends MemoryJob {
   attempts: number
   nextAttempt: number
   error?: string
 }
 export class MemoryService {
-  private engines = new Map<string, NanoMemEngine>()
-  private serial = new Serial()
+  private engines = new Map<string, MemoryEngine>()
   private jobsLock = new Serial()
   private cache = new Map<string, string>()
-  private processing = false
+  private cacheEpoch = 0
+  private invalidate() {
+    this.cacheEpoch++
+    this.cache.clear()
+  }
+  private processing?: Promise<void>
   private closed = false
   private paused = false
   private abort = new AbortController()
@@ -41,319 +34,180 @@ export class MemoryService {
     private vault: string,
     private model: (id: string) => ModelConfig | undefined,
     private report: (error: string) => void,
-    private conversations: ConversationStore,
     private modelClient: ModelClient,
   ) {}
-  private async complete(request: ModelRequest, signal: AbortSignal): Promise<ModelReply> {
-    let reply: ModelReply | undefined
-    for await (const event of this.modelClient.stream(request, signal))
-      if (event.type === 'done') reply = event.reply
-    if (!reply) throw new Error('记忆模型未返回结果')
-    return reply
-  }
-  private hosts = new Map<string, MemoryHost>()
-  private host(engine: NanoMemEngine, sessionId: string, modelId: string) {
-    return new MemoryHost(
-      engine,
-      this.vault,
-      sessionId,
-      async (system, content) => {
-        const model = this.model(modelId)
-        if (!model) throw new Error('记忆模型未配置')
-        return (
-          await this.complete(
-            {
-              model,
-              transcript: [{ role: 'user', content }],
-              system,
-              tools: [],
-              attachments: new Map(),
-            },
-            this.abort.signal,
-          )
-        ).text
-      },
-      this.report,
-      async (system, content, schema, options) => {
-        const model = this.model(modelId)
-        if (!model) throw new Error('记忆模型未配置')
-        const tool = {
-          name: options?.toolName || 'memory_result',
-          description: 'Return the structured memory result',
-          parameters: schema,
-        }
-        const result = await this.complete(
-          {
-            model,
-            transcript: [{ role: 'user', content }],
-            system: system + '\nReturn the result using the provided tool.',
-            tools: [tool],
-            attachments: new Map(),
-          },
-          this.abort.signal,
-        )
-        const call = result.calls.find((c) => c.name === tool.name)
-        const args: unknown =
-          call?.args ?? JSON.parse(result.text.replace(/^```(?:json)?\s*|\s*```$/g, ''))
-        if (!args || typeof args !== 'object' || Array.isArray(args))
-          throw new Error('Invalid structured memory result')
-        const validated = validateToolArguments(
-          { ...tool, parameters: schema as TSchema },
-          {
-            id: 'memory',
-            type: 'toolCall',
-            name: tool.name,
-            arguments: args as Record<string, unknown>,
-          },
-        ) as Record<string, unknown>
-        return JSON.stringify(options?.resultKey ? validated[options.resultKey] : validated)
-      },
-    )
-  }
-  async nativeTools(persona: string, modelId: string) {
-    const host = this.host(await this.engine(persona), 'recall', modelId)
-    this.hosts.set(persona, host)
-    return host.tools.map((t) => ({
-      name: t.name,
-      description: t.description,
-      parameters: t.parameters,
-    }))
-  }
-  private get jobsPath() {
-    return join(this.vault, '.catea/memory/pending-turns.json')
-  }
-  private async engine(persona: string) {
-    let engine = this.engines.get(persona)
-    if (engine) return engine
-    if (!['global', 'vex', 'aria', 'pencil'].includes(persona)) throw new Error('未知人格')
-    const directory = await within(this.vault, `.catea/memory/${persona}`)
-    await mkdir(directory, { recursive: true })
-    engine = new NanoMemEngine({
-      memoryDir: directory,
-      locale: 'zh',
-      defaultScope: persona === 'global' ? undefined : { agentId: persona },
-    })
-    await engine.runStartupMaintenance()
-    this.engines.set(persona, engine)
+  private engine(scope: string): MemoryEngine {
+    let engine = this.engines.get(scope)
+    if (!engine) {
+      engine = new MemoryEngine(new MemoryStore(this.vault, scope))
+      this.engines.set(scope, engine)
+    }
     return engine
   }
-  private bind(engine: NanoMemEngine, id: string, signal: AbortSignal = this.abort.signal) {
-    engine.setLlmFn(async (system, content) => {
-      const model = this.model(id)
-      if (!model) throw new Error('记忆任务的模型未配置')
-      return (
-        await this.complete(
-          {
-            model,
-            transcript: [{ role: 'user', content }],
-            system,
-            tools: [],
-            attachments: new Map(),
-          },
-          signal,
-        )
-      ).text
-    })
+  private jobsPath() {
+    return within(this.vault, '.catea/memory/pending-turns.json')
   }
-  private lastModelId = ''
-  async injection(persona: string, query: string, modelId: string) {
-    this.lastModelId = modelId
-    const refresh = this.serial
-      .run(async () => {
-        const entries = await Promise.all(
-          ['global', persona].map(async (id) =>
-            this.host(await this.engine(id), 'recall', this.lastModelId).injection(query),
-          ),
-        )
+  async injection(persona: string, query: string, _modelId: string): Promise<string> {
+    if (this.closed || this.paused) return ''
+    // Cache includes the query: a slow recall must not inject a previous project's result.
+    const key = JSON.stringify([persona, query])
+    const epoch = this.cacheEpoch
+    const refresh = Promise.all(
+      [...new Set(['global', persona])].map(async (scope) => {
+        const text = await this.engine(scope).injection(query)
+        return text ? `Memory scope: ${scope}\n${text}` : ''
+      }),
+    )
+      .then((entries) => {
+        if (epoch !== this.cacheEpoch || this.closed || this.paused) return ''
         const text = entries.filter(Boolean).join('\n\n')
-        this.cache.set(persona, text)
+        if (this.cache.size >= 20) this.cache.delete(this.cache.keys().next().value!)
+        this.cache.set(key, text)
         return text
       })
       .catch((e: unknown) => {
         this.report(`记忆召回失败：${e instanceof Error ? e.message : String(e)}`)
-        return this.cache.get(persona) || ''
+        return this.cache.get(key) || ''
       })
-    // No additional model request on the first-token path. Slow disk recall refreshes the cache.
     let timer: number | undefined
     try {
       return await Promise.race([
         refresh,
         new Promise<string>((resolve) => {
-          timer = window.setTimeout(() => resolve(this.cache.get(persona) || ''), 600)
+          timer = window.setTimeout(() => resolve(this.cache.get(key) || ''), 600)
         }),
       ])
     } finally {
       window.clearTimeout(timer)
     }
   }
-  async enqueue(job: Omit<Job, 'stage' | 'attempts' | 'nextAttempt'>) {
+  async enqueue(job: MemoryJob): Promise<void> {
+    if (this.closed || this.paused) return
     await this.jobsLock.run(async () => {
-      const jobs = await readJson<Job[]>(this.jobsPath, [])
+      const path = await this.jobsPath()
+      const jobs = await readJson<Job[]>(path, [])
       if (!jobs.some((j) => j.id === job.id))
-        await writeJson(this.jobsPath, [...jobs, { ...job, stage: 0, attempts: 0, nextAttempt: 0 }])
+        await writeJson(path, [...jobs, { ...job, attempts: 0, nextAttempt: 0 }])
     })
     void this.process()
   }
-  async process() {
-    if (this.processing || this.closed || this.paused) return
-    this.processing = true
+  process(): Promise<void> {
+    if (this.processing) return this.processing
+    if (this.closed || this.paused) return Promise.resolve()
+    this.processing = this.drain().finally(() => {
+      this.processing = undefined
+    })
+    return this.processing
+  }
+  private async drain(): Promise<void> {
+    const signal = this.abort.signal
     try {
-      const jobs = await this.jobsLock.run(() => readJson<Job[]>(this.jobsPath, []))
+      const jobs = await this.jobsLock.run(async () => readJson<Job[]>(await this.jobsPath(), []))
       for (const job of jobs) {
-        if (this.closed || this.paused) break
+        if (this.closed || this.paused || signal.aborted) break
         if (job.nextAttempt > Date.now()) continue
         try {
-          await this.serial.run(async () => {
-            const engine = await this.engine(job.persona)
-            this.bind(engine, job.modelId)
-            const host = this.host(engine, job.sessionId, job.modelId)
-            await host.emit('session_start')
-            await host.emit('before_agent_start', { prompt: job.user })
-            const session = await this.conversations.load(job.sessionId)
-            const allTools: ToolEvent[] =
-              session?.messages?.flatMap((m) => m.tools || []) || job.tools
-            await host.replay(allTools)
-            const checkpoint = async () =>
-              this.jobsLock.run(async () => {
-                const latest = await readJson<Job[]>(this.jobsPath, [])
-                await writeJson(
-                  this.jobsPath,
-                  latest.map((j) => (j.id === job.id ? job : j)),
-                )
-              })
-            if (job.stage < 2) {
-              await host.emit('agent_end', {
-                messages: [
-                  { role: 'user', content: job.user },
-                  { role: 'assistant', content: [{ type: 'text', text: job.assistant }] },
-                ],
-              })
-              job.stage = 2
-              await checkpoint()
-            }
-            if (job.stage < 3) {
-              await host.emit('session_shutdown')
-              job.stage = 3
-              await checkpoint()
-            }
-            await host.emit('turn_end')
-            this.cache.delete(job.persona)
-          })
+          const engine = this.engine(job.persona)
+          if (!(await engine.hasProcessed(job.id))) {
+            const model = this.model(job.modelId)
+            if (!model) throw new Error('记忆任务的模型未配置')
+            const inputs = await extractWritingMemories(job, model, this.modelClient, signal)
+            await engine.recordTurn(job.id, inputs, signal)
+          }
           await this.jobsLock.run(async () => {
-            const latest = await readJson<Job[]>(this.jobsPath, [])
+            const path = await this.jobsPath()
+            const latest = await readJson<Job[]>(path, [])
             await writeJson(
-              this.jobsPath,
+              path,
               latest.filter((j) => j.id !== job.id),
             )
           })
-        } catch (e: unknown) {
-          job.attempts++
-          job.error = e instanceof Error ? e.message : String(e)
+          this.invalidate()
+        } catch (error: unknown) {
+          if (signal.aborted) break
+          job.attempts = (job.attempts || 0) + 1
+          job.error = error instanceof Error ? error.message : String(error)
           job.nextAttempt = Date.now() + Math.min(3600000, 30000 * 2 ** Math.min(job.attempts, 7))
           await this.jobsLock.run(async () => {
-            const latest = await readJson<Job[]>(this.jobsPath, [])
+            const path = await this.jobsPath()
+            const latest = await readJson<Job[]>(path, [])
             await writeJson(
-              this.jobsPath,
+              path,
               latest.map((j) => (j.id === job.id ? job : j)),
             )
           })
-          this.report(`记忆任务待重试：${e instanceof Error ? e.message : String(e)}`)
+          this.report(`记忆任务待重试：${job.error}`)
         }
       }
-    } catch (e: unknown) {
-      this.report(`记忆队列失败：${e instanceof Error ? e.message : String(e)}`)
-    } finally {
-      this.processing = false
+    } catch (error: unknown) {
+      this.report(`记忆队列失败：${error instanceof Error ? error.message : String(error)}`)
     }
   }
   async run(
     name: string,
     args: Record<string, unknown>,
     persona: string,
-    modelId: string,
+    _modelId: string,
     signal: AbortSignal = this.abort.signal,
-  ) {
-    return this.serial.run(async () => {
-      signal.throwIfAborted()
-      const engine = await this.engine(args.scope === 'global' ? 'global' : persona)
-      this.bind(engine, modelId, signal)
-      if (name.startsWith('nanomem_')) {
-        const host = this.hosts.get(persona) || this.host(engine, 'manual', modelId)
-        return host.run(name, args, signal)
+  ): Promise<string> {
+    signal.throwIfAborted()
+    if (this.closed || this.paused) throw new Error('记忆工具已关闭')
+    const engine = this.engine(args.scope === 'global' ? 'global' : persona)
+    const text = (key: string) => (typeof args[key] === 'string' ? args[key] : '')
+    let result: unknown
+    switch (name) {
+      case 'memory_search':
+        result = await engine.search(text('query'), {
+          type: text('type'),
+          project: text('project'),
+          note: text('note'),
+          includeArchived: args.includeArchived === true,
+        })
+        break
+      case 'memory_recall':
+        result = await engine.recall(text('id'), signal)
+        break
+      case 'memory_remember': {
+        const { scope: _scope, ...input } = args
+        result = await engine.remember(validateMemoryInput(input), signal)
+        break
       }
-      let result: unknown
-      switch (name) {
-        case 'memory_search':
-          result = await engine.searchAllEntries(textValue(args.query || ''), 10)
-          break
-        case 'memory_recall':
-          result = await engine.getEntryById(textValue(args.id))
-          await engine.reinforceEntryById(textValue(args.id))
-          break
-        case 'memory_remember':
-          result = await engine.remember(
-            {
-              type: ([
-                'fact',
-                'preference',
-                'lesson',
-                'decision',
-                'pattern',
-                'struggle',
-                'event',
-              ].includes(textValue(args.type))
-                ? args.type
-                : 'fact') as
-                'fact' | 'preference' | 'lesson' | 'decision' | 'pattern' | 'struggle' | 'event',
-              name: textValue(args.name || ''),
-              summary: textValue(args.summary || ''),
-              detail: textValue(args.detail || ''),
-            },
-            'Catea',
-          )
-          break
-        case 'memory_edit':
-          result = await engine.editEntryById(textValue(args.id), {
-            summary: textValue(args.summary || ''),
-            detail: textValue(args.detail || ''),
-          })
-          break
-        case 'memory_forget':
-          result = await engine.forgetEntry(textValue(args.id))
-          break
-        case 'memory_resolve':
-          result = await engine.resolveConflictByIds(
-            textValue(args.aId),
-            textValue(args.bId),
-            args.action as Parameters<NanoMemEngine['resolveConflictByIds']>[2],
-          )
-          break
-        case 'memory_restore':
-          result = await engine.restoreArchivedEntry(textValue(args.id))
-          break
-        case 'memory_dream':
-          result = await engine.consolidateDetailed({ signal })
-          break
-        case 'memory_review':
-          result = await engine.getAlignmentSnapshot()
-          break
-        case 'memory_insights':
-          result = await engine.generateFullInsights()
-          break
-        default:
-          result = { legacy: await engine.getStats(), v2: await engine.getV2Stats() }
-      }
-      this.cache.delete(persona)
-      return JSON.stringify(result).slice(0, 24000)
-    })
+      case 'memory_edit':
+        result = await engine.edit(text('id'), args, signal)
+        break
+      case 'memory_forget':
+        result = await engine.forget(text('id'), signal)
+        break
+      case 'memory_restore':
+        result = await engine.restore(text('id'), signal)
+        break
+      case 'memory_resolve':
+        result = await engine.resolve(text('aId'), text('bId'), text('action'), signal)
+        break
+      case 'memory_dream':
+        result = await engine.consolidate(signal)
+        break
+      case 'memory_stats':
+      case 'memory_review':
+      case 'memory_insights':
+        result = await engine.review()
+        break
+      default:
+        throw new Error(`Unknown memory tool: ${name}`)
+    }
+    this.invalidate()
+    return JSON.stringify(result)
   }
-  setEnabled(enabled: boolean) {
+  setEnabled(enabled: boolean): void {
     this.paused = !enabled
-    if (!enabled) this.abort.abort()
-    else if (this.abort.signal.aborted) this.abort = new AbortController()
+    if (!enabled) {
+      this.abort.abort()
+      this.invalidate()
+    } else if (this.abort.signal.aborted) this.abort = new AbortController()
   }
-  close() {
+  close(): void {
     this.closed = true
     this.abort.abort()
+    this.invalidate()
   }
 }

@@ -3,7 +3,7 @@
  * [FROM]: Depends on ./types, ./upstream-stream, ./providers
  * [TO]: Consumed by packages/agent-core/src/index.ts, packages/agent-core/src/context.ts,
  *   packages/agent-core/src/model-client.ts, packages/agent-core/src/upstream-stream.ts,
- *   packages/integrations/src/conversation-store.ts, packages/memory/src/index.ts
+ *   packages/integrations/src/conversation-store.ts, packages/memory/src/index.ts, packages/memory/src/extraction.ts
  * [HERE]: packages/agent-core/src/contracts.ts - host-neutral conversation and memory ports with serializable session data
  */
 import type { ChatAttachment, ModelConfig, ToolEvent, TranscriptItem } from './types'
@@ -88,7 +88,6 @@ export interface MemoryJob {
 }
 export interface MemoryPort {
   injection(persona: string, query: string, modelId: string): Promise<string>
-  nativeTools(persona: string, modelId: string): Promise<ToolDefinition[]>
   enqueue(job: MemoryJob): Promise<void>
   process(): Promise<void>
   run(

@@ -3,7 +3,7 @@
  * [FROM]: Depends on (none)
  * [TO]: Consumed by packages/agent-core/src/providers.ts, packages/agent-core/src/index.ts,
  *   packages/integrations/src/tools.ts, packages/integrations/src/web.ts,
- *   packages/memory/src/index.ts, apps/obsidian/src/obsidian-tools.ts
+ *   apps/obsidian/src/obsidian-tools.ts
  * [HERE]: packages/agent-core/src/i18n.ts - flat error-label map plus t() with {name} interpolation; returns the key when a label is unknown
  */
 const labels: Record<string, string> = {

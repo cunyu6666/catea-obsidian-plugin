@@ -21,7 +21,6 @@ export function createAgentFactory(
     vault,
     (id) => configuredModels(settings().models).find((model) => model.id === id),
     notice,
-    conversations,
     modelClient,
   )
   return (hooks) => new Agent(vault, settings, hooks, { conversations, memory, modelClient })

@@ -30,7 +30,7 @@ Agent core
              ▼
 Capabilities
   packages/integrations/src/  vault, web, MCP, skills
-  packages/memory/src/        retained memory adapter
+  packages/memory/src/        unified writing memory
   packages/personas/src/      persona prompts
 ```
 
@@ -82,12 +82,18 @@ On first startup after upgrading, the plugin removes the obsolete
 `.catea/snapshots` tree. No current code reads it, and the migration is confined to
 that exact plugin-owned path.
 
-### Retained memory, host-owned storage
+### Unified writing memory
 
-The complete CatUI memory engine is retained. Catea replaces only the host adapter:
-memory is isolated by persona, recall is bounded on the first-token path, and
-extraction jobs persist with retry state. The engine is GPL-3.0 and its provenance
-and notices remain in the distribution.
+Catea uses one owned writing/knowledge schema and one authoritative JSON document
+per persona/global scope. Previous NanoMem flat and V2 stores are imported once
+with exact-source backups; they are not live fallback stores. The old engine and
+extension lifecycle no longer run. Local hash embedding and PII helpers retain
+their upstream provenance.
+
+Recall is bounded on the first-token path. Background extraction is queued and
+commits records together with an idempotency receipt. One tool surface handles
+search, edits, archival, restoration and conservative consolidation. See
+[Memory model and migration](./MEMORY.md) for categories and behavior changes.
 
 ### Explicit capability boundaries
 
@@ -106,7 +112,7 @@ a sandbox.
   sessions/<id>.json         one raw conversation and tool transcript
   skills/<id>/SKILL.md       explicitly enabled local skills
   memory/pending-turns.json  durable extraction queue
-  memory/{global,aria,vex,pencil}/
+  memory/{global,aria,vex,pencil}/memories.json
 ```
 
 When a conversation ages out of the 500-row index, its session file is deleted by

@@ -9,7 +9,7 @@
  *   packages/agent-core/src/byok.ts, packages/agent-core/src/index.ts,
  *   packages/agent-core/src/model-capabilities.ts,
  *   packages/agent-core/src/providers.ts, packages/agent-core/src/upstream-stream.ts,
- *   packages/integrations/src/tools.ts, packages/memory/src/host.ts, packages/memory/src/index.ts
+ *   packages/integrations/src/tools.ts, packages/memory/src/index.ts
  * [HERE]: packages/agent-core/src/types.ts - shared type declarations for models, transcripts, attachments, tools and search configuration; type-only, emits no runtime code
  */
 export type ModelProtocol = 'openai' | 'anthropic'

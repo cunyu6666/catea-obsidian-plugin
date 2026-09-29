@@ -4,7 +4,7 @@
  * [TO]: Consumed by apps/obsidian/src/obsidian-tools.ts, packages/agent-core/src/index.ts,
  *   packages/agent-core/src/upstream-stream.ts, packages/integrations/src/mcp.ts,
  *   packages/integrations/src/tools.ts, packages/integrations/src/web.ts,
- *   packages/memory/src/index.ts, packages/memory/src/tools.ts
+ *   packages/memory/src/tools.ts
  * [HERE]: packages/agent-core/src/providers.ts - streamModel maps transcripts to OpenAI or Anthropic requests and parses answer and provider reasoning streams; retries once without usage on 400/422
  */
 import type { ChatAttachment, ModelConfig, TokenUsage, ToolCall, TranscriptItem } from './types'

@@ -1,56 +1,71 @@
 /**
  * [WHO]: Provides memoryReadOnly, memoryTools
- * [FROM]: Depends on ../../agent-core/src/providers
+ * [FROM]: Depends on @sinclair/typebox, ../../agent-core/src/providers, ./model
  * [TO]: Consumed by packages/agent-core/src/index.ts
- * [HERE]: packages/memory/src/tools.ts - declares the memory_* tool schemas, each with a persona or global scope, and the memoryReadOnly allowlist that skips write approval
+ * [HERE]: packages/memory/src/tools.ts - one memory tool surface with writing categories, source attribution and scope filters
  */
+import { Type, type TProperties } from '@sinclair/typebox'
 import type { ToolDefinition } from '../../agent-core/src/providers'
-const string = { type: 'string' }
+import { memoryInputSchema } from './model'
+const string = Type.String()
+const scope = Type.Optional(Type.Union([Type.Literal('persona'), Type.Literal('global')]))
+function tool(name: string, description: string, properties: TProperties): ToolDefinition {
+  return {
+    name,
+    description,
+    parameters: Type.Object({ ...properties, scope }, { additionalProperties: false }),
+  }
+}
 export const memoryTools: ToolDefinition[] = [
-  ['memory_search', 'Search layered memories', { query: string }],
-  ['memory_recall', 'Recall and reinforce a memory', { id: string }],
-  [
-    'memory_remember',
-    'Store an explicit user-requested memory',
+  tool(
+    'memory_search',
+    'Search general, writing and knowledge memories; filter by type, project or note. Include archived records to find memories for restoration.',
     {
-      type: {
-        type: 'string',
-        enum: ['fact', 'preference', 'lesson', 'decision', 'pattern', 'struggle', 'event'],
-      },
-      name: string,
-      summary: string,
-      detail: string,
+      query: string,
+      type: Type.Optional(memoryInputSchema.properties.type),
+      project: Type.Optional(string),
+      note: Type.Optional(string),
+      includeArchived: Type.Optional(Type.Boolean()),
     },
-  ],
-  ['memory_edit', 'Edit a memory after approval', { id: string, summary: string, detail: string }],
-  ['memory_forget', 'Forget a memory after approval', { id: string }],
-  ['memory_restore', 'Restore archived memory', { id: string }],
-  [
+  ),
+  tool('memory_recall', 'Read a full memory with its attribution and reinforce it', { id: string }),
+  tool(
+    'memory_remember',
+    'Store an explicit user-requested general, writing or knowledge memory. Preserve sources and stance; quoted material and assistant suggestions are not user beliefs. Use project/note for contextual instructions.',
+    memoryInputSchema.properties,
+  ),
+  tool('memory_edit', 'Update one memory after approval; omitted fields are preserved', {
+    id: string,
+    ...Type.Partial(memoryInputSchema).properties,
+  }),
+  tool('memory_forget', 'Archive a memory after approval; exclude it from recall until restored', {
+    id: string,
+  }),
+  tool('memory_restore', 'Restore an archived memory after approval', { id: string }),
+  tool(
     'memory_resolve',
-    'Resolve conflicting memories',
+    'Resolve a conflict after approval; merge only memories of the same type and scope',
     {
       aId: string,
       bId: string,
-      action: { type: 'string', enum: ['merge', 'demote', 'forget', 'mark-situational'] },
+      action: Type.Union(
+        ['merge', 'demote', 'forget', 'mark-situational'].map((value) => Type.Literal(value)),
+      ),
     },
-  ],
-  ['memory_dream', 'Consolidate episodic and long-term memories', {}],
-  ['memory_stats', 'Memory statistics', {}],
-  ['memory_review', 'Review memory alignment and conflicts', {}],
-  ['memory_insights', 'Memory insights', {}],
-].map(([name, description, properties]) => ({
-  name: name as string,
-  description: description as string,
-  parameters: {
-    type: 'object',
-    properties: {
-      ...(properties as object),
-      scope: { type: 'string', enum: ['persona', 'global'] },
-    },
-    required: Object.keys(properties as object),
-    additionalProperties: false,
-  },
-}))
+  ),
+  tool(
+    'memory_dream',
+    'Consolidate exact duplicates and archive stale or expired memories without inventing new beliefs',
+    {},
+  ),
+  tool('memory_stats', 'Count active and archived memories by category', {}),
+  tool('memory_review', 'Review projects, uncertain memories and recorded conflicts', {}),
+  tool(
+    'memory_insights',
+    'Inspect general and writing-memory categories, projects, attribution uncertainty and conflicts',
+    {},
+  ),
+]
 export const memoryReadOnly = new Set([
   'memory_search',
   'memory_recall',

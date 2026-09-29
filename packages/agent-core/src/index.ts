@@ -463,29 +463,6 @@ export class Agent {
           },
         },
       ]
-      if (config.memory) {
-        let timeout: number | undefined
-        const native = this.memory
-          .nativeTools(config.personaId, model.id)
-          .catch((error: unknown) => {
-            this.hooks.notice(
-              `记忆工具不可用：${error instanceof Error ? error.message : String(error)}`,
-            )
-            return []
-          })
-        try {
-          tools.push(
-            ...(await Promise.race([
-              native,
-              new Promise<ToolDefinition[]>((resolve) => {
-                timeout = window.setTimeout(() => resolve([]), 600)
-              }),
-            ])),
-          )
-        } finally {
-          if (timeout) window.clearTimeout(timeout)
-        }
-      }
       if (modelCapabilities(model).tools === false) tools.length = 0
       const hasJournal = !!this.session.journal
       const continuity = new WorkingContext(this.session, model.contextWindow || 128000, 0, () =>
@@ -588,16 +565,13 @@ Internal note references use [[path|label]]. Only call listed tools. Preserve ra
           )
           return this.pool.call(name, args, signal)
         }
-        if (name.startsWith('memory_') || name.startsWith('nanomem_')) {
+        if (name.startsWith('memory_')) {
           if (!this.settings().memory) throw new Error('记忆工具已关闭')
           await requirePermission(
             {
               mode: this.settings().permissionMode || 'assist',
               capability: 'memory',
-              operation:
-                memoryReadOnly.has(name) || ['nanomem_search', 'nanomem_recall'].includes(name)
-                  ? 'read'
-                  : 'write',
+              operation: memoryReadOnly.has(name) ? 'read' : 'write',
               resource: name,
             },
             this.hooks.approve,
