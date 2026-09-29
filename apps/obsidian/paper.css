@@ -640,7 +640,6 @@ body.gp-enabled .catea-editor-zoom-label { position: absolute; width: 1px; heigh
    Keep host border-box rules from shifting straight lines away from node centers. */
 .catea-git-panel .catea-git-graph [data-testid*="-line"] { box-sizing: content-box; transform: translateY(-1px); }
 
-.catea-git-node { position: absolute; top: 50%; left: 50%; width: 7px; height: 7px; border-radius: 50%; transform: translate(-50%, -50%); z-index: 1; pointer-events: none; }
 .catea-file-changes-modal.modal {width:min(760px,calc(100vw - 32px));max-width:calc(100vw - 32px)}
 .catea-support-modal.modal {width:min(440px,calc(100vw - 32px));}
 .catea-support-modal .modal-content>p {line-height:1.7;margin:0 0 12px;}

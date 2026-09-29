@@ -242,21 +242,13 @@ export function GitHistoryPanel({ plugin }: { plugin: Catea }) {
                   classes={{ containerClass: 'catea-git-graph' }}
                   onSelectCommit={(commit) => setSelected(commit?.hash || '')}
                 >
-                  <GitLog.GraphHTMLGrid
+                  <GitLog.Graph
                     nodeSize={7}
-                    node={({ colour }: { colour: string }) => (
-                      <span className="catea-git-node" style={{ backgroundColor: colour }} />
-                    )}
                     nodeTheme="plain"
                     showCommitNodeHashes={false}
                     showCommitNodeTooltips={false}
                   />
-                  <GitLog.Table
-                    className="catea-git-table"
-                    row={({ commit }) =>
-                      row({ ...commit, author: { name: commit.author?.name || '' } })
-                    }
-                  />
+                  <GitLog.Table className="catea-git-table" />
                 </GitLog>
               </GraphBoundary>
               {history?.hasMore && limit < 1000 && (

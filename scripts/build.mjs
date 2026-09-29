@@ -3,10 +3,20 @@ import postcss from 'postcss'
 import { agentLoopPatchPlugin } from './agent-loop-patch.mjs'
 import { buildStyles } from '../packages/design-system/scripts/build.mjs'
 import { readFile, writeFile, mkdir, copyFile, stat } from 'node:fs/promises'
+import { existsSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { resolve, dirname } from 'node:path'
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..'),
   out = resolve(root, 'dist/catea-paper')
+const dependencyRoot = (name) => {
+  const candidates = [
+    resolve(root, 'apps/obsidian/node_modules', name),
+    resolve(root, 'node_modules', name),
+  ]
+  const directory = candidates.find((candidate) => existsSync(resolve(candidate, 'package.json')))
+  if (!directory) throw new Error(`Cannot locate package root for ${name}`)
+  return directory
+}
 await mkdir(out, { recursive: true })
 await build({
   absWorkingDir: root,
@@ -60,7 +70,7 @@ const dockCss = (
   )
 ).join('\n')
 const gitStyles = postcss.parse(
-  await readFile(resolve(root, 'node_modules/@tomplum/react-git-log/dist/index.css'), 'utf8'),
+  await readFile(resolve(dependencyRoot('@tomplum/react-git-log'), 'dist/index.css'), 'utf8'),
 )
 gitStyles.walkRules((rule) => {
   if (rule.parent?.type === 'atrule' && rule.parent.name.includes('keyframes')) return
@@ -80,7 +90,7 @@ await writeFile(
     await Promise.all(
       gitDependencies.map(
         async (name) =>
-          `${name}\n\n${await readFile(resolve(root, `node_modules/${name}/LICENSE`), 'utf8')}`,
+          `${name}\n\n${await readFile(resolve(dependencyRoot(name), 'LICENSE'), 'utf8')}`,
       ),
     )
   ).join('\n\n---\n\n'),

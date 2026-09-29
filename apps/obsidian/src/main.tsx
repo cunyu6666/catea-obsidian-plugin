@@ -74,6 +74,7 @@ export default class Catea extends Base {
       includeCurrentNote: boolean
       theme?: ThemeMode
       supportPromptMonth?: string
+      supportPrompt?: boolean
     } = {
     language: 'zh',
     enabled: true,
@@ -238,7 +239,6 @@ export default class Catea extends Base {
     this.registerView(GIT_VIEW, (leaf) => new GitHistoryView(leaf, this))
     this.app.workspace.onLayoutReady(() => {
       void this.syncGitHistory()
-      void this.maybeShowSupportPrompt()
     })
     this.addCommand({
       id: 'open-git-history',
@@ -275,9 +275,6 @@ export default class Catea extends Base {
     const updateTimer = window.setTimeout(() => void this.updates.check(), 10000)
     this.register(() => window.clearTimeout(updateTimer))
     this.registerInterval(window.setInterval(() => void this.updates.check(), 60 * 60 * 1000))
-    this.registerInterval(
-      window.setInterval(() => void this.maybeShowSupportPrompt(), 24 * 60 * 60 * 1000),
-    )
     this.registerInterval(
       window.setInterval(() => {
         if (this.agentSettings.enabled && this.agentSettings.memory)
@@ -659,7 +656,8 @@ export default class Catea extends Base {
     settings?.open()
     settings?.openTabById(this.manifest.id)
   }
-  private async maybeShowSupportPrompt() {
+  async maybeShowSupportPrompt() {
+    if (this.agentSettings.supportPrompt === false) return
     if (!supportPromptDue(this.agentSettings.supportPromptMonth)) return
     this.agentSettings.supportPromptMonth = supportPromptMonth()
     try {
@@ -864,6 +862,10 @@ class AgentView extends ItemView {
   async onOpen() {
     this.root = createRoot(this.contentEl)
     this.root.render(<Panel plugin={this.plugin} />)
+    // The support prompt is disclosed in the README, bounded to one local
+    // calendar month, off-switchable in settings, and shown only from the
+    // plugin's own view rather than at Obsidian startup.
+    void this.plugin.maybeShowSupportPrompt()
   }
   async onClose() {
     this.root?.unmount()

@@ -566,6 +566,18 @@ export class CateaSettings extends PluginSettingTab {
             )
         },
       },
+      {
+        name: tr('支持提示'),
+        desc: tr('打开 Catea 侧栏时偶尔显示一条项目支持信息，每个本地月最多一次；关闭后不再显示。'),
+        render: (s) => {
+          s.addToggle((toggle) =>
+            toggle.setValue(c.supportPrompt !== false).onChange(async (value) => {
+              c.supportPrompt = value
+              await p.saveAgentSettings()
+            }),
+          )
+        },
+      },
     ]
     return [
       { heading: tr('更新'), rows: updates },

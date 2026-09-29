@@ -3,6 +3,25 @@
 Notable changes per release. The version is the one in `manifest.json`; the GitHub
 release tag is that same number with no `v` prefix.
 
+## 0.3.14
+
+### Fixed
+
+- Satisfy the community-plugin manifest rules with a neutral, punctuated
+  description that does not repeat the host application's name.
+- Return the UI runtime to React 18 and use the compatible React Git Log release,
+  removing React DOM's runtime script-element factory from the production bundle
+  that the marketplace scanner classified as code obfuscation.
+- Resolve the Git Log package from either the workspace or root installation so
+  clean npm installs do not depend on a particular hoisting layout.
+
+### Changed
+
+- Scope the GitHub Star invitation to opening the Catea sidebar instead of
+  Obsidian startup, add a Support prompt off switch in settings, and disclose
+  it in both README languages, as the Obsidian developer policies require for
+  static messages inside the plugin's own interface.
+
 ## 0.3.13
 
 ### Added

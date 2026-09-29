@@ -9,13 +9,16 @@ scanned a release containing them.
 | Review finding | Resolution |
 | --- | --- |
 | Clean build requires an unavailable sibling design system | The design system is now included under `packages/design-system`; installation and build were checked in a temporary copy without the sibling or pre-existing dependencies. |
-| `main.js` exceeds 5 MB | Native Obsidian Mermaid loading and the curated grammar bundle keep the 0.3.13 output at 4,582,896 bytes. Both the build script and CI enforce a limit of 5,000,000 bytes. |
+| `main.js` exceeds 5 MB | Native Obsidian Mermaid loading and the curated grammar bundle keep the 0.3.14 output at 4,490,605 bytes. Both the build script and CI enforce a limit of 5,000,000 bytes. |
+| Manifest description repeats the host name and lacks accepted terminal punctuation | Replaced it with a neutral bilingual description ending in an ASCII period. |
+| Bundle creates a `script` element | Returned to React 18 and the React-18-compatible Git Log release. The production bundle no longer contains `createElement('script')`; the flagged factory came from React DOM 19's hoistable-script implementation rather than application code. |
 | Missing build provenance | The GitHub release workflow attests `main.js` and `styles.css` before publishing. This takes effect only when that workflow runs successfully; local builds do not create attestations. |
 | Undeclared dependencies | Runtime dependencies are declared in the workspaces that import them, with an updated lockfile. |
 | Settings search compatibility | Shared setting definitions expose searchable names to the modern API while preserving the legacy display path. Secrets are not included in searchable metadata. |
 | Owned-source lint findings | Added the official Obsidian recommended ESLint rules, typed protocol and host boundaries, removed unused values and unsafe `any`, replaced dynamic `require`, and aligned DOM/timer usage with the host. |
 | CSS `!important` and `:has` | Replaced them in plugin and design-system CSS with scoped specificity, explicit selection/menu state, and registered ribbon hover handlers. |
 | README title detection | The primary heading is Markdown and matches the plugin name. |
+| Static support prompt inside the plugin interface | The developer policies allow static pop-up messages within the plugin's own interface when clearly indicated in the README. Both README languages disclose the GitHub Star invitation; it appears only when the Catea sidebar is opened, at most once per local calendar month, is voluntary and dismissible, and Settings → Support prompt turns it off entirely. |
 
 CI and release preflight now run formatting, lint and adapter behavior checks in addition to
 contracts, governance, typecheck and build. The behavior checks exercise OpenAI

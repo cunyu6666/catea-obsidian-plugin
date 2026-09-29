@@ -46,6 +46,8 @@ No Catea account, telemetry, or Catea-operated backend. The agent runs inside Ob
 
 Model requests send relevant prompts, notes, and tool results to your chosen provider. Web search and page reading use Exa, Jina, or DuckDuckGo; enabled MCP servers receive the inputs needed for their tools. GitHub update checks run at most once daily automatically and send no notes or keys. Web search and automatic update checks have separate off switches.
 
+Disclosure: when you open the Catea sidebar, Catea may show a static support message — an optional invitation to leave a GitHub Star — at most once per local calendar month. It lives entirely inside the plugin's own interface, sends nothing over the network, is fully voluntary, and can be turned off in **Settings → Catea → Support prompt**.
+
 The default **Assist** mode asks for approval for file changes and other sensitive actions. **Full access** skips those approvals; Bash commands can access files beyond your vault. See the [security model](./SECURITY.md) for details.
 
 Versions before 0.3.12 created full-vault recovery copies under `.catea/snapshots`.
@@ -97,6 +99,8 @@ Catea 可检查新版本，并在顶部横幅提醒更新。设置中可以关�
 无需 Catea 账号，没有遥测，也没有 Catea 运营的后端。Agent 在 Obsidian 内运行，对话、记忆和知识库设置保存在当前知识库。若本机支持系统级安全加密，BYOK 模型和 API Key 会加密保存在 Obsidian 的本机数据目录，并在知识库间共享；打开旧知识库时会导入已有模型。若安全加密不可用，模型仍按知识库保存，密钥优先使用 Obsidian 安全存储，否则仅保留在当前会话的内存里。
 
 模型请求会把相关提示词、笔记和工具结果发送给你选择的服务商。网络搜索与网页读取使用 Exa、Jina 或 DuckDuckGo；你启用的 MCP 服务会收到执行工具所需的输入。GitHub 自动更新检查每天最多一次，不发送笔记或密钥。网络搜索与自动检查更新各有独立开关。
+
+披露：打开 Catea 侧栏时，Catea 可能会显示一条静态支持提示——自愿的 GitHub Star 邀请——每个本地日历月最多一次。它只存在于插件自身界面内，不发送任何网络请求，完全自愿，可在**设置 → Catea → 支持提示**中关闭。
 
 默认的「帮我批准」模式会对文件修改等敏感操作请求确认。「完全访问」会跳过这些审批；Bash 命令可以访问知识库之外的文件。详情见[安全说明](./SECURITY.md)。
 

@@ -25,12 +25,12 @@ panel.tsx: React sidebar root composing a header session dropdown, empty convers
 paper.cjs: Vendored, generated 1.6 MB bundle providing the Paper base class with embedded Tabler icon assets; skipped by DIP, never hand-edited.
 selection.ts: Adds an editor-menu entry and a floating add-to-Catea popup positioned through CodeMirror `coordsAtPos`, rebinding listeners on layout change.
 session-drafts.ts: Keeps composer text, attachments and selected quotes isolated by session ID, including asynchronous restoration after send failure.
-support-prompt.ts: Gates the optional GitHub Star prompt to the first load and at most once per local calendar month.
+support-prompt.ts: Gates the optional GitHub support prompt, shown only when the Agent sidebar opens, to at most once per local calendar month; a settings toggle turns it off.
 tool-presenters.ts: Registry for tool activity card names, summaries and detail payloads; unknown tools use a fallback presenter.
 turn-review.ts: Coalesces repeated tool writes into one per-file diff and decides when an empty or failed turn needs a standalone review action.
 updates.ts: Checks stable GitHub releases at most daily, validates release assets and host compatibility, caches results and per-version dismissals, and supports manual checks.
 theme.ts: Reversible per-window light/dark/system selection, with live operating-system appearance listeners and unload cleanup.
-settings.ts: Searchable setting definitions for Obsidian 1.13+, with an imperative fallback for older hosts; language, theme, release updates, paper, Agent persona and capabilities, optional reply annotations and Git history (both off by default), global BYOK and MCP; OpenRouter quick setup and advanced ModelModal validate through core BYOK helpers.
+settings.ts: Searchable setting definitions for Obsidian 1.13+, with an imperative fallback for older hosts; language, theme, release updates, support prompt, paper, Agent persona and capabilities, optional reply annotations and Git history (both off by default), global BYOK and MCP; OpenRouter quick setup and advanced ModelModal validate through core BYOK helpers.
 
 ## Submodules
 

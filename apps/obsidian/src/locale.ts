@@ -17,6 +17,9 @@ const english: Record<string, string> = {
     'It helps more people discover the project and gives its maintenance a little encouragement. It is entirely optional; close this dialog to continue.',
   暂时不用: 'Not now',
   '前往 GitHub': 'Open GitHub',
+  支持提示: 'Support prompt',
+  '打开 Catea 侧栏时偶尔显示一条项目支持信息，每个本地月最多一次；关闭后不再显示。':
+    'Occasionally shows a note about supporting the project when the Catea sidebar opens, at most once per local calendar month. Nothing is shown once this is off.',
   刷新: 'Refresh',
   关闭: 'Close',
   'Git 历史': 'Git history',
