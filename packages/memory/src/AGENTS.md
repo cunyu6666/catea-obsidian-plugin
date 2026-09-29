@@ -13,7 +13,7 @@ store.ts: `MemoryStore` confines paths to the vault, serializes transactions and
 migration.ts: Imports both previous NanoMem formats and archives with exact-byte source backups, ID aliases, links and conservative archive preservation; malformed inputs stop migration without overwriting originals.
 engine.ts: `MemoryEngine` implements canonical CRUD, attributed local recall with explicit project/note applicability, reinforcement, conflict resolution, exact-duplicate consolidation and stale/TTL archival; retains upstream hash embedding and PII helpers.
 extraction.ts: Extracts general categories plus six writing/knowledge extensions through structured BYOK output; attaches turn provenance and distinguishes user statements, quotations, assistant proposals and uncertain inference.
-index.ts: `MemoryService` shares per-scope stores (global, vex, aria, pencil), bounds recall at 600 ms with query-specific caching, and drains the durable queue with retry backoff and cancellation.
+index.ts: `MemoryService` shares per-scope stores (global, vex, aria, pencil, dazai), bounds recall at 600 ms with query-specific caching, and drains the durable queue with retry backoff and cancellation.
 tools.ts: Declares one `memory_*` tool surface using the shared schema and read-only approval allowlist.
 
 ## Notes

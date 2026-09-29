@@ -14,7 +14,7 @@ export class MemoryStore {
     private vault: string,
     private scope: string,
   ) {
-    if (!['global', 'aria', 'vex', 'pencil'].includes(scope))
+    if (!['global', 'aria', 'vex', 'pencil', 'dazai'].includes(scope))
       throw new Error('Unknown memory scope')
   }
   private async load(): Promise<{ path: string; data: MemoryDocument }> {

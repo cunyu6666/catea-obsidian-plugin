@@ -7,6 +7,10 @@ release tag is that same number with no `v` prefix.
 
 ### Added
 
+- A fourth persona, Dazai, in two layers: a tone layer for ordinary turns and a
+  prose layer of nine checkable style rules for writing tasks. The prose layer
+  asks for the optional `dazai-corpus` skill and degrades to rule-only output,
+  saying so, when that skill is absent.
 - Type `/` in the composer to open a skill picker above the input, with
   type-to-search and keyboard navigation. Chosen skills appear as removable
   tags, and the tagged message injects only the selected skills for that turn —

@@ -1,7 +1,7 @@
 # General memory with writing and knowledge extensions
 
 Catea has one memory model, one `memory_*` tool surface and one authoritative
-`memories.json` per scope under `.catea/memory/{global,aria,vex,pencil}/`.
+`memories.json` per scope under `.catea/memory/{global,aria,vex,pencil,dazai}/`.
 `schemaVersion` describes the file format; it does not select a second engine.
 
 ## Categories and applicability

@@ -112,7 +112,7 @@ a sandbox.
   sessions/<id>.json         one raw conversation and tool transcript
   skills/<id>/SKILL.md       explicitly enabled local skills
   memory/pending-turns.json  durable extraction queue
-  memory/{global,aria,vex,pencil}/memories.json
+  memory/{global,aria,vex,pencil,dazai}/memories.json
 ```
 
 When a conversation ages out of the 500-row index, its session file is deleted by

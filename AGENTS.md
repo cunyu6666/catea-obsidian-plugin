@@ -62,7 +62,7 @@ the web, call MCP servers, and keep a long-term memory of the user's notes.
 |  | fs + bash tools  |  | native vault API  |  | writing memory     |   |
 |  |------------------|  |-------------------|  |--------------------|   |
 |  | McpPool          |  | web_search/fetch  |  | personas           |   |
-|  | HTTP + stdio     |  | Exa/Jina/DDG      |  | Vex / Aria / Pencil|   |
+|  | HTTP + stdio     |  | Exa/Jina/DDG      |  | 4 personas, see P2 |   |
 |  |------------------|  |-------------------|  |--------------------|   |
 |-----------------------------------------------------------------------|
                                  |
@@ -101,6 +101,7 @@ packages/personas/src/       # Persona prompt documents plus index.ts
 packages/design-system/      # Vendored design system: tokens, components, Tailwind compiler
 docs/                        # Design rationale and specs
 docs/specs/                  # Approved design specifications
+docs/skills/                 # Skill templates users copy into <vault>/.catea/skills/
 .github/                     # CI, the release workflow, and issue and PR templates
 scripts/                     # Build tooling, the scoped typecheck gate, and the release script
 tests/                       # DIP harness: contract parser, verify gate, governance gate
@@ -230,7 +231,7 @@ Vault-specific runtime data is written inside the user's vault, never into the p
 | `.catea/skills/<id>/SKILL.md` | User-installed skill packages, enabled explicitly |
 | `.catea/memory/pending-turns.json` | Durable queue of turns awaiting memory extraction |
 | `.catea/memory/global/memories.json` | Canonical shared writing and knowledge memory |
-| `.catea/memory/aria/`, `.catea/memory/vex/`, `.catea/memory/pencil/` | Per-persona isolation; each contains one canonical `memories.json` |
+| `.catea/memory/aria/`, `.catea/memory/vex/`, `.catea/memory/pencil/`, `.catea/memory/dazai/` | Per-persona isolation; each contains one canonical `memories.json` |
 
 BYOK models and API keys are held in encrypted `<Obsidian userData>/catea/byok.enc`
 when OS-backed Electron safeStorage is available (Linux `basic_text` is rejected).
@@ -253,7 +254,10 @@ it may contain private note content.
 resolved through `apps/obsidian/src/locale.ts` and `packages/agent-core/src/i18n.ts`,
 and Chinese remains a supported UI language. `README.md` is intentionally
 bilingual, with English first and Chinese second in one document. The Chinese persona documents under `packages/personas/src/` are
-runtime prompt content and are deliberately not translated here.
+runtime prompt content and are deliberately not translated here. Templates under
+`docs/skills/` are the same category: a `SKILL.md` is injected into the prompt
+when enabled, so it is runtime content that merely lives beside the docs, and
+the persona it serves decides its language.
 
 ### Commit Convention
 
