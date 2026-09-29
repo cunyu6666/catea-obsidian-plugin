@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto'
 import { readFile } from 'node:fs/promises'
 import { resolve } from 'node:path'
+import { originalSource } from './upstream-source-adaptations.mjs'
 
 const relativePath = 'packages/agent-core/upstream/loop/agent-loop.ts'
 const manifestPath = 'packages/agent-core/LOCAL_PATCHES.json'
@@ -77,10 +78,11 @@ export function agentLoopPatchPlugin(root) {
         ])
         const { files } = JSON.parse(manifest)
         const expected = files['loop/agent-loop.ts']
-        if (!expected || sha256(source) !== expected.upstreamSha256)
+        const original = await originalSource(root, relativePath, source)
+        if (!expected || sha256(original) !== expected.upstreamSha256)
           throw new Error('CatUI agent-loop source differs from the reviewed upstream snapshot')
         const contents = applyAgentLoopPatch(source)
-        if (sha256(contents) !== expected.localSha256)
+        if (sha256(applyAgentLoopPatch(original)) !== expected.localSha256)
           throw new Error('CatUI agent-loop patch differs from its reviewed digest')
         applied = true
         return {

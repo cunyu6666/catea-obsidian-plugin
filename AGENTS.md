@@ -71,7 +71,7 @@ the web, call MCP servers, and keep a long-term memory of the user's notes.
 |                      VENDORED UPSTREAM (excluded from DIP)             |
 |  packages/agent-core/upstream/  -> CatUI standard agent loop + AI      |
 |  packages/memory/upstream/      -> CatUI mem-core (GPL-3.0)            |
-|  Byte-verified original; reviewed loop patch applied during the build.  |
+|  Verified source adaptations; loop patch applied during the build.  |
 |-----------------------------------------------------------------------|
 ```
 
@@ -332,8 +332,9 @@ Four deliberate exclusions:
    from DIP. Agent-core source digests are recorded in
    `packages/agent-core/upstream/SOURCE_HASHES.json`; the one local loop patch
    is applied in memory by `scripts/agent-loop-patch.mjs` and recorded in
-   `packages/agent-core/LOCAL_PATCHES.json`. Inserting a P3 header would
-   invalidate the original digests.
+   `packages/agent-core/LOCAL_PATCHES.json`. Source adaptations are recorded separately in `packages/UPSTREAM_ADAPTATIONS.json`;
+   verification reverses each edit to check the unchanged original digests.
+   Do not modify snapshots without updating these auditable adaptation records.
 2. **`scripts/`** — the scope rule above covers `apps/*/src` and `packages/*/src`
    only, so `scripts/build.mjs` is unheadered. Adding a header now would also race
    the concurrent marketplace work that edits that file.

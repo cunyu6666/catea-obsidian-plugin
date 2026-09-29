@@ -20,7 +20,7 @@ declare module "catui-protocol" {
 		hasUI: boolean;
 		sessionManager: SessionManagerContract;
 		ui: ExtensionUi;
-		getSettings?: () => { nanomem?: Record<string, any> } | undefined;
+		getSettings?: () => { nanomem?: { autoDream?: { enabled?: boolean; minHours?: number; minSessions?: number; scanIntervalMinutes?: number }; dream?: { lockStaleMinutes?: number } } } | undefined;
 		completeSimple?: (systemPrompt: string, userMessage: string) => Promise<string | undefined>;
 		completeJson?: (
 			systemPrompt: string,
@@ -43,13 +43,19 @@ declare module "catui-protocol" {
 		| "tool_execution_start"
 		| "tool_execution_end";
 
-	export type HookHandler = (event: any, ctx: ExtensionContext) => any | Promise<any>;
+	export type HookEvents = {
+  before_agent_start: { prompt?: string };
+  tool_execution_start: { toolCallId: string; toolName: string; args: Record<string, unknown> };
+  tool_execution_end: { toolCallId: string; toolName: string; result: unknown; isError: boolean };
+  agent_end: { messages: Array<{ role: string; content?: unknown }> };
+};
+export type HookHandler<T extends HookEventName = HookEventName> = (event: T extends keyof HookEvents ? HookEvents[T] : unknown, ctx: ExtensionContext) => unknown;
 
 	export interface ExtensionCommand {
 		description?: string;
 		getArgumentCompletions?: (
 			argumentPrefix: string,
-			context?: { tokenIndex?: number; [key: string]: any },
+			context?: { tokenIndex?: number; [key: string]: unknown },
 		) => Array<{ value: string; label: string }> | null;
 		handler: (args: string | undefined, ctx: ExtensionContext) => void | Promise<void>;
 	}
@@ -95,7 +101,7 @@ declare module "catui-protocol" {
 	}
 
 	export interface ExtensionAPI {
-		on(event: HookEventName, handler: HookHandler): void;
+		on<T extends HookEventName>(event: T, handler: HookHandler<T>): void;
 		registerCommand(name: string, command: ExtensionCommand): void;
 		registerTool<TParams extends TSchema = TSchema, TDetails = unknown>(tool: ToolContract<TParams, TDetails>): void;
 	}

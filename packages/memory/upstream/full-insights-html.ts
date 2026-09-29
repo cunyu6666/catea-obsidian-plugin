@@ -10,12 +10,8 @@ import { PROMPTS } from "./i18n.js";
 import type {
 	DeveloperPersona,
 	FullInsightsChart,
-	FullInsightsFriction,
 	FullInsightsReport,
-	FullInsightsFeatureToTry,
-	FullInsightsUsagePattern,
 	HumanInsight,
-	PatternInsight,
 	RootCauseInsight,
 } from "./types.js";
 
@@ -65,7 +61,6 @@ export function renderFullInsightsHtml(report: FullInsightsReport, locale: strin
 		rootCauses?: RootCauseInsight[];
 	};
 
-	const sections: string[] = [];
 
 	// TOC links (only for sections we might render)
 	const tocLinks: string[] = [

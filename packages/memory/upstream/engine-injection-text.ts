@@ -1,3 +1,4 @@
+import { readLegacyContent } from "./compat.js";
 /**
  * [WHO]: Provides buildProgressiveInjectionText, CONVERSATION_PREFERENCE_PATTERNS, isConversationPreference, selectConversationPreferences, rankConversationPreference, mergeUniqueEntries
  * [FROM]: Depends on ./i18n.js for PromptSet; ./linking.js for getGraphContextSummaries, GraphNeighbor; ./scoring.js for daysSince; ./types.js, ./types-v2.js for memory types
@@ -31,7 +32,7 @@ export const CONVERSATION_PREFERENCE_PATTERNS = [
 
 export function isConversationPreference(entry: MemoryEntry): boolean {
 	if (entry.type !== "preference") return false;
-	const text = `${entry.name || ""}\n${entry.summary || ""}\n${entry.detail || ""}\n${entry.content || ""}`;
+	const text = `${entry.name || ""}\n${entry.summary || ""}\n${entry.detail || ""}\n${readLegacyContent(entry) || ""}`;
 	return CONVERSATION_PREFERENCE_PATTERNS.some((pattern) => pattern.test(text));
 }
 

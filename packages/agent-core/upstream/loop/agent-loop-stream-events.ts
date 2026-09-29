@@ -31,9 +31,9 @@ export function waitForAbortableOperation<T>(
 				cleanup();
 				resolve({ type: "resolved", value });
 			},
-			(error) => {
+			(error: unknown) => {
 				cleanup();
-				reject(error);
+				reject(error instanceof Error ? error : new Error("Stream operation rejected", { cause: error }));
 			},
 		);
 	});
@@ -68,9 +68,9 @@ export function waitForAssistantStreamEvent(
 				cleanup();
 				resolve(result);
 			},
-			(error) => {
+			(error: unknown) => {
 				cleanup();
-				reject(error);
+				reject(error instanceof Error ? error : new Error("Stream operation rejected", { cause: error }));
 			},
 		);
 	});

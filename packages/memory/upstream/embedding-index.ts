@@ -48,9 +48,9 @@ export function cosineSimilarity(a: number[], b: number[]): number {
 	let magA = 0;
 	let magB = 0;
 	for (let i = 0; i < a.length; i++) {
-		dot += a[i]! * b[i]!;
-		magA += a[i]! * a[i]!;
-		magB += b[i]! * b[i]!;
+		dot += a[i] * b[i];
+		magA += a[i] * a[i];
+		magB += b[i] * b[i];
 	}
 	if (!magA || !magB) return 0;
 	return dot / (Math.sqrt(magA) * Math.sqrt(magB));
@@ -84,7 +84,7 @@ export async function syncEmbeddingIndex(
 		const vectors = await embedFn(toEmbed.map((item) => item.text));
 		const now = new Date().toISOString();
 		for (let i = 0; i < toEmbed.length; i++) {
-			const item = toEmbed[i]!;
+			const item = toEmbed[i];
 			const vector = vectors[i] ?? [];
 			nextRecords.push({
 				id: `${item.memoryKind}:${item.memoryId}`,

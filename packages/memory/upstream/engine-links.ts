@@ -250,8 +250,8 @@ export function detectAlignmentConflicts(
 
 	for (let i = 0; i < candidates.length; i++) {
 		for (let j = i + 1; j < candidates.length; j++) {
-			const a = candidates[i]!;
-			const b = candidates[j]!;
+			const a = candidates[i];
+			const b = candidates[j];
 			if (a.id === b.id) continue;
 			const overlap = tagOverlap(a.tags, b.tags);
 			if (overlap < 0.45) continue;

@@ -13,6 +13,7 @@ import type {
   Model,
   Api,
   StreamOptions,
+  SimpleStreamOptions,
 } from '../upstream/ai/types'
 import { AssistantMessageEventStream } from '../upstream/ai/events'
 import { ModelServiceError, type ModelReply } from './providers'
@@ -85,7 +86,7 @@ export function toTranscript(m: RuntimeMessage): TranscriptItem {
       content: text,
       calls: m.content
         .filter((b) => b.type === 'toolCall')
-        .map((b) => ({ id: b.id, name: b.name, args: b.arguments as Record<string, unknown> })),
+        .map((b) => ({ id: b.id, name: b.name, args: b.arguments })),
       ...(m.anthropicContent ? { anthropicContent: m.anthropicContent } : {}),
     }
   return { role: 'user', content: text, attachmentIds: m.attachmentIds }
@@ -242,6 +243,10 @@ export function providerStream(
   }
 }
 // Mandatory host injection prevents accidentally selecting CatUI's built-in providers or credentials.
-export function streamSimple(): never {
+export function streamSimple(
+  _model: Model<Api>,
+  _context: Context,
+  _options?: SimpleStreamOptions,
+): AssistantMessageEventStream {
   throw new Error('Catea provider adapter required')
 }

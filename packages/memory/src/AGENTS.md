@@ -25,6 +25,8 @@ tools.ts: Declares one `memory_*` tool surface using the shared schema and read-
 - Migration leaves source files untouched. Once `memories.json` exists, malformed
   canonical data fails closed instead of falling back to stale source files.
 - Automatic extraction suppresses exact duplicates of user-forgotten records; explicit restore remains available.
+- Extraction retries malformed structured output once with bounded schema diagnostics;
+  transport failures go directly to the durable queue. Validation remains all-or-nothing.
 - Background extraction failure remains in `pending-turns.json`; successful
   retries cannot replay an already committed turn.
 - Source attribution checks reject fabricated user excerpts, but semantic

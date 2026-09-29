@@ -1,3 +1,4 @@
+import { readLegacyContent } from "./compat.js";
 /**
  * [WHO]: Provides inferSemanticRetention/Stability/Importance, mapExtractedItemToSemanticType, upsertSemanticFromExtractedItem, semanticKindToLegacyType, semanticToRuntimeEntry, proceduralToRuntimeEntry
  * [FROM]: Depends on ./privacy.js for filterPII; ./scoring.js for extractTags, tagOverlap; ./types.js, ./types-v2.js; ./engine-scoring-v2.js for currentStructuralAnchor
@@ -86,7 +87,7 @@ export function upsertSemanticFromExtractedItem(
 	defaultScope: MemoryScope | undefined,
 ): void {
 	if (item.type === "retract") return;
-	const detail = filterPII(item.detail || item.content || "");
+	const detail = filterPII(item.detail || readLegacyContent(item) || "");
 	const name = item.name || detail.slice(0, 30) || item.summary || "memory";
 	const summary = item.summary || detail.slice(0, 150) || name;
 	const semanticType = mapExtractedItemToSemanticType(item);

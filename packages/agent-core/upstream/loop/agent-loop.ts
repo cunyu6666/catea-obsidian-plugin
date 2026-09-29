@@ -32,7 +32,7 @@ import type {
 	AgentToolResult,
 	StreamFn,
 } from "./types.js";
-import { ToolNotFoundError, ToolExecutionError, ToolPermissionDeniedError, ValidationError } from "./errors.js";
+import { ToolNotFoundError, ToolPermissionDeniedError, ValidationError } from "./errors.js";
 import {
 	computeRecoveryMaxTokens,
 	createOutputTokenRecoveryMessage,
@@ -71,19 +71,8 @@ const DEFAULT_MAX_STOP_HOOK_CONTINUATIONS = 3;
 const DEFAULT_MAX_MODEL_ERROR_RECOVERY_ATTEMPTS = 1;
 const DEFAULT_MAX_OUTPUT_TOKEN_RECOVERY_ATTEMPTS = 1;
 
-// --- Timing instrumentation (gated by CATUI_DEBUG=1) ---
-function _tlog(msg: string): void {
-	if (process.env.CATUI_DEBUG !== "1") return;
-	try {
-		const { appendFileSync } = require("fs");
-		const { join } = require("path");
-		const { homedir } = require("os");
-		appendFileSync(
-			join(homedir(), ".catui", "agent", "catui-debug.log"),
-			`[${new Date().toISOString()}] [loop] ${msg}\n`,
-		);
-	} catch { /* best-effort */ }
-}
+// Catea does not persist debug traces outside the user's vault.
+function _tlog(_msg: string): void { /* Host owns diagnostics. */ }
 
 interface LoopTiming {
 	loopStart: number;
@@ -125,7 +114,7 @@ export function agentLoop(
 ): EventStream<AgentEvent, AgentMessage[]> {
 	const stream = createAgentStream();
 
-	(async () => {
+	void (async () => {
 		const newMessages: AgentMessage[] = [...prompts];
 		const currentContext: AgentContext = {
 			...context,
@@ -173,7 +162,7 @@ export function agentLoopContinue(
 
 	const stream = createAgentStream();
 
-	(async () => {
+	void (async () => {
 		const newMessages: AgentMessage[] = [];
 		const currentContext: AgentContext = { ...context };
 
@@ -1082,7 +1071,7 @@ function collectPermissionDenials(toolResults: ToolResultMessage[]): AgentToolPe
  * Execute tool calls from an assistant message.
  */
 async function executeToolCalls(
-	tools: AgentTool<any>[] | undefined,
+	tools: AgentTool[] | undefined,
 	assistantMessage: AssistantMessage,
 	signal: AbortSignal | undefined,
 	stream: EventStream<AgentEvent, AgentMessage[]>,
@@ -1139,7 +1128,7 @@ async function executeToolCalls(
 			args: toolCall.arguments,
 		});
 
-		let result: AgentToolResult<any>;
+		let result: AgentToolResult<unknown>;
 		let isError = false;
 		let executedInput: unknown = toolCall.arguments;
 		let didExecute = false;
@@ -1166,7 +1155,7 @@ async function executeToolCalls(
 					rawInput: toolCall.arguments,
 				})
 				: undefined;
-			if (policyDecision?.decision === "allow" && policyDecision.input !== undefined) validatedArgs = policyDecision.input;
+			if (policyDecision?.decision === "allow" && policyDecision.input !== undefined) validatedArgs = validateToolArguments(tool, { ...toolCall, arguments: policyDecision.input });
 			executedInput = validatedArgs;
 			const permission = policyDecision && policyDecision.decision !== "allow" ? policyDecision : await canUseTool?.({
 				toolCallId: toolCall.id,
@@ -1319,7 +1308,7 @@ interface SingleToolUseResult {
  */
 async function executeToolCallsBatched(
 	toolCalls: StructuredAdaptiveToolCall[],
-	toolByName: Map<string, AgentTool<any>>,
+	toolByName: Map<string, AgentTool>,
 	signal: AbortSignal | undefined,
 	stream: EventStream<AgentEvent, AgentMessage[]>,
 	getSteeringMessages?: AgentLoopConfig["getSteeringMessages"],
@@ -1427,7 +1416,7 @@ async function executeToolCallsBatched(
 
 async function executeSingleToolUse(
 	toolCall: StructuredAdaptiveToolCall,
-	tool: AgentTool<any> | undefined,
+	tool: AgentTool | undefined,
 	signal: AbortSignal | undefined,
 	stream: EventStream<AgentEvent, AgentMessage[]>,
 	canUseTool?: AgentLoopConfig["canUseTool"],
@@ -1448,7 +1437,7 @@ async function executeSingleToolUse(
 		args: toolCall.arguments,
 	});
 
-	let result: AgentToolResult<any>;
+	let result: AgentToolResult<unknown>;
 	let isError = false;
 	let executedInput: unknown = toolCall.arguments;
 	let didExecute = false;
@@ -1475,7 +1464,7 @@ async function executeSingleToolUse(
 				rawInput: toolCall.arguments,
 			})
 			: undefined;
-		if (policyDecision?.decision === "allow" && policyDecision.input !== undefined) validatedArgs = policyDecision.input;
+		if (policyDecision?.decision === "allow" && policyDecision.input !== undefined) validatedArgs = validateToolArguments(tool, { ...toolCall, arguments: policyDecision.input });
 		executedInput = validatedArgs;
 		const permission = policyDecision && policyDecision.decision !== "allow" ? policyDecision : await canUseTool?.({
 			toolCallId: toolCall.id,
@@ -1642,7 +1631,7 @@ function skipToolCall(
 	reason = "Skipped due to queued user message.",
 	details: Record<string, unknown> = {},
 ): ToolResultMessage {
-	const result: AgentToolResult<any> = {
+	const result: AgentToolResult<unknown> = {
 		content: [{ type: "text", text: reason }],
 		details,
 	};

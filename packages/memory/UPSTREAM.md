@@ -2,7 +2,8 @@
 
 Source revision: d6d110aa645cd5e2305dde42e04040bddafb5e6a (GPL-3.0).
 
-The snapshot and license are retained. Catea's runtime uses the local hashing
+The snapshot and license are retained with reversible source adaptations recorded
+in `packages/UPSTREAM_ADAPTATIONS.json`; see `docs/UPSTREAM_ADAPTATIONS.md`. Catea's runtime uses the local hashing
 embedding and PII-filter helpers; it no longer instantiates NanoMemEngine or
 registers the NanoMem extension and its parallel tools.
 

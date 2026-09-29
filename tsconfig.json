@@ -10,7 +10,18 @@
     "allowJs": true,
     "allowImportingTsExtensions": true,
     "skipLibCheck": true,
-    "noEmit": true
+    "noEmit": true,
+    "paths": {
+      "@catui/ai/stream": [
+        "./packages/agent-core/src/upstream-stream.ts"
+      ],
+      "@catui/ai/*": [
+        "./packages/agent-core/upstream/ai/*"
+      ],
+      "@catui/agent-core": [
+        "./packages/agent-core/upstream/loop/types.ts"
+      ]
+    }
   },
   "include": [
     "apps",

@@ -1,0 +1,2295 @@
+{
+  "baseRepositoryCommit": "98d1ddd",
+  "files": {
+    "packages/agent-core/upstream/context/file-ops.ts": {
+      "originalSha256": "7d49954ed89b5b6f65533aae6c31dd7552369e714df0503d620808ccfc0d2ab1",
+      "adaptedSha256": "66f3c42b56e6bb7441f43888d1aab29cdad97cd0e443f6039f0778372862ab41",
+      "reason": "Typed contracts and lifecycle handling; explicit terminal/host interfaces and validated legacy compatibility. See docs/UPSTREAM_ADAPTATIONS.md.",
+      "edits": [
+        {
+          "at": 7,
+          "before": [
+            "import type { Message } from \"@catui/ai/types\";"
+          ],
+          "after": [
+            ""
+          ]
+        }
+      ]
+    },
+    "packages/agent-core/upstream/context/boundaries.ts": {
+      "originalSha256": "be7210085e2641c0ad2b62edcb6fca19570d085aff59eeda1a7376ab5474fdb7",
+      "adaptedSha256": "6b23513a166ce9e4c1b7aa4923b35ef3b77b17f65ff270d7464aa8b888709787",
+      "reason": "Typed contracts and lifecycle handling; explicit terminal/host interfaces and validated legacy compatibility. See docs/UPSTREAM_ADAPTATIONS.md.",
+      "edits": [
+        {
+          "at": 1,
+          "before": [
+            "import type { AssistantMessage,Usage } from \"../ai/types\";",
+            "type SessionEntry=any;type CompactionEntry=any;"
+          ],
+          "after": [
+            "import type {Usage } from \"../ai/types\";",
+            "import type { SessionEntry, CompactionEntry } from \"../../../session\";"
+          ]
+        },
+        {
+          "at": 4,
+          "before": [
+            "const createCompactionSummaryMessage=(summary:string)=>({role:\"compactionSummary\",summary});",
+            "const createBranchSummaryMessage=(summary:string)=>({role:\"branchSummary\",summary});",
+            "const createCustomMessage=(e:any)=>({role:\"custom\",content:e.content});"
+          ],
+          "after": [
+            "const createCompactionSummaryMessage = (summary: string, tokensBefore: number, timestamp: string): AgentMessage => ({ role: \"compactionSummary\", summary, tokensBefore, timestamp: Date.parse(timestamp) });",
+            "const createBranchSummaryMessage = (summary: string, fromId: string, timestamp: string): AgentMessage => ({ role: \"branchSummary\", summary, fromId, timestamp: Date.parse(timestamp) });",
+            "const createCustomMessage = (customType: string, content: string | (import(\"../ai/types\").TextContent | import(\"../ai/types\").ImageContent)[], display: boolean, details: unknown, timestamp: string): AgentMessage => ({ role: \"custom\", customType, content, display, details, timestamp: Date.parse(timestamp) });"
+          ]
+        },
+        {
+          "at": 112,
+          "before": [
+            "\t\tconst assistantMsg = msg as AssistantMessage;"
+          ],
+          "after": [
+            "\t\tconst assistantMsg = msg;"
+          ]
+        },
+        {
+          "at": 209,
+          "before": [
+            "\t\t\tconst assistant = message as AssistantMessage;"
+          ],
+          "after": [
+            "\t\t\tconst assistant = message;"
+          ]
+        }
+      ]
+    },
+    "packages/agent-core/upstream/ai/types.ts": {
+      "originalSha256": "196755724fd4c9aea83e455002befbd9e4afd9b08b36193f04d8c3e51f8c7e52",
+      "adaptedSha256": "5b7e302e74469eff0a5bdfc986452584d9db11fd0f87694163a797125e837bf4",
+      "reason": "Typed contracts and lifecycle handling; explicit terminal/host interfaces and validated legacy compatibility. See docs/UPSTREAM_ADAPTATIONS.md.",
+      "edits": [
+        {
+          "at": 20,
+          "before": [
+            "export type Api = KnownApi | (string & {});"
+          ],
+          "after": [
+            "export type Api = string;"
+          ]
+        },
+        {
+          "at": 48,
+          "before": [
+            "export type Provider = KnownProvider | string;"
+          ],
+          "after": [
+            "export type Provider = string;"
+          ]
+        },
+        {
+          "at": 184,
+          "before": [
+            "\targuments: Record<string, any>;"
+          ],
+          "after": [
+            "\targuments: Record<string, unknown>;"
+          ]
+        },
+        {
+          "at": 225,
+          "before": [
+            "export interface ToolResultMessage<TDetails = any> {"
+          ],
+          "after": [
+            "export interface ToolResultMessage<TDetails = unknown> {"
+          ]
+        },
+        {
+          "at": 303,
+          "before": [
+            "export interface OpenAIResponsesCompat {",
+            "\t// Reserved for future use",
+            "}"
+          ],
+          "after": [
+            "export type OpenAIResponsesCompat = Record<string, never>;"
+          ]
+        }
+      ]
+    },
+    "packages/agent-core/upstream/ai/utils/validation.ts": {
+      "originalSha256": "f0577b7c5cc9f6a4a6b1b1c38db4042308a5fe820f992ee20e629632bfd808df",
+      "adaptedSha256": "ce482fb1dd8c08fb59dc2e8d0abeaa421d438481f201bade059ccff14cebe1a1",
+      "reason": "Typed contracts and lifecycle handling; explicit terminal/host interfaces and validated legacy compatibility. See docs/UPSTREAM_ADAPTATIONS.md.",
+      "edits": [
+        {
+          "at": 7,
+          "before": [
+            "import AjvModule from \"ajv\";",
+            "import addFormatsModule from \"ajv-formats\";",
+            "import type { ErrorObject } from \"ajv\";",
+            "",
+            "// Handle both default and named exports",
+            "const Ajv = (AjvModule as any).default || AjvModule;",
+            "const addFormats = (addFormatsModule as any).default || addFormatsModule;",
+            ""
+          ],
+          "after": [
+            "import { Ajv, type ErrorObject } from \"ajv\";",
+            "import addFormats from \"ajv-formats\";"
+          ]
+        },
+        {
+          "at": 11,
+          "before": [
+            "interface BrowserExtensionGlobal {",
+            "\tchrome?: {",
+            "\t\truntime?: {",
+            "\t\t\tid?: unknown;",
+            "\t\t};",
+            "\t};",
+            "}",
+            "",
+            "// Detect if we're in a browser extension environment with strict CSP",
+            "// Chrome extensions with Manifest V3 don't allow eval/Function constructor",
+            "const browserGlobal = globalThis as BrowserExtensionGlobal;",
+            "const isBrowserExtension = browserGlobal.chrome?.runtime?.id !== undefined;",
+            "",
+            "// Create a singleton AJV instance with formats (only if not in browser extension)",
+            "// AJV requires 'unsafe-eval' CSP which is not allowed in Manifest V3",
+            "let ajv: any = null;",
+            "if (!isBrowserExtension) {",
+            "\ttry {",
+            "\t\tajv = new Ajv({",
+            "\t\t\tallErrors: true,",
+            "\t\t\tstrict: false,",
+            "\t\t\tcoerceTypes: true,",
+            "\t\t});",
+            "\t\taddFormats(ajv);",
+            "\t} catch (_e) {",
+            "\t\t// AJV initialization failed (likely CSP restriction)",
+            "\t\tconsole.warn(\"AJV validation disabled due to CSP restrictions\");",
+            "\t}",
+            "}"
+          ],
+          "after": [
+            "// Desktop host: validation is mandatory. Initialization failure must not trust model arguments.",
+            "const ajv = new Ajv({ allErrors: true, strict: false, coerceTypes: true });",
+            "addFormats(ajv);"
+          ]
+        },
+        {
+          "at": 22,
+          "before": [
+            "export function validateToolCall(tools: Tool[], toolCall: ToolCall): any {"
+          ],
+          "after": [
+            "export function validateToolCall(tools: Tool[], toolCall: ToolCall): Record<string, unknown> {"
+          ]
+        },
+        {
+          "at": 37,
+          "before": [
+            "export function validateToolArguments(tool: Tool, toolCall: ToolCall): any {",
+            "\t// Skip validation in browser extension environment (CSP restrictions prevent AJV from working)",
+            "\tif (!ajv || isBrowserExtension) {",
+            "\t\t// Trust the LLM's output without validation",
+            "\t\t// Browser extensions can't use AJV due to Manifest V3 CSP restrictions",
+            "\t\treturn toolCall.arguments;",
+            "\t}",
+            ""
+          ],
+          "after": [
+            "export function validateToolArguments(tool: Tool, toolCall: Omit<ToolCall, \"arguments\"> & { arguments: unknown }): Record<string, unknown> {"
+          ]
+        },
+        {
+          "at": 39,
+          "before": [
+            "\tconst validate = ajv.compile(tool.parameters);"
+          ],
+          "after": [
+            "\tconst validate = ajv.compile<Record<string, unknown>>(tool.parameters);"
+          ]
+        },
+        {
+          "at": 53,
+          "before": [
+            "\t\t\t\tconst path = err.instancePath ? err.instancePath.substring(1) : err.params.missingProperty || \"root\";"
+          ],
+          "after": [
+            "\t\t\t\tconst path = err.instancePath ? err.instancePath.substring(1) : (typeof err.params.missingProperty === \"string\" ? err.params.missingProperty : \"root\");"
+          ]
+        }
+      ]
+    },
+    "packages/agent-core/upstream/loop/run-trace-recorder.ts": {
+      "originalSha256": "4399f544be3e1d808a21586d02fe8400adf983ebe033caf5322ba1268f16cad8",
+      "adaptedSha256": "f8436deabe6962866870d3364c6bcf8877b64b85c59d819852066ec463469aa8",
+      "reason": "Typed contracts and lifecycle handling; explicit terminal/host interfaces and validated legacy compatibility. See docs/UPSTREAM_ADAPTATIONS.md.",
+      "edits": [
+        {
+          "at": 131,
+          "before": [
+            "\t\tif (this.#requiredFailure !== undefined) throw this.#requiredFailure;"
+          ],
+          "after": [
+            "\t\tif (this.#requiredFailure !== undefined) throw this.#requiredFailure instanceof Error ? this.#requiredFailure : new Error(\"Required trace failed\", { cause: this.#requiredFailure });"
+          ]
+        }
+      ]
+    },
+    "packages/agent-core/upstream/loop/agent-loop-stream-events.ts": {
+      "originalSha256": "d4f9069d70349ac4559554ee956c30bac985f8efb3cbc1b26b767f17a803696d",
+      "adaptedSha256": "7965b3d252680abd57924c153075ec8b7f26d66ab3b7ba901ddbe8a404b56a6a",
+      "reason": "Typed contracts and lifecycle handling; explicit terminal/host interfaces and validated legacy compatibility. See docs/UPSTREAM_ADAPTATIONS.md.",
+      "edits": [
+        {
+          "at": 33,
+          "before": [
+            "\t\t\t(error) => {"
+          ],
+          "after": [
+            "\t\t\t(error: unknown) => {"
+          ]
+        },
+        {
+          "at": 35,
+          "before": [
+            "\t\t\t\treject(error);"
+          ],
+          "after": [
+            "\t\t\t\treject(error instanceof Error ? error : new Error(\"Stream operation rejected\", { cause: error }));"
+          ]
+        },
+        {
+          "at": 70,
+          "before": [
+            "\t\t\t(error) => {"
+          ],
+          "after": [
+            "\t\t\t(error: unknown) => {"
+          ]
+        },
+        {
+          "at": 72,
+          "before": [
+            "\t\t\t\treject(error);"
+          ],
+          "after": [
+            "\t\t\t\treject(error instanceof Error ? error : new Error(\"Stream operation rejected\", { cause: error }));"
+          ]
+        }
+      ]
+    },
+    "packages/agent-core/upstream/loop/types.ts": {
+      "originalSha256": "12d9d096be03f1f68e9a09ea87f0cfc19ff6c4deb8695d73c4aada3ae3931f4e",
+      "adaptedSha256": "8f60ed6338310ac5ae0f8d99420922b054169a04570a928fceaf684ce49ee18b",
+      "reason": "Typed contracts and lifecycle handling; explicit terminal/host interfaces and validated legacy compatibility. See docs/UPSTREAM_ADAPTATIONS.md.",
+      "edits": [
+        {
+          "at": 7,
+          "before": [
+            "import type {"
+          ],
+          "after": [
+            "import type { Api,"
+          ]
+        },
+        {
+          "at": 128,
+          "before": [
+            "\tmodel: Model<any>;"
+          ],
+          "after": [
+            "\tmodel: Model<Api>;"
+          ]
+        },
+        {
+          "at": 220,
+          "before": [
+            "\t\ttool: AgentTool<any>;"
+          ],
+          "after": [
+            "\t\ttool: AgentTool;"
+          ]
+        },
+        {
+          "at": 366,
+          "before": [
+            "\t// Empty by default - apps extend via declaration merging"
+          ],
+          "after": [
+            "\tcompactionSummary: { role: \"compactionSummary\"; summary: string; tokensBefore: number; timestamp: number };"
+          ]
+        },
+        {
+          "at": 381,
+          "before": [
+            "\tmodel: Model<any>;"
+          ],
+          "after": [
+            "\tmodel: Model<Api>;"
+          ]
+        },
+        {
+          "at": 383,
+          "before": [
+            "\ttools: AgentTool<any>[];"
+          ],
+          "after": [
+            "\ttools: AgentTool[];"
+          ]
+        },
+        {
+          "at": 406,
+          "before": [
+            "export type AgentToolUpdateCallback<T = any> = (partialResult: AgentToolResult<T>) => void;"
+          ],
+          "after": [
+            "export type AgentToolUpdateCallback<T = unknown> = (partialResult: AgentToolResult<T>) => void;"
+          ]
+        },
+        {
+          "at": 418,
+          "before": [
+            "export interface AgentTool<TParameters extends TSchema = TSchema, TDetails = any> extends Tool<TParameters> {"
+          ],
+          "after": [
+            "export interface AgentTool<TParameters extends TSchema = TSchema, TDetails = unknown> extends Tool<TParameters> {"
+          ]
+        },
+        {
+          "at": 448,
+          "before": [
+            "\ttools?: AgentTool<any>[];"
+          ],
+          "after": [
+            "\ttools?: AgentTool[];"
+          ]
+        },
+        {
+          "at": 477,
+          "before": [
+            "\t| { type: \"tool_execution_start\"; toolCallId: string; toolName: string; args: any }",
+            "\t| { type: \"tool_execution_update\"; toolCallId: string; toolName: string; args: any; partialResult: any }"
+          ],
+          "after": [
+            "\t| { type: \"tool_execution_start\"; toolCallId: string; toolName: string; args: unknown }",
+            "\t| { type: \"tool_execution_update\"; toolCallId: string; toolName: string; args: unknown; partialResult: unknown }"
+          ]
+        },
+        {
+          "at": 483,
+          "before": [
+            "\t\t\tresult: any;"
+          ],
+          "after": [
+            "\t\t\tresult: unknown;"
+          ]
+        }
+      ]
+    },
+    "packages/agent-core/upstream/loop/agent-loop-tool-results.ts": {
+      "originalSha256": "8c5485023e87152c051274dbbe0a05951a342447a5fbc5c52e9e2cccbfd9f490",
+      "adaptedSha256": "dcc3ac1e96383dd82792744b17579640737a7f540daa41c733da3565ef7e7dad",
+      "reason": "Typed contracts and lifecycle handling; explicit terminal/host interfaces and validated legacy compatibility. See docs/UPSTREAM_ADAPTATIONS.md.",
+      "edits": [
+        {
+          "at": 40,
+          "before": [
+            "\t\tconst truncated = truncateToolResultToTextChars(next[candidate.index]!, targetSize, limit);"
+          ],
+          "after": [
+            "\t\tconst truncated = truncateToolResultToTextChars(next[candidate.index], targetSize, limit);"
+          ]
+        }
+      ]
+    },
+    "packages/agent-core/upstream/loop/agent-loop.ts": {
+      "originalSha256": "726a7058cf133edc0159979021a22b1e8afccbdbeba46942426fdb0497abece8",
+      "adaptedSha256": "c4188e788db1579004e67a46662ec264344677a2cbfdaa9aefc13bb1a4304c83",
+      "reason": "Typed contracts and lifecycle handling; explicit terminal/host interfaces and validated legacy compatibility. See docs/UPSTREAM_ADAPTATIONS.md.",
+      "edits": [
+        {
+          "at": 34,
+          "before": [
+            "import { ToolNotFoundError, ToolExecutionError, ToolPermissionDeniedError, ValidationError } from \"./errors.js\";"
+          ],
+          "after": [
+            "import { ToolNotFoundError, ToolPermissionDeniedError, ValidationError } from \"./errors.js\";"
+          ]
+        },
+        {
+          "at": 73,
+          "before": [
+            "// --- Timing instrumentation (gated by CATUI_DEBUG=1) ---",
+            "function _tlog(msg: string): void {",
+            "\tif (process.env.CATUI_DEBUG !== \"1\") return;",
+            "\ttry {",
+            "\t\tconst { appendFileSync } = require(\"fs\");",
+            "\t\tconst { join } = require(\"path\");",
+            "\t\tconst { homedir } = require(\"os\");",
+            "\t\tappendFileSync(",
+            "\t\t\tjoin(homedir(), \".catui\", \"agent\", \"catui-debug.log\"),",
+            "\t\t\t`[${new Date().toISOString()}] [loop] ${msg}\\n`,",
+            "\t\t);",
+            "\t} catch { /* best-effort */ }",
+            "}"
+          ],
+          "after": [
+            "// Catea does not persist debug traces outside the user's vault.",
+            "function _tlog(_msg: string): void { /* Host owns diagnostics. */ }"
+          ]
+        },
+        {
+          "at": 116,
+          "before": [
+            "\t(async () => {"
+          ],
+          "after": [
+            "\tvoid (async () => {"
+          ]
+        },
+        {
+          "at": 164,
+          "before": [
+            "\t(async () => {"
+          ],
+          "after": [
+            "\tvoid (async () => {"
+          ]
+        },
+        {
+          "at": 1073,
+          "before": [
+            "\ttools: AgentTool<any>[] | undefined,"
+          ],
+          "after": [
+            "\ttools: AgentTool[] | undefined,"
+          ]
+        },
+        {
+          "at": 1130,
+          "before": [
+            "\t\tlet result: AgentToolResult<any>;"
+          ],
+          "after": [
+            "\t\tlet result: AgentToolResult<unknown>;"
+          ]
+        },
+        {
+          "at": 1157,
+          "before": [
+            "\t\t\tif (policyDecision?.decision === \"allow\" && policyDecision.input !== undefined) validatedArgs = policyDecision.input;"
+          ],
+          "after": [
+            "\t\t\tif (policyDecision?.decision === \"allow\" && policyDecision.input !== undefined) validatedArgs = validateToolArguments(tool, { ...toolCall, arguments: policyDecision.input });"
+          ]
+        },
+        {
+          "at": 1310,
+          "before": [
+            "\ttoolByName: Map<string, AgentTool<any>>,"
+          ],
+          "after": [
+            "\ttoolByName: Map<string, AgentTool>,"
+          ]
+        },
+        {
+          "at": 1418,
+          "before": [
+            "\ttool: AgentTool<any> | undefined,"
+          ],
+          "after": [
+            "\ttool: AgentTool | undefined,"
+          ]
+        },
+        {
+          "at": 1439,
+          "before": [
+            "\tlet result: AgentToolResult<any>;"
+          ],
+          "after": [
+            "\tlet result: AgentToolResult<unknown>;"
+          ]
+        },
+        {
+          "at": 1466,
+          "before": [
+            "\t\tif (policyDecision?.decision === \"allow\" && policyDecision.input !== undefined) validatedArgs = policyDecision.input;"
+          ],
+          "after": [
+            "\t\tif (policyDecision?.decision === \"allow\" && policyDecision.input !== undefined) validatedArgs = validateToolArguments(tool, { ...toolCall, arguments: policyDecision.input });"
+          ]
+        },
+        {
+          "at": 1633,
+          "before": [
+            "\tconst result: AgentToolResult<any> = {"
+          ],
+          "after": [
+            "\tconst result: AgentToolResult<unknown> = {"
+          ]
+        }
+      ]
+    },
+    "packages/agent-core/upstream/loop/structured-adaptive-tool-orchestration.ts": {
+      "originalSha256": "b258a47255e868d726c0eec94c0fac486d94148f6157d87b97e6ddb081865384",
+      "adaptedSha256": "318671b2d2d527622a491d0887618b27f97f1febec663987fef22d868211a2d8",
+      "reason": "Typed contracts and lifecycle handling; explicit terminal/host interfaces and validated legacy compatibility. See docs/UPSTREAM_ADAPTATIONS.md.",
+      "edits": [
+        {
+          "at": 62,
+          "before": [
+            "\ttools: AgentTool<any>[] | undefined,"
+          ],
+          "after": [
+            "\ttools: AgentTool[] | undefined,"
+          ]
+        },
+        {
+          "at": 147,
+          "before": [
+            "\tconst results: TResult[] = new Array(items.length);"
+          ],
+          "after": [
+            "\tconst results: TResult[] = new Array<TResult>(items.length);"
+          ]
+        },
+        {
+          "at": 154,
+          "before": [
+            "\t\t\tresults[index] = await run(items[index]!);"
+          ],
+          "after": [
+            "\t\t\tresults[index] = await run(items[index]);"
+          ]
+        },
+        {
+          "at": 178,
+          "before": [
+            "export function buildToolMap(tools: AgentTool<any>[] | undefined): Map<string, AgentTool<any>> {",
+            "\tconst toolByName = new Map<string, AgentTool<any>>();"
+          ],
+          "after": [
+            "export function buildToolMap(tools: AgentTool[] | undefined): Map<string, AgentTool> {",
+            "\tconst toolByName = new Map<string, AgentTool>();"
+          ]
+        },
+        {
+          "at": 193,
+          "before": [
+            "\ttoolByName: Map<string, AgentTool<any>>,"
+          ],
+          "after": [
+            "\ttoolByName: Map<string, AgentTool>,"
+          ]
+        },
+        {
+          "at": 221,
+          "before": [
+            "\ttool: AgentTool<any> | undefined,"
+          ],
+          "after": [
+            "\ttool: AgentTool | undefined,"
+          ]
+        },
+        {
+          "at": 237,
+          "before": [
+            "\ttool: AgentTool<any> | undefined,"
+          ],
+          "after": [
+            "\ttool: AgentTool | undefined,"
+          ]
+        },
+        {
+          "at": 253,
+          "before": [
+            "\ttool: AgentTool<any> | undefined,"
+          ],
+          "after": [
+            "\ttool: AgentTool | undefined,"
+          ]
+        },
+        {
+          "at": 271,
+          "before": [
+            "\tlet result: AgentToolResult<any>;"
+          ],
+          "after": [
+            "\tlet result: AgentToolResult<unknown>;"
+          ]
+        },
+        {
+          "at": 297,
+          "before": [
+            "\t\tif (policyDecision?.decision === \"allow\" && policyDecision.input !== undefined) validatedArgs = policyDecision.input;"
+          ],
+          "after": [
+            "\t\tif (policyDecision?.decision === \"allow\" && policyDecision.input !== undefined) validatedArgs = validateToolArguments(tool, { ...toolCall, arguments: policyDecision.input });"
+          ]
+        },
+        {
+          "at": 474,
+          "before": [
+            "\tconst result: AgentToolResult<any> = {"
+          ],
+          "after": [
+            "\tconst result: AgentToolResult<unknown> = {"
+          ]
+        }
+      ]
+    },
+    "packages/memory/upstream/human-insights.ts": {
+      "originalSha256": "f092f924654110ba39e4628788f7688922b95686884a5fc0592b6cc11143dd80",
+      "adaptedSha256": "e6eefdd48da9c499d955c9012c7ad7393b30a4b18fecd4d7f851fbae28f56007",
+      "reason": "Typed contracts and lifecycle handling; explicit terminal/host interfaces and validated legacy compatibility. See docs/UPSTREAM_ADAPTATIONS.md.",
+      "edits": [
+        {
+          "at": 0,
+          "before": [],
+          "after": [
+            "import { readLegacyContent } from \"./compat.js\";"
+          ]
+        },
+        {
+          "at": 173,
+          "before": [
+            "\t\t.map((entry) => entry.summary || entry.detail || entry.content || \"\")"
+          ],
+          "after": [
+            "\t\t.map((entry) => entry.summary || entry.detail || readLegacyContent(entry) || \"\")"
+          ]
+        },
+        {
+          "at": 239,
+          "before": [
+            "\t\t\t\t\twhatTheyDo: String(parsed.persona.whatTheyDo || \"\"),",
+            "\t\t\t\t\texperienceLevel: String(parsed.persona.experienceLevel || \"\"),"
+          ],
+          "after": [
+            "\t\t\t\t\twhatTheyDo: plainText(parsed.persona.whatTheyDo || \"\"),",
+            "\t\t\t\t\texperienceLevel: plainText(parsed.persona.experienceLevel || \"\"),"
+          ]
+        },
+        {
+          "at": 243,
+          "before": [
+            "\t\t\t\t\tworkStyle: String(parsed.persona.workStyle || \"\"),",
+            "\t\t\t\t\tsummary: String(parsed.persona.summary || \"\"),"
+          ],
+          "after": [
+            "\t\t\t\t\tworkStyle: plainText(parsed.persona.workStyle || \"\"),",
+            "\t\t\t\t\tsummary: plainText(parsed.persona.summary || \"\"),"
+          ]
+        },
+        {
+          "at": 251,
+          "before": [
+            "\t\t\t\t\t\ttitle: String(item.title || \"\").trim(),",
+            "\t\t\t\t\t\tcontent: String(item.content || \"\").trim(),",
+            "\t\t\t\t\t\ticon: String(item.icon || \"Insight\").trim(),",
+            "\t\t\t\t\t\tutility: [\"high\", \"medium\", \"low\"].includes(String(item.utility))",
+            "\t\t\t\t\t\t\t? (String(item.utility) as \"high\" | \"medium\" | \"low\")"
+          ],
+          "after": [
+            "\t\t\t\t\t\ttitle: plainText(item.title || \"\").trim(),",
+            "\t\t\t\t\t\tcontent: plainText(item.content || \"\").trim(),",
+            "\t\t\t\t\t\ticon: plainText(item.icon || \"Insight\").trim(),",
+            "\t\t\t\t\t\tutility: [\"high\", \"medium\", \"low\"].includes(plainText(item.utility))",
+            "\t\t\t\t\t\t\t? (plainText(item.utility) as \"high\" | \"medium\" | \"low\")"
+          ]
+        },
+        {
+          "at": 265,
+          "before": [
+            "\t\t\t\t\t\tsymptom: String(item.symptom || \"\").trim(),",
+            "\t\t\t\t\t\trootCause: String(item.rootCause || \"\").trim(),"
+          ],
+          "after": [
+            "\t\t\t\t\t\tsymptom: plainText(item.symptom || \"\").trim(),",
+            "\t\t\t\t\t\trootCause: plainText(item.rootCause || \"\").trim(),"
+          ]
+        },
+        {
+          "at": 268,
+          "before": [
+            "\t\t\t\t\t\tsuggestion: String(item.suggestion || \"\").trim(),"
+          ],
+          "after": [
+            "\t\t\t\t\t\tsuggestion: plainText(item.suggestion || \"\").trim(),"
+          ]
+        },
+        {
+          "at": 347,
+          "before": [],
+          "after": [
+            "// Reject structured values where a human-readable text field is expected.",
+            "function plainText(value: unknown): string {",
+            " return typeof value === \"string\" ? value : typeof value === \"number\" || typeof value === \"boolean\" ? String(value) : \"\";",
+            "}",
+            ""
+          ]
+        }
+      ]
+    },
+    "packages/memory/upstream/engine-links.ts": {
+      "originalSha256": "e952fbdd51f948757c6788e7526c552e658309cc465be51cfc46d947cbf2f026",
+      "adaptedSha256": "c59ed2082eddab63f820a528be5191045cb9d9d3b8ce7bd79c93c8ceaaf364f9",
+      "reason": "Typed contracts and lifecycle handling; explicit terminal/host interfaces and validated legacy compatibility. See docs/UPSTREAM_ADAPTATIONS.md.",
+      "edits": [
+        {
+          "at": 252,
+          "before": [
+            "\t\t\tconst a = candidates[i]!;",
+            "\t\t\tconst b = candidates[j]!;"
+          ],
+          "after": [
+            "\t\t\tconst a = candidates[i];",
+            "\t\t\tconst b = candidates[j];"
+          ]
+        }
+      ]
+    },
+    "packages/memory/upstream/engine-injection-text.ts": {
+      "originalSha256": "c3297e9ef7c6905d57d9cfe5d74fd3d6ad4f5852e5369ddfdf6686a6dcdae60c",
+      "adaptedSha256": "e24c622288461160f954bc93b3ecc6ab2107190b0c040edfb28c1251e1efb8bf",
+      "reason": "Typed contracts and lifecycle handling; explicit terminal/host interfaces and validated legacy compatibility. See docs/UPSTREAM_ADAPTATIONS.md.",
+      "edits": [
+        {
+          "at": 0,
+          "before": [],
+          "after": [
+            "import { readLegacyContent } from \"./compat.js\";"
+          ]
+        },
+        {
+          "at": 34,
+          "before": [
+            "\tconst text = `${entry.name || \"\"}\\n${entry.summary || \"\"}\\n${entry.detail || \"\"}\\n${entry.content || \"\"}`;"
+          ],
+          "after": [
+            "\tconst text = `${entry.name || \"\"}\\n${entry.summary || \"\"}\\n${entry.detail || \"\"}\\n${readLegacyContent(entry) || \"\"}`;"
+          ]
+        }
+      ]
+    },
+    "packages/memory/upstream/full-insights.ts": {
+      "originalSha256": "045bec65b7f270d6c6a57c66fd787136ce874e49a53e62cf7253321c274ec087",
+      "adaptedSha256": "ef574297b3f3e5ea2135d9c02f2b32504e4a1f646282032095e3f0666de1048a",
+      "reason": "Typed contracts and lifecycle handling; explicit terminal/host interfaces and validated legacy compatibility. See docs/UPSTREAM_ADAPTATIONS.md.",
+      "edits": [
+        {
+          "at": 0,
+          "before": [],
+          "after": [
+            "import { readLegacyContent } from \"./compat.js\";"
+          ]
+        },
+        {
+          "at": 138,
+          "before": [
+            "\t\t\ttrigger: e.facetData?.kind === \"pattern\" ? e.facetData.trigger : (e.summary || e.detail || e.content || \"\").slice(0, 50),",
+            "\t\t\tbehavior: e.facetData?.kind === \"pattern\" ? e.facetData.behavior : (e.summary || e.detail || e.content || \"\"),"
+          ],
+          "after": [
+            "\t\t\ttrigger: e.facetData?.kind === \"pattern\" ? e.facetData.trigger : (e.summary || e.detail || readLegacyContent(e) || \"\").slice(0, 50),",
+            "\t\t\tbehavior: e.facetData?.kind === \"pattern\" ? e.facetData.behavior : (e.summary || e.detail || readLegacyContent(e) || \"\"),"
+          ]
+        },
+        {
+          "at": 148,
+          "before": [
+            "\t\t\t\tproblem: e.facetData?.kind === \"struggle\" ? e.facetData.problem : (e.summary || e.detail || e.content || \"\"),"
+          ],
+          "after": [
+            "\t\t\t\tproblem: e.facetData?.kind === \"struggle\" ? e.facetData.problem : (e.summary || e.detail || readLegacyContent(e) || \"\"),"
+          ]
+        },
+        {
+          "at": 191,
+          "before": [
+            "\t\tconst text = l.summary || l.detail || l.content || \"\";"
+          ],
+          "after": [
+            "\t\tconst text = l.summary || l.detail || readLegacyContent(l) || \"\";"
+          ]
+        },
+        {
+          "at": 216,
+          "before": [
+            "\t\tconst top = patterns[0]!;"
+          ],
+          "after": [
+            "\t\tconst top = patterns[0];"
+          ]
+        },
+        {
+          "at": 240,
+          "before": [
+            "\t\tconst topTool = toolRows[0]!.label;"
+          ],
+          "after": [
+            "\t\tconst topTool = toolRows[0].label;"
+          ]
+        },
+        {
+          "at": 264,
+          "before": [
+            "\treturn [entry.name, entry.summary, entry.detail, entry.content, entry.tags.join(\" \")].filter(Boolean).join(\"\\n\");"
+          ],
+          "after": [
+            "\treturn [entry.name, entry.summary, entry.detail, readLegacyContent(entry), entry.tags.join(\" \")].filter(Boolean).join(\"\\n\");"
+          ]
+        }
+      ]
+    },
+    "packages/memory/upstream/linking.ts": {
+      "originalSha256": "8f098210372e736f71885ba9685395fd69c94c69d1342b29008a91962d5ac78f",
+      "adaptedSha256": "f2f400e1aceb18a6e63b7decc8060633ff4204d2b9911143858f7cf4126ea2cf",
+      "reason": "Typed contracts and lifecycle handling; explicit terminal/host interfaces and validated legacy compatibility. See docs/UPSTREAM_ADAPTATIONS.md.",
+      "edits": [
+        {
+          "at": 0,
+          "before": [],
+          "after": [
+            "import { readLegacyContent } from \"./compat.js\";"
+          ]
+        },
+        {
+          "at": 74,
+          "before": [
+            "\t\t.map((e) => e.summary || e.content?.slice(0, 80) || e.name || \"\");"
+          ],
+          "after": [
+            "\t\t.map((e) => e.summary || readLegacyContent(e)?.slice(0, 80) || e.name || \"\");"
+          ]
+        },
+        {
+          "at": 164,
+          "before": [
+            "\t\t\t\tcandidate.entry.summary || candidate.entry.name || candidate.entry.content?.slice(0, 80) || \"\""
+          ],
+          "after": [
+            "\t\t\t\tcandidate.entry.summary || candidate.entry.name || readLegacyContent(candidate.entry)?.slice(0, 80) || \"\""
+          ]
+        }
+      ]
+    },
+    "packages/memory/upstream/engine-insights.ts": {
+      "originalSha256": "cfcf1b9ed18dcd176a16db741530c7730faaa039a37b75ca94f05ed529d92429",
+      "adaptedSha256": "e47c96ece5e8f1782768c7487adf38cde537995a2da33378e0f45c9d10e0f8b5",
+      "reason": "Typed contracts and lifecycle handling; explicit terminal/host interfaces and validated legacy compatibility. See docs/UPSTREAM_ADAPTATIONS.md.",
+      "edits": [
+        {
+          "at": 0,
+          "before": [],
+          "after": [
+            "import { readLegacyContent } from \"./compat.js\";"
+          ]
+        },
+        {
+          "at": 114,
+          "before": [
+            "\t\t\t\tlessons: lessons.slice(0, 5).map((l) => l.summary || l.detail || l.content || \"\"),"
+          ],
+          "after": [
+            "\t\t\t\tlessons: lessons.slice(0, 5).map((l) => l.summary || l.detail || readLegacyContent(l) || \"\"),"
+          ]
+        },
+        {
+          "at": 139,
+          "before": [
+            "\t\tconst top = patterns[0]!;"
+          ],
+          "after": [
+            "\t\tconst top = patterns[0];"
+          ]
+        }
+      ]
+    },
+    "packages/memory/upstream/extension.ts": {
+      "originalSha256": "0bad3cc9fad1f235ed0a87f1172741e0c774feddd61b82c5d43471cac57d4d50",
+      "adaptedSha256": "50b540fb8eb5df404684570216b459eebe551600f36ca12e572a2371ceafc7b5",
+      "reason": "Typed contracts and lifecycle handling; explicit terminal/host interfaces and validated legacy compatibility. See docs/UPSTREAM_ADAPTATIONS.md.",
+      "edits": [
+        {
+          "at": 0,
+          "before": [],
+          "after": [
+            "import { readLegacyContent } from \"./compat.js\";"
+          ]
+        },
+        {
+          "at": 9,
+          "before": [
+            "import { existsSync, writeFileSync } from \"node:fs\";"
+          ],
+          "after": [
+            "import { writeFileSync } from \"node:fs\";"
+          ]
+        },
+        {
+          "at": 17,
+          "before": [
+            "import { renderInsightsHtml } from \"./insights-html.js\";"
+          ],
+          "after": [
+            ""
+          ]
+        },
+        {
+          "at": 20,
+          "before": [
+            "import type { Episode, Meta, MemoryEntry, WorkEntry } from \"./types.js\";",
+            "import { loadEntries, loadMeta } from \"./store.js\";"
+          ],
+          "after": [
+            "import type { Episode, MemoryEntry, WorkEntry } from \"./types.js\";",
+            "import { loadMeta } from \"./store.js\";"
+          ]
+        },
+        {
+          "at": 114,
+          "before": [
+            "\t\tconst timer = setTimeout(() => resolve(undefined), timeoutMs);"
+          ],
+          "after": [
+            "\t\tconst timer = window.setTimeout(() => resolve(undefined), timeoutMs);"
+          ]
+        },
+        {
+          "at": 117,
+          "before": [
+            "\t\t\t\tclearTimeout(timer);"
+          ],
+          "after": [
+            "\t\t\t\twindow.clearTimeout(timer);"
+          ]
+        },
+        {
+          "at": 121,
+          "before": [
+            "\t\t\t\tclearTimeout(timer);"
+          ],
+          "after": [
+            "\t\t\t\twindow.clearTimeout(timer);"
+          ]
+        },
+        {
+          "at": 250,
+          "before": [
+            "\t\t\t\tconst old = String(args.old_string ?? \"\").slice(0, 50);",
+            "\t\t\t\tconst nw = String(args.new_string ?? \"\").slice(0, 50);"
+          ],
+          "after": [
+            "\t\t\t\tconst old = plainText(args.old_string ?? \"\").slice(0, 50);",
+            "\t\t\t\tconst nw = plainText(args.new_string ?? \"\").slice(0, 50);"
+          ]
+        },
+        {
+          "at": 258,
+          "before": [
+            "\t\t\tconst cmd = String(args.command ?? \"\").slice(0, 100);"
+          ],
+          "after": [
+            "\t\t\tconst cmd = plainText(args.command ?? \"\").slice(0, 100);"
+          ]
+        },
+        {
+          "at": 264,
+          "before": [
+            "\t\t\treturn { observation: `Search: ${String(args.pattern ?? args.glob ?? \"\")}` };"
+          ],
+          "after": [
+            "\t\t\treturn { observation: `Search: ${plainText(args.pattern ?? args.glob ?? \"\")}` };"
+          ]
+        },
+        {
+          "at": 303,
+          "before": [
+            "\tconst summary = entry.summary || entry.detail || entry.content || \"\";"
+          ],
+          "after": [
+            "\tconst summary = entry.summary || entry.detail || readLegacyContent(entry) || \"\";"
+          ]
+        },
+        {
+          "at": 385,
+          "before": [
+            "\t\tconst meta = (await loadMeta(metaPath)) as Meta;"
+          ],
+          "after": [
+            "\t\tconst meta = (await loadMeta(metaPath));"
+          ]
+        },
+        {
+          "at": 862,
+          "before": [
+            "\t\t\tfor (const e of results.slice(0, 10)) ctx.ui.notify(`[${e.type}] ${(e.summary || e.detail || e.content || \"\").slice(0, 80)}`, \"info\");"
+          ],
+          "after": [
+            "\t\t\tfor (const e of results.slice(0, 10)) ctx.ui.notify(`[${e.type}] ${(e.summary || e.detail || readLegacyContent(e) || \"\").slice(0, 80)}`, \"info\");"
+          ]
+        },
+        {
+          "at": 995,
+          "before": [
+            "\t\t\tconst updated = await engine.editEntryById(id, patch as never);"
+          ],
+          "after": [
+            "\t\t\tconst updated = await engine.editEntryById(id, patch);"
+          ]
+        },
+        {
+          "at": 1095,
+          "before": [
+            "\t\t\tconst detail = entry.detail || entry.content || \"\";"
+          ],
+          "after": [
+            "\t\t\tconst detail = entry.detail || readLegacyContent(entry) || \"\";"
+          ]
+        },
+        {
+          "at": 1132,
+          "before": [
+            "\t\t\t\tconst summary = e.summary || e.content?.slice(0, 100) || \"\";"
+          ],
+          "after": [
+            "\t\t\t\tconst summary = e.summary || readLegacyContent(e)?.slice(0, 100) || \"\";"
+          ]
+        },
+        {
+          "at": 1241,
+          "before": [
+            "\t\t\tconst updated = await engine.editEntryById(params.id, patch as never);"
+          ],
+          "after": [
+            "\t\t\tconst updated = await engine.editEntryById(params.id, patch);"
+          ]
+        },
+        {
+          "at": 1288,
+          "before": [],
+          "after": [
+            "// Reject structured values where a human-readable text field is expected.",
+            "function plainText(value: unknown): string {",
+            " return typeof value === \"string\" ? value : typeof value === \"number\" || typeof value === \"boolean\" ? String(value) : \"\";",
+            "}",
+            ""
+          ]
+        }
+      ]
+    },
+    "packages/memory/upstream/cli.ts": {
+      "originalSha256": "4e6b6c9a9f73ea0fab41c6797c220f76b8b86cfd5211353de61ebbe3988eb4ea",
+      "adaptedSha256": "9b666d18eac0b72e79c12831900c74053b776f30754f96b14243c7d73799c816",
+      "reason": "Typed contracts and lifecycle handling; explicit terminal/host interfaces and validated legacy compatibility. See docs/UPSTREAM_ADAPTATIONS.md.",
+      "edits": [
+        {
+          "at": 1,
+          "before": [],
+          "after": [
+            "import { format } from \"node:util\";",
+            "import { readLegacyContent } from \"./compat.js\";"
+          ]
+        },
+        {
+          "at": 21,
+          "before": [
+            "\t\tconsole.log(`nanomem — NanoMem memory CLI"
+          ],
+          "after": [
+            "\t\twriteOutput(`nanomem — NanoMem memory CLI"
+          ]
+        },
+        {
+          "at": 45,
+          "before": [
+            "\t\tconsole.log(`Sessions: ${s.totalSessions}`);",
+            "\t\tconsole.log(`Knowledge: ${s.knowledge}`);",
+            "\t\tconsole.log(`Lessons: ${s.lessons}`);",
+            "\t\tconsole.log(`Preferences: ${s.preferences}`);",
+            "\t\tconsole.log(`Work: ${s.work}`);",
+            "\t\tconsole.log(`Archived Knowledge: ${s.archivedKnowledge}`);",
+            "\t\tconsole.log(`Archived Lessons: ${s.archivedLessons}`);",
+            "\t\tconsole.log(`Archived Events: ${s.archivedEvents}`);",
+            "\t\tconsole.log(`Archived Preferences: ${s.archivedPreferences}`);",
+            "\t\tconsole.log(`Archived Facets: ${s.archivedFacets}`);",
+            "\t\tconsole.log(`Archived Work: ${s.archivedWork}`);",
+            "\t\tconsole.log(`Episodes: ${s.episodes}`);",
+            "\t\tconsole.log(`V2 Episodes: ${v2.episodes}`);",
+            "\t\tconsole.log(`V2 Episode Facets: ${v2.facets}`);",
+            "\t\tconsole.log(`V2 Semantic: ${v2.semantic}`);",
+            "\t\tconsole.log(`V2 Procedures: ${v2.procedural}`);",
+            "\t\tconsole.log(`Archived V2 Semantic: ${v2.archivedSemantic}`);",
+            "\t\tconsole.log(`Archived V2 Procedures: ${v2.archivedProcedural}`);",
+            "\t\tconsole.log(`V2 Links: ${v2.links}`);",
+            "\t\tconsole.log(`V2 Embeddings: ${v2.embeddings}`);",
+            "\t\tif (v2.lastEmbeddingSyncAt) console.log(`V2 Last Embedding Sync: ${v2.lastEmbeddingSyncAt}`);",
+            "\t\tif (v2.lastReconsolidationAt) console.log(`V2 Last Reconsolidation: ${v2.lastReconsolidationAt}`);"
+          ],
+          "after": [
+            "\t\twriteOutput(`Sessions: ${s.totalSessions}`);",
+            "\t\twriteOutput(`Knowledge: ${s.knowledge}`);",
+            "\t\twriteOutput(`Lessons: ${s.lessons}`);",
+            "\t\twriteOutput(`Preferences: ${s.preferences}`);",
+            "\t\twriteOutput(`Work: ${s.work}`);",
+            "\t\twriteOutput(`Archived Knowledge: ${s.archivedKnowledge}`);",
+            "\t\twriteOutput(`Archived Lessons: ${s.archivedLessons}`);",
+            "\t\twriteOutput(`Archived Events: ${s.archivedEvents}`);",
+            "\t\twriteOutput(`Archived Preferences: ${s.archivedPreferences}`);",
+            "\t\twriteOutput(`Archived Facets: ${s.archivedFacets}`);",
+            "\t\twriteOutput(`Archived Work: ${s.archivedWork}`);",
+            "\t\twriteOutput(`Episodes: ${s.episodes}`);",
+            "\t\twriteOutput(`V2 Episodes: ${v2.episodes}`);",
+            "\t\twriteOutput(`V2 Episode Facets: ${v2.facets}`);",
+            "\t\twriteOutput(`V2 Semantic: ${v2.semantic}`);",
+            "\t\twriteOutput(`V2 Procedures: ${v2.procedural}`);",
+            "\t\twriteOutput(`Archived V2 Semantic: ${v2.archivedSemantic}`);",
+            "\t\twriteOutput(`Archived V2 Procedures: ${v2.archivedProcedural}`);",
+            "\t\twriteOutput(`V2 Links: ${v2.links}`);",
+            "\t\twriteOutput(`V2 Embeddings: ${v2.embeddings}`);",
+            "\t\tif (v2.lastEmbeddingSyncAt) writeOutput(`V2 Last Embedding Sync: ${v2.lastEmbeddingSyncAt}`);",
+            "\t\tif (v2.lastReconsolidationAt) writeOutput(`V2 Last Reconsolidation: ${v2.lastReconsolidationAt}`);"
+          ]
+        },
+        {
+          "at": 74,
+          "before": [
+            "\t\t\tconsole.log(\"No matching memories.\");"
+          ],
+          "after": [
+            "\t\t\twriteOutput(\"No matching memories.\");"
+          ]
+        },
+        {
+          "at": 78,
+          "before": [
+            "\t\t\tconsole.log(`[${e.type}] ${e.id} — ${(e.summary || e.detail || e.content || \"\").slice(0, 100)}`);"
+          ],
+          "after": [
+            "\t\t\twriteOutput(`[${e.type}] ${e.id} — ${(e.summary || e.detail || readLegacyContent(e) || \"\").slice(0, 100)}`);"
+          ]
+        },
+        {
+          "at": 86,
+          "before": [
+            "\t\t\tconsole.error(\"Usage: nanomem search-v2 <query>\");"
+          ],
+          "after": [
+            "\t\t\twriteError(\"Usage: nanomem search-v2 <query>\");"
+          ]
+        },
+        {
+          "at": 91,
+          "before": [
+            "\t\t\tconsole.log(\"No matching V2 memories.\");"
+          ],
+          "after": [
+            "\t\t\twriteOutput(\"No matching V2 memories.\");"
+          ]
+        },
+        {
+          "at": 95,
+          "before": [
+            "\t\t\tconsole.log(`[${item.kind}] ${item.id} (${item.score.toFixed(3)}) — ${item.title}: ${item.summary.slice(0, 120)}`);"
+          ],
+          "after": [
+            "\t\t\twriteOutput(`[${item.kind}] ${item.id} (${item.score.toFixed(3)}) — ${item.title}: ${item.summary.slice(0, 120)}`);"
+          ]
+        },
+        {
+          "at": 103,
+          "before": [
+            "\t\t\tconsole.error(\"Usage: nanomem forget <id>\");"
+          ],
+          "after": [
+            "\t\t\twriteError(\"Usage: nanomem forget <id>\");"
+          ]
+        },
+        {
+          "at": 107,
+          "before": [
+            "\t\tconsole.log(ok ? `Removed entry ${id}` : `Entry ${id} not found`);"
+          ],
+          "after": [
+            "\t\twriteOutput(ok ? `Removed entry ${id}` : `Entry ${id} not found`);"
+          ]
+        },
+        {
+          "at": 114,
+          "before": [
+            "\t\t\tconsole.log(\"No duplicates found. Memory is already deduplicated.\");"
+          ],
+          "after": [
+            "\t\t\twriteOutput(\"No duplicates found. Memory is already deduplicated.\");"
+          ]
+        },
+        {
+          "at": 116,
+          "before": [
+            "\t\t\tconsole.log(`Deduplication complete. Removed ${result.total} duplicate(s):`);",
+            "\t\t\tif (result.knowledge) console.log(`  knowledge: ${result.knowledge}`);",
+            "\t\t\tif (result.lessons) console.log(`  lessons: ${result.lessons}`);",
+            "\t\t\tif (result.preferences) console.log(`  preferences: ${result.preferences}`);",
+            "\t\t\tif (result.facets) console.log(`  facets: ${result.facets}`);",
+            "\t\t\tif (result.work) console.log(`  work: ${result.work}`);"
+          ],
+          "after": [
+            "\t\t\twriteOutput(`Deduplication complete. Removed ${result.total} duplicate(s):`);",
+            "\t\t\tif (result.knowledge) writeOutput(`  knowledge: ${result.knowledge}`);",
+            "\t\t\tif (result.lessons) writeOutput(`  lessons: ${result.lessons}`);",
+            "\t\t\tif (result.preferences) writeOutput(`  preferences: ${result.preferences}`);",
+            "\t\t\tif (result.facets) writeOutput(`  facets: ${result.facets}`);",
+            "\t\t\tif (result.work) writeOutput(`  work: ${result.work}`);"
+          ]
+        },
+        {
+          "at": 129,
+          "before": [
+            "\t\t\tconsole.log(\"No stale memories were archived.\");"
+          ],
+          "after": [
+            "\t\t\twriteOutput(\"No stale memories were archived.\");"
+          ]
+        },
+        {
+          "at": 132,
+          "before": [
+            "\t\tconsole.log(`Archived ${result.total} stale memory item(s):`);",
+            "\t\tif (result.knowledge) console.log(`  knowledge: ${result.knowledge}`);",
+            "\t\tif (result.lessons) console.log(`  lessons: ${result.lessons}`);",
+            "\t\tif (result.events) console.log(`  events: ${result.events}`);",
+            "\t\tif (result.preferences) console.log(`  preferences: ${result.preferences}`);",
+            "\t\tif (result.facets) console.log(`  facets: ${result.facets}`);",
+            "\t\tif (result.work) console.log(`  work: ${result.work}`);",
+            "\t\tif (result.semantic) console.log(`  semantic: ${result.semantic}`);",
+            "\t\tif (result.procedural) console.log(`  procedural: ${result.procedural}`);"
+          ],
+          "after": [
+            "\t\twriteOutput(`Archived ${result.total} stale memory item(s):`);",
+            "\t\tif (result.knowledge) writeOutput(`  knowledge: ${result.knowledge}`);",
+            "\t\tif (result.lessons) writeOutput(`  lessons: ${result.lessons}`);",
+            "\t\tif (result.events) writeOutput(`  events: ${result.events}`);",
+            "\t\tif (result.preferences) writeOutput(`  preferences: ${result.preferences}`);",
+            "\t\tif (result.facets) writeOutput(`  facets: ${result.facets}`);",
+            "\t\tif (result.work) writeOutput(`  work: ${result.work}`);",
+            "\t\tif (result.semantic) writeOutput(`  semantic: ${result.semantic}`);",
+            "\t\tif (result.procedural) writeOutput(`  procedural: ${result.procedural}`);"
+          ]
+        },
+        {
+          "at": 147,
+          "before": [
+            "\t\t\tconsole.error(\"Usage: nanomem restore <id>\");"
+          ],
+          "after": [
+            "\t\t\twriteError(\"Usage: nanomem restore <id>\");"
+          ]
+        },
+        {
+          "at": 151,
+          "before": [
+            "\t\tconsole.log(result.ok ? `Restored archived ${result.location} entry ${id}` : `Archived entry ${id} not found`);"
+          ],
+          "after": [
+            "\t\twriteOutput(result.ok ? `Restored archived ${result.location} entry ${id}` : `Archived entry ${id} not found`);"
+          ]
+        },
+        {
+          "at": 157,
+          "before": [
+            "\t\tconsole.log(JSON.stringify(data, null, 2));"
+          ],
+          "after": [
+            "\t\twriteOutput(JSON.stringify(data, null, 2));"
+          ]
+        },
+        {
+          "at": 163,
+          "before": [
+            "\t\tconsole.log(JSON.stringify(data, null, 2));"
+          ],
+          "after": [
+            "\t\twriteOutput(JSON.stringify(data, null, 2));"
+          ]
+        },
+        {
+          "at": 169,
+          "before": [
+            "\t\tconsole.log(JSON.stringify(data, null, 2));"
+          ],
+          "after": [
+            "\t\twriteOutput(JSON.stringify(data, null, 2));"
+          ]
+        },
+        {
+          "at": 175,
+          "before": [
+            "\t\tconsole.log(`Episodes: ${data.counts.episodes}`);",
+            "\t\tconsole.log(`Facets: ${data.counts.facets}`);",
+            "\t\tconsole.log(`Semantic: ${data.counts.semantic}`);",
+            "\t\tconsole.log(`Procedural: ${data.counts.procedural}`);",
+            "\t\tconsole.log(`Active Procedural: ${data.counts.activeProcedural}`);",
+            "\t\tconsole.log(`Superseded Procedural: ${data.counts.supersededProcedural}`);",
+            "\t\tconsole.log(`Procedure Chains: ${data.counts.procedureChains}`);",
+            "\t\tconsole.log(`Procedural Conflicts: ${data.counts.proceduralConflicts}`);",
+            "\t\tconsole.log(`Semantic Conflicts: ${data.counts.semanticConflicts}`);"
+          ],
+          "after": [
+            "\t\twriteOutput(`Episodes: ${data.counts.episodes}`);",
+            "\t\twriteOutput(`Facets: ${data.counts.facets}`);",
+            "\t\twriteOutput(`Semantic: ${data.counts.semantic}`);",
+            "\t\twriteOutput(`Procedural: ${data.counts.procedural}`);",
+            "\t\twriteOutput(`Active Procedural: ${data.counts.activeProcedural}`);",
+            "\t\twriteOutput(`Superseded Procedural: ${data.counts.supersededProcedural}`);",
+            "\t\twriteOutput(`Procedure Chains: ${data.counts.procedureChains}`);",
+            "\t\twriteOutput(`Procedural Conflicts: ${data.counts.proceduralConflicts}`);",
+            "\t\twriteOutput(`Semantic Conflicts: ${data.counts.semanticConflicts}`);"
+          ]
+        },
+        {
+          "at": 186,
+          "before": [
+            "\t\t\tconsole.log(\"\\nProcedure Version Chains:\");"
+          ],
+          "after": [
+            "\t\t\twriteOutput(\"\\nProcedure Version Chains:\");"
+          ]
+        },
+        {
+          "at": 188,
+          "before": [
+            "\t\t\t\tconsole.log(`- ${chain.name} [${chain.status}] depth=${chain.versionDepth} root=${chain.rootId}`);",
+            "\t\t\t\tconsole.log(`  ${chain.ids.join(\" -> \")}`);"
+          ],
+          "after": [
+            "\t\t\t\twriteOutput(`- ${chain.name} [${chain.status}] depth=${chain.versionDepth} root=${chain.rootId}`);",
+            "\t\t\t\twriteOutput(`  ${chain.ids.join(\" -> \")}`);"
+          ]
+        },
+        {
+          "at": 194,
+          "before": [
+            "\t\t\tconsole.log(\"\\nProcedural Conflict Signals:\");"
+          ],
+          "after": [
+            "\t\t\twriteOutput(\"\\nProcedural Conflict Signals:\");"
+          ]
+        },
+        {
+          "at": 196,
+          "before": [
+            "\t\t\t\tconsole.log("
+          ],
+          "after": [
+            "\t\t\t\twriteOutput("
+          ]
+        },
+        {
+          "at": 203,
+          "before": [
+            "\t\t\tconsole.log(\"\\nSemantic Conflict Signals:\");"
+          ],
+          "after": [
+            "\t\t\twriteOutput(\"\\nSemantic Conflict Signals:\");"
+          ]
+        },
+        {
+          "at": 205,
+          "before": [
+            "\t\t\t\tconsole.log(`- ${conflict.aName} (${conflict.aId}) <-> ${conflict.bName} (${conflict.bId}) — ${conflict.reason}`);"
+          ],
+          "after": [
+            "\t\t\t\twriteOutput(`- ${conflict.aName} (${conflict.aId}) <-> ${conflict.bName} (${conflict.bId}) — ${conflict.reason}`);"
+          ]
+        },
+        {
+          "at": 214,
+          "before": [
+            "\t\t\tconsole.log(\"No embeddings synced. Embeddings are currently disabled.\");"
+          ],
+          "after": [
+            "\t\t\twriteOutput(\"No embeddings synced. Embeddings are currently disabled.\");"
+          ]
+        },
+        {
+          "at": 217,
+          "before": [
+            "\t\tconsole.log(`Synced V2 embeddings for ${count} items.`);"
+          ],
+          "after": [
+            "\t\twriteOutput(`Synced V2 embeddings for ${count} items.`);"
+          ]
+        },
+        {
+          "at": 247,
+          "before": [
+            "\t\tconsole.log(`Insights report written to: ${outputPath}`);"
+          ],
+          "after": [
+            "\t\twriteOutput(`Insights report written to: ${outputPath}`);"
+          ]
+        },
+        {
+          "at": 251,
+          "before": [
+            "\tconsole.error(`Unknown command: ${sub}. Run 'nanomem help' for usage.`);"
+          ],
+          "after": [
+            "\twriteError(`Unknown command: ${sub}. Run 'nanomem help' for usage.`);"
+          ]
+        },
+        {
+          "at": 256,
+          "before": [
+            "\tconsole.error(err);"
+          ],
+          "after": [
+            "\twriteError(err);"
+          ]
+        },
+        {
+          "at": 260,
+          "before": [],
+          "after": [
+            "// CLI output is part of the command interface, not plugin console diagnostics.",
+            "function writeOutput(...values: unknown[]): void { process.stdout.write(format(...values) + \"\\n\"); }",
+            "function writeError(...values: unknown[]): void { process.stderr.write(format(...values) + \"\\n\"); }",
+            ""
+          ]
+        }
+      ]
+    },
+    "packages/memory/upstream/dedup.ts": {
+      "originalSha256": "12ec01025fd8268fc9a5ba567b28e82967337c57521feb5fa63dedf4cee20c34",
+      "adaptedSha256": "2da3578c449e882a487bfabec37f89051bdde97c2de23eaf750fc500bdbf877d",
+      "reason": "Typed contracts and lifecycle handling; explicit terminal/host interfaces and validated legacy compatibility. See docs/UPSTREAM_ADAPTATIONS.md.",
+      "edits": [
+        {
+          "at": 0,
+          "before": [],
+          "after": [
+            "import { readLegacyContent } from \"./compat.js\";"
+          ]
+        },
+        {
+          "at": 18,
+          "before": [
+            "\tconst aText = `${a.name || \"\"} ${a.summary || \"\"} ${a.content || \"\"}`.trim();",
+            "\tconst bText = `${b.name || \"\"} ${b.summary || \"\"} ${b.content || \"\"}`.trim();"
+          ],
+          "after": [
+            "\tconst aText = `${a.name || \"\"} ${a.summary || \"\"} ${readLegacyContent(a) || \"\"}`.trim();",
+            "\tconst bText = `${b.name || \"\"} ${b.summary || \"\"} ${readLegacyContent(b) || \"\"}`.trim();"
+          ]
+        }
+      ]
+    },
+    "packages/memory/upstream/extraction.ts": {
+      "originalSha256": "1deed88e204140bd5b9a321b4076d09a732b24eae8bb7787ea77ae2dace527ad",
+      "adaptedSha256": "112621122590c77056b5c48e747a6b08ac9f041e31e921779a40ce33973f3ac9",
+      "reason": "Typed contracts and lifecycle handling; explicit terminal/host interfaces and validated legacy compatibility. See docs/UPSTREAM_ADAPTATIONS.md.",
+      "edits": [
+        {
+          "at": 0,
+          "before": [],
+          "after": [
+            "import { readLegacyContent } from \"./compat.js\";"
+          ]
+        },
+        {
+          "at": 55,
+          "before": [
+            "\t\t\tconst detail = item.detail || item.content || \"\";"
+          ],
+          "after": [
+            "\t\t\tconst detail = item.detail || readLegacyContent(item) || \"\";"
+          ]
+        },
+        {
+          "at": 163,
+          "before": [
+            "\t\t\taddItem(\"lesson\", match[1]!);"
+          ],
+          "after": [
+            "\t\t\taddItem(\"lesson\", match[1]);"
+          ]
+        },
+        {
+          "at": 175,
+          "before": [
+            "\t\t\taddItem(\"preference\", match[1]!);"
+          ],
+          "after": [
+            "\t\t\taddItem(\"preference\", match[1]);"
+          ]
+        },
+        {
+          "at": 189,
+          "before": [
+            "\t\t\taddItem(\"fact\", match[1]!);"
+          ],
+          "after": [
+            "\t\t\taddItem(\"fact\", match[1]);"
+          ]
+        },
+        {
+          "at": 200,
+          "before": [
+            "\t\t\taddItem(\"decision\", match[1]!);"
+          ],
+          "after": [
+            "\t\t\taddItem(\"decision\", match[1]);"
+          ]
+        },
+        {
+          "at": 213,
+          "before": [
+            "\t\t\taddItem(\"event\", match[1]!);"
+          ],
+          "after": [
+            "\t\t\taddItem(\"event\", match[1]);"
+          ]
+        },
+        {
+          "at": 219,
+          "before": [
+            "\t\t\tconst mood = match[1]!;"
+          ],
+          "after": [
+            "\t\t\tconst mood = match[1];"
+          ]
+        },
+        {
+          "at": 242,
+          "before": [
+            "\t\t\taddItem(\"pattern\", match[1]!);"
+          ],
+          "after": [
+            "\t\t\taddItem(\"pattern\", match[1]);"
+          ]
+        },
+        {
+          "at": 254,
+          "before": [
+            "\t\t\taddItem(\"struggle\", match[1]!);"
+          ],
+          "after": [
+            "\t\t\taddItem(\"struggle\", match[1]);"
+          ]
+        }
+      ]
+    },
+    "packages/memory/upstream/engine.ts": {
+      "originalSha256": "3733c5788dbb30b888672740cacf39a3d9f36e90f90c71e435000b5fde8045c6",
+      "adaptedSha256": "8b02fbf52a1cba410a5ed0b14ad28396c92ae11800265a48088842687a57688c",
+      "reason": "Typed contracts and lifecycle handling; explicit terminal/host interfaces and validated legacy compatibility. See docs/UPSTREAM_ADAPTATIONS.md.",
+      "edits": [
+        {
+          "at": 0,
+          "before": [],
+          "after": [
+            "import { readLegacyContent, syncLegacyContent } from \"./compat.js\";"
+          ]
+        },
+        {
+          "at": 22,
+          "before": [
+            "import type { PromptSet } from \"./i18n.js\";"
+          ],
+          "after": [
+            ""
+          ]
+        },
+        {
+          "at": 25,
+          "before": [
+            "\tgetGraphContextSummaries,",
+            "\tgetGraphNeighborhoodBySeeds,"
+          ],
+          "after": []
+        },
+        {
+          "at": 27,
+          "before": [
+            "\ttype GraphNeighbor,"
+          ],
+          "after": []
+        },
+        {
+          "at": 28,
+          "before": [
+            "import { parseLlmJson } from \"./llm-json.js\";"
+          ],
+          "after": [
+            ""
+          ]
+        },
+        {
+          "at": 30,
+          "before": [
+            "import { daysSince, extractTags, pickTop, scoreEntry, scoreEpisode, scoreWorkEntry, tagOverlap, tierEntries } from \"./scoring.js\";"
+          ],
+          "after": [
+            "import { daysSince, extractTags, scoreEntry, tagOverlap} from \"./scoring.js\";"
+          ]
+        },
+        {
+          "at": 100,
+          "before": [
+            "\tmergeUniqueEntries as mergeUniqueEntriesFn,"
+          ],
+          "after": []
+        },
+        {
+          "at": 121,
+          "before": [
+            "\ttype ForgettingConfig,"
+          ],
+          "after": []
+        },
+        {
+          "at": 130,
+          "before": [
+            "\texplainConflictAction as explainConflictActionFn,"
+          ],
+          "after": []
+        },
+        {
+          "at": 132,
+          "before": [
+            "import { makeEpisodeMemoryId, mapEpisodeToV2, syncEpisodeToV2 } from \"./engine-episode-sync.js\";",
+            "import {",
+            "\treinforceProcedural as reinforceProceduralFn,",
+            "\treinforceEpisodeMemories as reinforceEpisodeMemoriesFn,",
+            "\treinforceEpisodeFacets as reinforceEpisodeFacetsFn,",
+            "\treinforceV2SemanticMemories as reinforceV2SemanticMemoriesFn,",
+            "\treinforceWork as reinforceWorkFn,",
+            "\treconsolidateV2AfterRecall as reconsolidateV2AfterRecallFn,",
+            "\treconsolidateIfNeeded as reconsolidateIfNeededFn,",
+            "} from \"./engine-reinforce.js\";"
+          ],
+          "after": [
+            "",
+            ""
+          ]
+        },
+        {
+          "at": 292,
+          "before": [
+            "\t\t\tconst existing = entries[result.index]!;"
+          ],
+          "after": [
+            "\t\t\tconst existing = entries[result.index];"
+          ]
+        },
+        {
+          "at": 458,
+          "before": [
+            "\t\t\t\tconst existing = target[result.index]!;"
+          ],
+          "after": [
+            "\t\t\t\tconst existing = target[result.index];"
+          ]
+        },
+        {
+          "at": 760,
+          "before": [
+            "\t\tconst detail = patch.detail ?? entry.detail ?? entry.content ?? \"\";"
+          ],
+          "after": [
+            "\t\tconst detail = patch.detail ?? entry.detail ?? readLegacyContent(entry) ?? \"\";"
+          ]
+        },
+        {
+          "at": 764,
+          "before": [
+            "\t\tentry.content = detail;"
+          ],
+          "after": [
+            "\t\tsyncLegacyContent(entry);"
+          ]
+        },
+        {
+          "at": 821,
+          "before": [
+            "\t\tprimary.entry.detail = [primary.entry.detail || primary.entry.content, secondary.entry.detail || secondary.entry.content]"
+          ],
+          "after": [
+            "\t\tprimary.entry.detail = [primary.entry.detail || readLegacyContent(primary.entry), secondary.entry.detail || readLegacyContent(secondary.entry)]"
+          ]
+        },
+        {
+          "at": 825,
+          "before": [
+            "\t\tprimary.entry.content = primary.entry.detail;"
+          ],
+          "after": [
+            "\t\tsyncLegacyContent(primary.entry);"
+          ]
+        },
+        {
+          "at": 2380,
+          "before": [
+            "\t\t\t\tconst memText = entry.detail || entry.summary || entry.content || \"\";"
+          ],
+          "after": [
+            "\t\t\t\tconst memText = entry.detail || entry.summary || readLegacyContent(entry) || \"\";"
+          ]
+        },
+        {
+          "at": 2388,
+          "before": [
+            "\t\t\t\t\tentry.content = trimmed;"
+          ],
+          "after": [
+            "\t\t\t\t\tsyncLegacyContent(entry);"
+          ]
+        }
+      ]
+    },
+    "packages/memory/upstream/engine-v2-mapping.ts": {
+      "originalSha256": "be38b54465f25e3e278089d5016fb89ed009eede5d5ecb7edfeb115865135c16",
+      "adaptedSha256": "4f11c86095e2220195ead19af0e4745813d4ad1fa0417f032aca0731ffd1abac",
+      "reason": "Typed contracts and lifecycle handling; explicit terminal/host interfaces and validated legacy compatibility. See docs/UPSTREAM_ADAPTATIONS.md.",
+      "edits": [
+        {
+          "at": 0,
+          "before": [],
+          "after": [
+            "import { readLegacyContent } from \"./compat.js\";"
+          ]
+        },
+        {
+          "at": 89,
+          "before": [
+            "\tconst detail = filterPII(item.detail || item.content || \"\");"
+          ],
+          "after": [
+            "\tconst detail = filterPII(item.detail || readLegacyContent(item) || \"\");"
+          ]
+        }
+      ]
+    },
+    "packages/memory/upstream/llm-json.ts": {
+      "originalSha256": "43cc838fe209f19eb9b19a72bde79c7d41b772173ea0384e631dfe78857f96ea",
+      "adaptedSha256": "59cf5dbd8a8e83ecaf2d6ac5c2b13b12abe0ea37256f51fd4a00122cb06ea57c",
+      "reason": "Typed contracts and lifecycle handling; explicit terminal/host interfaces and validated legacy compatibility. See docs/UPSTREAM_ADAPTATIONS.md.",
+      "edits": [
+        {
+          "at": 73,
+          "before": [
+            "\t\t\tconst ch = value[index]!;"
+          ],
+          "after": [
+            "\t\t\tconst ch = value[index];"
+          ]
+        },
+        {
+          "at": 129,
+          "before": [
+            "\t\tconst ch = s[i]!;"
+          ],
+          "after": [
+            "\t\tconst ch = s[i];"
+          ]
+        }
+      ]
+    },
+    "packages/memory/upstream/engine-reinforce.ts": {
+      "originalSha256": "c3901094bc4eb59ba17ffe8f13a0e57cae616df0271b44992e3fa9b5cbe4e883",
+      "adaptedSha256": "60abdfa5caa25d26d7e8d0d4ccecad3d342779fa47a0c8484a116f59f50278f6",
+      "reason": "Typed contracts and lifecycle handling; explicit terminal/host interfaces and validated legacy compatibility. See docs/UPSTREAM_ADAPTATIONS.md.",
+      "edits": [
+        {
+          "at": 0,
+          "before": [],
+          "after": [
+            "import { readLegacyContent, syncLegacyContent } from \"./compat.js\";"
+          ]
+        },
+        {
+          "at": 9,
+          "before": [
+            "import { reinforceRelations } from \"./linking.js\";"
+          ],
+          "after": [
+            ""
+          ]
+        },
+        {
+          "at": 12,
+          "before": [
+            "import { saveEntries, saveWork } from \"./store.js\";"
+          ],
+          "after": [
+            "import { saveWork } from \"./store.js\";"
+          ]
+        },
+        {
+          "at": 24,
+          "before": [
+            "import { utilityEntry, utilityWork } from \"./eviction.js\";"
+          ],
+          "after": [
+            "import { utilityWork } from \"./eviction.js\";"
+          ]
+        },
+        {
+          "at": 138,
+          "before": [
+            "\t\t\tconst memText = entry.detail || entry.summary || entry.content || \"\";"
+          ],
+          "after": [
+            "\t\t\tconst memText = entry.detail || entry.summary || readLegacyContent(entry) || \"\";"
+          ]
+        },
+        {
+          "at": 146,
+          "before": [
+            "\t\t\t\tentry.content = trimmed;"
+          ],
+          "after": [
+            "\t\t\t\tsyncLegacyContent(entry);"
+          ]
+        }
+      ]
+    },
+    "packages/memory/upstream/diagnostics.ts": {
+      "originalSha256": "241291b9ed780909d356489049a59547d7041c8b6d1f0a032027aef461369b8f",
+      "adaptedSha256": "dac22be95255d9ee1db8f1ccd17ca205f6cbd656ef11ab636512f5af1413608e",
+      "reason": "Typed contracts and lifecycle handling; explicit terminal/host interfaces and validated legacy compatibility. See docs/UPSTREAM_ADAPTATIONS.md.",
+      "edits": [
+        {
+          "at": 0,
+          "before": [],
+          "after": [
+            "import { format } from \"node:util\";",
+            "import { memoryHostGlobal } from \"./compat.js\";"
+          ]
+        },
+        {
+          "at": 4,
+          "before": [
+            " * [FROM]: Depends only on node:events"
+          ],
+          "after": [
+            " * [FROM]: Depends on node:events, node:util and the explicit compatibility host registry"
+          ]
+        },
+        {
+          "at": 6,
+          "before": [
+            " * [HERE]: packages/mem-core/src/diagnostics.ts - mirrors utils/diagnostics.ts; explicit dev/debug mode prints to console, and both copies bind to the same Symbol.for slot on globalThis at runtime so the diagnostics extension subscribed via utils/diagnostics.ts receives mem-core events too"
+          ],
+          "after": [
+            " * [HERE]: packages/mem-core/src/diagnostics.ts - mirrors utils/diagnostics.ts; explicit dev/debug mode prints to console, and both copies bind to the same Symbol.for slot on the selected host global at runtime so the diagnostics extension subscribed via utils/diagnostics.ts receives mem-core events too"
+          ]
+        },
+        {
+          "at": 8,
+          "before": [
+            " * Keep this file structurally identical to utils/diagnostics.ts. mem-core is a",
+            " * separately-compiled package, so we cannot import the canonical helper. The",
+            " * Symbol.for(...) slot is the runtime contract that ties both copies together."
+          ],
+          "after": [
+            " * Separately compiled hosts can call configureMemoryHost with a shared registry.",
+            " * Symbol.for(...) retains the diagnostic slot identity within that registry.",
+            " * The standalone Node CLI defaults to module-local storage."
+          ]
+        },
+        {
+          "at": 46,
+          "before": [
+            "\tconst holder = globalThis as unknown as Record<symbol, BusSlot | undefined>;"
+          ],
+          "after": [
+            "\tconst holder = memoryHostGlobal() as unknown as Record<symbol, BusSlot | undefined>;"
+          ]
+        },
+        {
+          "at": 67,
+          "before": [
+            "\t\tconst fn =",
+            "\t\t\tevent.severity === \"error\" ? console.error :",
+            "\t\t\tevent.severity === \"warning\" ? console.warn :",
+            "\t\t\tconsole.log;",
+            "\t\tif (event.detail !== undefined) {",
+            "\t\t\tfn(`${tag} ${event.message}`, event.detail);",
+            "\t\t} else {",
+            "\t\t\tfn(`${tag} ${event.message}`);",
+            "\t\t}"
+          ],
+          "after": [
+            "\t\tconst output = event.severity === \"error\" || event.severity === \"warning\" ? process.stderr : process.stdout;",
+            "\t\tconst values = event.detail !== undefined ? [`${tag} ${event.message}`, event.detail] : [`${tag} ${event.message}`];",
+            "\t\toutput.write(format(...values) + \"\\n\");"
+          ]
+        }
+      ]
+    },
+    "packages/memory/upstream/full-insights-html.ts": {
+      "originalSha256": "b0437c8b44bdf4bc9d244bf6d9834b50dab7567e08d8f9ed8323064c319e48c9",
+      "adaptedSha256": "68baa00024e899eab8bb5ec006a161e4a6e8f12376d4c91e0d0da020bbb42677",
+      "reason": "Typed contracts and lifecycle handling; explicit terminal/host interfaces and validated legacy compatibility. See docs/UPSTREAM_ADAPTATIONS.md.",
+      "edits": [
+        {
+          "at": 12,
+          "before": [
+            "\tFullInsightsFriction,"
+          ],
+          "after": []
+        },
+        {
+          "at": 13,
+          "before": [
+            "\tFullInsightsFeatureToTry,",
+            "\tFullInsightsUsagePattern,"
+          ],
+          "after": []
+        },
+        {
+          "at": 14,
+          "before": [
+            "\tPatternInsight,"
+          ],
+          "after": []
+        },
+        {
+          "at": 63,
+          "before": [
+            "\tconst sections: string[] = [];"
+          ],
+          "after": []
+        }
+      ]
+    },
+    "packages/memory/upstream/engine-episode-sync.ts": {
+      "originalSha256": "70782b053fe92d6ab16a7a048ecd62e1901730061dc9d2bd1d22f05d54ab9b0a",
+      "adaptedSha256": "1bd0e807685daf80fbcd12d840ebf6aa1655b55ca7a89be64532e8779d22595d",
+      "reason": "Typed contracts and lifecycle handling; explicit terminal/host interfaces and validated legacy compatibility. See docs/UPSTREAM_ADAPTATIONS.md.",
+      "edits": [
+        {
+          "at": 11,
+          "before": [
+            "\tgetV2Paths,"
+          ],
+          "after": []
+        }
+      ]
+    },
+    "packages/memory/upstream/turn-context.ts": {
+      "originalSha256": "dc7f004e634c81ec4e9e1f7943eb18a3019f4376f952bac73a379e1199d50eb0",
+      "adaptedSha256": "da72ac09d31016641fb9c15deb97d96225f2cf5c5ac6187c774467d21136bd22",
+      "reason": "Typed contracts and lifecycle handling; explicit terminal/host interfaces and validated legacy compatibility. See docs/UPSTREAM_ADAPTATIONS.md.",
+      "edits": [
+        {
+          "at": 0,
+          "before": [],
+          "after": [
+            "import { memoryHostGlobal } from \"./compat.js\";"
+          ]
+        },
+        {
+          "at": 3,
+          "before": [
+            " * [FROM]: Depends on nothing; reads/writes globalThis using the documented key"
+          ],
+          "after": [
+            " * [FROM]: Depends on ./compat.js; reads/writes the explicit host registry using the documented key"
+          ]
+        },
+        {
+          "at": 5,
+          "before": [
+            " * [HERE]: packages/mem-core/src/turn-context.ts - structural mirror of core/runtime/turn-context; mem-core cannot reverse-import the main app, so the contract is shared via the globalThis key string and schema, not the source file"
+          ],
+          "after": [
+            " * [HERE]: packages/mem-core/src/turn-context.ts - structural mirror of core/runtime/turn-context; mem-core cannot reverse-import the main app, so the contract is shared via the host-global key string and schema, not the source file"
+          ]
+        },
+        {
+          "at": 7,
+          "before": [
+            " * Keep this file structurally aligned with core/runtime/turn-context.ts.",
+            " * If the schema changes there, mirror the change here."
+          ],
+          "after": [
+            " * Host integrations sharing state across bundles must explicitly install their",
+            " * registry using configureMemoryHost; the standalone CLI is module-local."
+          ]
+        },
+        {
+          "at": 38,
+          "before": [
+            "\tconst g = globalThis as unknown as Record<string, TurnContext | undefined>;"
+          ],
+          "after": [
+            "\tconst g = memoryHostGlobal() as unknown as Record<string, TurnContext | undefined>;"
+          ]
+        },
+        {
+          "at": 40,
+          "before": [
+            "\treturn g[TURN_CONTEXT_GLOBAL_KEY] as TurnContext;"
+          ],
+          "after": [
+            "\treturn g[TURN_CONTEXT_GLOBAL_KEY];"
+          ]
+        }
+      ]
+    },
+    "packages/memory/upstream/engine-recall-select.ts": {
+      "originalSha256": "ba85bda6b331e50f4507f49dab08d1810cd312e8aad89848ebb9a49d9ef852df",
+      "adaptedSha256": "c6b25579f573011330eefcbad5ed706cee9b1bfff95bb3d9b58f1bf27d197407",
+      "reason": "Typed contracts and lifecycle handling; explicit terminal/host interfaces and validated legacy compatibility. See docs/UPSTREAM_ADAPTATIONS.md.",
+      "edits": [
+        {
+          "at": 23,
+          "before": [
+            "import type { MemoryEntry, MemoryScope, WorkEntry, Episode } from \"./types.js\";"
+          ],
+          "after": [
+            "import type { MemoryEntry, WorkEntry, Episode } from \"./types.js\";"
+          ]
+        }
+      ]
+    },
+    "packages/memory/upstream/insights-html.ts": {
+      "originalSha256": "01d729cca238c94e7a6c9e528a7cb08ebaca8383c885fadd84df06765d6964c5",
+      "adaptedSha256": "597ce74dabdae6055e3ae44c479967a386097661bfc3cf78db81fc4b22b2706c",
+      "reason": "Typed contracts and lifecycle handling; explicit terminal/host interfaces and validated legacy compatibility. See docs/UPSTREAM_ADAPTATIONS.md.",
+      "edits": [
+        {
+          "at": 0,
+          "before": [],
+          "after": [
+            "import { readLegacyContent } from \"./compat.js\";"
+          ]
+        },
+        {
+          "at": 242,
+          "before": [
+            "\t\t.map((entry) => `<li>${escapeHtml(entry.summary || entry.detail || entry.content || \"\")}${entry.tags.length ? ` <span class=\"tags\">${entry.tags.slice(0, 4).map((tag) => `#${escapeHtml(tag)}`).join(\" \")}</span>` : \"\"}</li>`)"
+          ],
+          "after": [
+            "\t\t.map((entry) => `<li>${escapeHtml(entry.summary || entry.detail || readLegacyContent(entry) || \"\")}${entry.tags.length ? ` <span class=\"tags\">${entry.tags.slice(0, 4).map((tag) => `#${escapeHtml(tag)}`).join(\" \")}</span>` : \"\"}</li>`)"
+          ]
+        }
+      ]
+    },
+    "packages/memory/upstream/embedding-index.ts": {
+      "originalSha256": "370c47db4c916ed8ca7cd132c76cc4729a70996c65cf45416096277965b910fc",
+      "adaptedSha256": "ae464c41a67aeb562f97d127bdd16a0485f878d3e8fcee3286dd1bedbad9da9a",
+      "reason": "Typed contracts and lifecycle handling; explicit terminal/host interfaces and validated legacy compatibility. See docs/UPSTREAM_ADAPTATIONS.md.",
+      "edits": [
+        {
+          "at": 50,
+          "before": [
+            "\t\tdot += a[i]! * b[i]!;",
+            "\t\tmagA += a[i]! * a[i]!;",
+            "\t\tmagB += b[i]! * b[i]!;"
+          ],
+          "after": [
+            "\t\tdot += a[i] * b[i];",
+            "\t\tmagA += a[i] * a[i];",
+            "\t\tmagB += b[i] * b[i];"
+          ]
+        },
+        {
+          "at": 86,
+          "before": [
+            "\t\t\tconst item = toEmbed[i]!;"
+          ],
+          "after": [
+            "\t\t\tconst item = toEmbed[i];"
+          ]
+        }
+      ]
+    },
+    "packages/memory/upstream/protocol-shim.d.ts": {
+      "originalSha256": "7a6b545fa4a754405d9436e728e0356b3d975dbb985088babda2dbe85c387759",
+      "adaptedSha256": "0818d2055cf42c663569c11d522a06d4dd4b566f80d240a0ac1ba0fc795be91f",
+      "reason": "Typed contracts and lifecycle handling; explicit terminal/host interfaces and validated legacy compatibility. See docs/UPSTREAM_ADAPTATIONS.md.",
+      "edits": [
+        {
+          "at": 22,
+          "before": [
+            "\t\tgetSettings?: () => { nanomem?: Record<string, any> } | undefined;"
+          ],
+          "after": [
+            "\t\tgetSettings?: () => { nanomem?: { autoDream?: { enabled?: boolean; minHours?: number; minSessions?: number; scanIntervalMinutes?: number }; dream?: { lockStaleMinutes?: number } } } | undefined;"
+          ]
+        },
+        {
+          "at": 45,
+          "before": [
+            "\texport type HookHandler = (event: any, ctx: ExtensionContext) => any | Promise<any>;"
+          ],
+          "after": [
+            "\texport type HookEvents = {",
+            "  before_agent_start: { prompt?: string };",
+            "  tool_execution_start: { toolCallId: string; toolName: string; args: Record<string, unknown> };",
+            "  tool_execution_end: { toolCallId: string; toolName: string; result: unknown; isError: boolean };",
+            "  agent_end: { messages: Array<{ role: string; content?: unknown }> };",
+            "};",
+            "export type HookHandler<T extends HookEventName = HookEventName> = (event: T extends keyof HookEvents ? HookEvents[T] : unknown, ctx: ExtensionContext) => unknown;"
+          ]
+        },
+        {
+          "at": 57,
+          "before": [
+            "\t\t\tcontext?: { tokenIndex?: number; [key: string]: any },"
+          ],
+          "after": [
+            "\t\t\tcontext?: { tokenIndex?: number; [key: string]: unknown },"
+          ]
+        },
+        {
+          "at": 103,
+          "before": [
+            "\t\ton(event: HookEventName, handler: HookHandler): void;"
+          ],
+          "after": [
+            "\t\ton<T extends HookEventName>(event: T, handler: HookHandler<T>): void;"
+          ]
+        }
+      ]
+    },
+    "packages/memory/upstream/full-insights-sections.ts": {
+      "originalSha256": "d9145bf40b8f7f61b209079acad575d9e19d33aabd0aa49ef97001adb12d7837",
+      "adaptedSha256": "cc90dc834b093862b77b2392543ba9ebefebe5a094503b107f158f0b177493e6",
+      "reason": "Typed contracts and lifecycle handling; explicit terminal/host interfaces and validated legacy compatibility. See docs/UPSTREAM_ADAPTATIONS.md.",
+      "edits": [
+        {
+          "at": 0,
+          "before": [],
+          "after": [
+            "import { readLegacyContent } from \"./compat.js\";"
+          ]
+        },
+        {
+          "at": 96,
+          "before": [
+            "\t\tlessons: context.lessons.slice(0, 8).map((lesson) => lesson.summary || lesson.detail || lesson.content || \"\"),"
+          ],
+          "after": [
+            "\t\tlessons: context.lessons.slice(0, 8).map((lesson) => lesson.summary || lesson.detail || readLegacyContent(lesson) || \"\"),"
+          ]
+        }
+      ]
+    },
+    "packages/memory/upstream/store.ts": {
+      "originalSha256": "ae8af10438175fddc7437f01aa5eacfe22b22a07dd0698ee269bdf547cd1f187",
+      "adaptedSha256": "0e10e9ffc43248c7734c5eea5b8141ec1a012d05183a9dc6ebb40bb960bbe79d",
+      "reason": "Typed contracts and lifecycle handling; explicit terminal/host interfaces and validated legacy compatibility. See docs/UPSTREAM_ADAPTATIONS.md.",
+      "edits": [
+        {
+          "at": 0,
+          "before": [],
+          "after": [
+            "import { readLegacyContent } from \"./compat.js\";"
+          ]
+        },
+        {
+          "at": 56,
+          "before": [
+            "\tconst content = entry.content || entry.detail || \"\";"
+          ],
+          "after": [
+            "\tconst content = readLegacyContent(entry) || entry.detail || \"\";"
+          ]
+        },
+        {
+          "at": 98,
+          "before": [
+            "\tconst persisted = entries.map((e) => ({ ...e, content: e.detail || e.content || e.summary || \"\" }));"
+          ],
+          "after": [
+            "\tconst persisted = entries.map((e) => ({ ...e, content: e.detail || readLegacyContent(e) || e.summary || \"\" }));"
+          ]
+        }
+      ]
+    },
+    "packages/memory/upstream/update.ts": {
+      "originalSha256": "a4e9a4d244c007349bc24f30a0edb222f12bfb81d6c849bfeeb4f1ea46140e3f",
+      "adaptedSha256": "e046c83568ac1ea45d4163b31dcd7990e15f94b426d399a4234b8cbf2d8c8154",
+      "reason": "Typed contracts and lifecycle handling; explicit terminal/host interfaces and validated legacy compatibility. See docs/UPSTREAM_ADAPTATIONS.md.",
+      "edits": [
+        {
+          "at": 0,
+          "before": [],
+          "after": [
+            "import { readLegacyContent } from \"./compat.js\";"
+          ]
+        },
+        {
+          "at": 45,
+          "before": [
+            "\t\tconst existingNameSummary = `${e.name || \"\"} ${e.summary || e.content || \"\"}`.trim();"
+          ],
+          "after": [
+            "\t\tconst existingNameSummary = `${e.name || \"\"} ${e.summary || readLegacyContent(e) || \"\"}`.trim();"
+          ]
+        },
+        {
+          "at": 124,
+          "before": [
+            "\t\tapplyDelete(entries, item.detail || item.content || item.summary || \"\");"
+          ],
+          "after": [
+            "\t\tapplyDelete(entries, item.detail || readLegacyContent(item) || item.summary || \"\");"
+          ]
+        },
+        {
+          "at": 129,
+          "before": [
+            "\tconst rawDetail = item.detail || item.content || \"\";"
+          ],
+          "after": [
+            "\tconst rawDetail = item.detail || readLegacyContent(item) || \"\";"
+          ]
+        },
+        {
+          "at": 143,
+          "before": [
+            "\t\tconst existing = entries[updateIdx]!;"
+          ],
+          "after": [
+            "\t\tconst existing = entries[updateIdx];"
+          ]
+        },
+        {
+          "at": 260,
+          "before": [
+            "\t\tconst e = entries[i]!;"
+          ],
+          "after": [
+            "\t\tconst e = entries[i];"
+          ]
+        },
+        {
+          "at": 267,
+          "before": [
+            "\t\tconst e = entries[i]!;"
+          ],
+          "after": [
+            "\t\tconst e = entries[i];"
+          ]
+        }
+      ]
+    }
+  },
+  "additions": {
+    "packages/memory/upstream/compat.ts": "4c5ec14d5911f9ec04523498c32ebe83f200e207d3e4812947bd07f46ea44bc3",
+    "packages/agent-core/upstream/session/session-manager.d.ts": "7f3ae4b7a7d81ba4d98aa94d2abe3027e242eafb2ad2d8d868eae39646025e10"
+  }
+}

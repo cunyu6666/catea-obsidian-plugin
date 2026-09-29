@@ -1,3 +1,4 @@
+import { readLegacyContent } from "./compat.js";
 /**
  * [WHO]: renderInsightsHtml
  * [FROM]: Depends on ./i18n.js, ./types.js
@@ -239,7 +240,7 @@ function renderStruggleRows(struggles: StruggleInsight[], ui: UiText): string {
 function renderMemoryList(entries: MemoryEntry[], empty: string): string {
 	if (!entries.length) return `<p class="empty">${escapeHtml(empty)}</p>`;
 	return `<ul class="list">${entries
-		.map((entry) => `<li>${escapeHtml(entry.summary || entry.detail || entry.content || "")}${entry.tags.length ? ` <span class="tags">${entry.tags.slice(0, 4).map((tag) => `#${escapeHtml(tag)}`).join(" ")}</span>` : ""}</li>`)
+		.map((entry) => `<li>${escapeHtml(entry.summary || entry.detail || readLegacyContent(entry) || "")}${entry.tags.length ? ` <span class="tags">${entry.tags.slice(0, 4).map((tag) => `#${escapeHtml(tag)}`).join(" ")}</span>` : ""}</li>`)
 		.join("")}</ul>`;
 }
 

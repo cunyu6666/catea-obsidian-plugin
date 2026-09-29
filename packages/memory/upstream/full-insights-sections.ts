@@ -1,3 +1,4 @@
+import { readLegacyContent } from "./compat.js";
 /**
  * [WHO]: generateParallelFullInsightSections(), FullInsightsSectionPayload
  * [FROM]: Depends on ./llm-json and ./types for structured LLM section generation
@@ -93,7 +94,7 @@ function compactContext(context: FullInsightsSectionContext): Record<string, unk
 			solution: struggle.solution,
 			weight: Number(struggle.weight.toFixed(2)),
 		})),
-		lessons: context.lessons.slice(0, 8).map((lesson) => lesson.summary || lesson.detail || lesson.content || ""),
+		lessons: context.lessons.slice(0, 8).map((lesson) => lesson.summary || lesson.detail || readLegacyContent(lesson) || ""),
 		topTools: context.topTools.slice(0, 8),
 		topLanguages: context.topLanguages.slice(0, 8),
 		topErrors: context.topErrors.slice(0, 8),

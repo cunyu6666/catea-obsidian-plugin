@@ -46,32 +46,72 @@ export async function extractWritingMemories(
       result: typeof t.result === 'string' ? t.result.slice(0, 12000) : t.result,
     })),
   })
-  let result: unknown
-  for await (const event of client.stream(
-    {
-      model,
-      system,
-      transcript: [{ role: 'user', content: input }],
-      tools: [tool],
-      attachments: new Map(),
-      maxTokens: 6000,
-    },
-    signal,
-  )) {
-    if (event.type !== 'done') continue
-    const call = event.reply.calls.find((c) => c.name === tool.name)
-    result = call?.args ?? JSON.parse(event.reply.text.replace(/^```(?:json)?\s*|\s*```$/g, ''))
+  let memories: MemoryInput[] | undefined
+  let issues = ''
+  // One bounded repair request; transport failures go straight to the durable queue.
+  for (let attempt = 0; attempt < 2; attempt++) {
+    signal.throwIfAborted()
+    let result: unknown
+    let completed = false
+    let invalidJson = false
+    for await (const event of client.stream(
+      {
+        model,
+        system,
+        transcript: [
+          { role: 'user', content: input },
+          ...(attempt
+            ? [
+                {
+                  role: 'user' as const,
+                  content: `The previous extraction failed validation: ${issues}. Regenerate the complete submit_memories payload from the original conversation. Include required type, name, summary and detail for each memory. Match the schema exactly; omit absent optional fields instead of using null. Do not invent facts to satisfy validation. Use an empty memories array only if there is no durable memory.`,
+                },
+              ]
+            : []),
+        ],
+        tools: [tool],
+        attachments: new Map(),
+        maxTokens: 6000,
+      },
+      signal,
+    )) {
+      if (event.type !== 'done') continue
+      completed = true
+      const call = event.reply.calls.find((c) => c.name === tool.name)
+      if (call) result = call.args
+      else {
+        try {
+          result = JSON.parse(event.reply.text.trim().replace(/^```(?:json)?\s*|\s*```$/g, ''))
+        } catch {
+          invalidJson = true
+        }
+      }
+    }
+    signal.throwIfAborted()
+    if (completed && !invalidJson && Value.Check(schema, result)) {
+      memories = result.memories
+      break
+    }
+    // Report only schema diagnostics, never model output or excerpts from private notes.
+    issues = !completed
+      ? 'Missing completed model response'
+      : invalidJson
+        ? 'Expected valid JSON or a submit_memories tool call'
+        : [...Value.Errors(schema, result)]
+            .slice(0, 5)
+            .map((error) => `${error.path || '/'}: ${error.message}`)
+            .join('; ')
+    issues = issues.slice(0, 1000)
   }
-  signal.throwIfAborted()
-  if (!Value.Check(schema, result))
-    throw new Error('Invalid structured memory extraction; queued for retry')
+  if (!memories)
+    throw new Error(`Memory extraction failed validation after one repair attempt: ${issues}`)
   const paths = new Set(
     job.tools
       .filter((t) => !t.error)
       .map((t) => t.args.path)
       .filter((p): p is string => typeof p === 'string'),
   )
-  return result.memories.map((item) => {
+  return memories.map((item) => {
     const sources = (
       item.sources?.length
         ? item.sources

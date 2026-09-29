@@ -1,3 +1,4 @@
+import { readLegacyContent } from "./compat.js";
 /**
  * [WHO]: GraphNeighbor, linkNewEntry, getRelatedSummaries, getGraphNeighborhood, getGraphContextSummaries, reinforceRelations
  * [FROM]: Depends on ./scoring.js, ./types.js
@@ -71,7 +72,7 @@ export function getRelatedSummaries(entry: MemoryEntry, allEntries: MemoryEntry[
 	return allEntries
 		.filter((e) => idSet.has(e.id))
 		.slice(0, maxCount)
-		.map((e) => e.summary || e.content?.slice(0, 80) || e.name || "");
+		.map((e) => e.summary || readLegacyContent(e)?.slice(0, 80) || e.name || "");
 }
 
 function buildGraphScore(seed: MemoryEntry, candidate: MemoryEntry, hop: number, explicit: boolean): number {
@@ -161,7 +162,7 @@ export function getGraphContextSummaries(entry: MemoryEntry, allEntries: MemoryE
 	return getGraphNeighborhood(entry, allEntries, maxCount).map(
 		(candidate) =>
 			`[${candidate.relation}] [${candidate.entry.type}] ${
-				candidate.entry.summary || candidate.entry.name || candidate.entry.content?.slice(0, 80) || ""
+				candidate.entry.summary || candidate.entry.name || readLegacyContent(candidate.entry)?.slice(0, 80) || ""
 			}`,
 	);
 }

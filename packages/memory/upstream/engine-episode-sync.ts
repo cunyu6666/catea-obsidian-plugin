@@ -9,7 +9,6 @@ import { currentStructuralAnchor } from "./engine-scoring-v2.js";
 import { compileProcedureFromEpisode } from "./procedural-v2.js";
 import { extractTags } from "./scoring.js";
 import {
-	getV2Paths,
 	loadV2Episodes,
 	loadV2Facets,
 	loadV2Links,

@@ -1,3 +1,4 @@
+import { readLegacyContent, syncLegacyContent } from "./compat.js";
 /**
  * [WHO]: NanoMemEngine class - unified facade for memory CRUD, injection, consolidation; delegates to engine-* modules
  * [FROM]: Depends on node:fs/promises, node:path; ./config.js, ./consolidation.js, ./eviction.js, ./extraction.js, ./i18n.js, ./linking.js, ./llm-json.js, ./privacy.js, ./scoring.js, ./store.js, ./update.js; ./engine-scoring-v2.js, ./engine-injection-text.js, ./engine-v2-mapping.js, ./engine-archive.js, ./engine-links.js, ./engine-insights.js, ./engine-episode-sync.js, ./engine-reinforce.js, ./engine-recall-select.js
@@ -19,18 +20,15 @@ import {
 import { utilityEntry, utilityWork } from "./eviction.js";
 import { extractMemories, extractWork } from "./extraction.js";
 import { createHashedEmbeddingFn } from "./hash-embedding.js";
-import type { PromptSet } from "./i18n.js";
+
 import { PROMPTS } from "./i18n.js";
 import {
-	getGraphContextSummaries,
-	getGraphNeighborhoodBySeeds,
 	linkNewEntry,
 	reinforceRelations,
-	type GraphNeighbor,
 } from "./linking.js";
-import { parseLlmJson } from "./llm-json.js";
+
 import { evictExpiredEntries, evictExpiredWork, filterByScope, filterPII } from "./privacy.js";
-import { daysSince, extractTags, pickTop, scoreEntry, scoreEpisode, scoreWorkEntry, tagOverlap, tierEntries } from "./scoring.js";
+import { daysSince, extractTags, scoreEntry, tagOverlap} from "./scoring.js";
 import {
 	loadEntries,
 	loadEpisodes,
@@ -100,7 +98,6 @@ import {
 	buildInjectedMemoryOrder,
 	buildProgressiveInjectionText,
 	isConversationPreference as isConversationPreferenceFn,
-	mergeUniqueEntries as mergeUniqueEntriesFn,
 	selectConversationPreferences as selectConversationPreferencesFn,
 	rankConversationPreference as rankConversationPreferenceFn,
 } from "./engine-injection-text.js";
@@ -122,7 +119,6 @@ import {
 	partitionArchivedWork as partitionArchivedWorkFn,
 	partitionArchivedSemantic as partitionArchivedSemanticFn,
 	partitionArchivedProcedural as partitionArchivedProceduralFn,
-	type ForgettingConfig,
 } from "./engine-archive.js";
 import {
 	AUTO_V2_LINK_PREFIX,
@@ -132,19 +128,10 @@ import {
 	detectSemanticConflicts as detectSemanticConflictsFn,
 	detectAlignmentConflicts as detectAlignmentConflictsFn,
 	suggestConflictAction as suggestConflictActionFn,
-	explainConflictAction as explainConflictActionFn,
 } from "./engine-links.js";
 import { generateInsightsReport } from "./engine-insights.js";
-import { makeEpisodeMemoryId, mapEpisodeToV2, syncEpisodeToV2 } from "./engine-episode-sync.js";
-import {
-	reinforceProcedural as reinforceProceduralFn,
-	reinforceEpisodeMemories as reinforceEpisodeMemoriesFn,
-	reinforceEpisodeFacets as reinforceEpisodeFacetsFn,
-	reinforceV2SemanticMemories as reinforceV2SemanticMemoriesFn,
-	reinforceWork as reinforceWorkFn,
-	reconsolidateV2AfterRecall as reconsolidateV2AfterRecallFn,
-	reconsolidateIfNeeded as reconsolidateIfNeededFn,
-} from "./engine-reinforce.js";
+
+
 import { selectRecallEntries } from "./engine-recall-select.js";
 import { setTurnContext, type MemoryRecallRecord } from "./turn-context.js";
 
@@ -303,7 +290,7 @@ export class NanoMemEngine {
 		const result = checkWorkDuplicate(entries, newWork);
 		if (result.action === "skip") return;
 		if (result.action === "update" && result.index !== undefined) {
-			const existing = entries[result.index]!;
+			const existing = entries[result.index];
 			entries[result.index] = {
 				...existing,
 				goal: newWork.goal,
@@ -469,7 +456,7 @@ export class NanoMemEngine {
 			}
 			if (result.action === "update" && result.index !== undefined) {
 				updated++;
-				const existing = target[result.index]!;
+				const existing = target[result.index];
 				target[result.index] = {
 					...existing,
 					name: entry.name,
@@ -771,11 +758,11 @@ export class NanoMemEngine {
 		const located = await this.findEntryLocation(id);
 		if (!located) return null;
 		const { entry, entries, path, max } = located;
-		const detail = patch.detail ?? entry.detail ?? entry.content ?? "";
+		const detail = patch.detail ?? entry.detail ?? readLegacyContent(entry) ?? "";
 		entry.name = patch.name ?? entry.name;
 		entry.summary = patch.summary ?? entry.summary;
 		entry.detail = detail;
-		entry.content = detail;
+		syncLegacyContent(entry);
 		entry.retention = patch.retention ?? entry.retention;
 		entry.salience = patch.salience ?? entry.salience;
 		entry.stability = patch.stability ?? entry.stability;
@@ -832,11 +819,11 @@ export class NanoMemEngine {
 		}
 
 		primary.entry.summary = [primary.entry.summary, secondary.entry.summary].filter(Boolean).join(" | ").slice(0, 300);
-		primary.entry.detail = [primary.entry.detail || primary.entry.content, secondary.entry.detail || secondary.entry.content]
+		primary.entry.detail = [primary.entry.detail || readLegacyContent(primary.entry), secondary.entry.detail || readLegacyContent(secondary.entry)]
 			.filter(Boolean)
 			.join("\n\n")
 			.slice(0, 4000);
-		primary.entry.content = primary.entry.detail;
+		syncLegacyContent(primary.entry);
 		primary.entry.tags = [...new Set([...(primary.entry.tags ?? []), ...(secondary.entry.tags ?? [])])].slice(0, 30);
 		primary.entry.relatedIds = [...new Set([...(primary.entry.relatedIds ?? []), ...(secondary.entry.relatedIds ?? []), secondary.entry.id])].slice(0, 20);
 		primary.entry.relations = [
@@ -2391,7 +2378,7 @@ export class NanoMemEngine {
 			const overlap = tagOverlap(entry.tags, contextTags);
 			if (overlap >= 0.3) continue;
 			try {
-				const memText = entry.detail || entry.summary || entry.content || "";
+				const memText = entry.detail || entry.summary || readLegacyContent(entry) || "";
 				const updated = await this.llmFn(
 					p.reconsolidationSystem,
 					`Original memory: ${memText}\n\nCurrent context tags: ${contextTags.join(", ")}`,
@@ -2399,7 +2386,7 @@ export class NanoMemEngine {
 				if (updated && updated.length > 10) {
 					const trimmed = updated.trim();
 					entry.detail = trimmed;
-					entry.content = trimmed;
+					syncLegacyContent(entry);
 					entry.summary = trimmed.length <= 150 ? trimmed : `${trimmed.slice(0, 147)}...`;
 					entry.tags = extractTags(trimmed);
 				}

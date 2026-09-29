@@ -48,11 +48,12 @@ export function AgentActivities({
   const countSize = Math.max(20, 12 + String(items.length).length * 6)
 
   return (
-    <section className="anno-activities" aria-label={preview}>
+    <section className="anno-activities" aria-label={preview || labels.thought}>
       <button
         className="anno-activities__toggle"
         type="button"
         aria-expanded={expanded}
+        aria-label={preview || labels.thought}
         onClick={() => setManual({ phase: autoExpand, expanded: !expanded })}
       >
         <span
@@ -67,7 +68,7 @@ export function AgentActivities({
         >
           <span className="anno-activities__count">{items.length}</span>
         </span>
-        <span className="anno-activities__preview">{preview}</span>
+        {preview && <span className="anno-activities__preview">{preview}</span>}
       </button>
       {expanded && (
         <div className="anno-activities__list anno-auto-scrollbar">

@@ -18,7 +18,7 @@ export type KnownApi =
 	| "google-gemini-cli"
 	| "google-vertex";
 
-export type Api = KnownApi | (string & {});
+export type Api = string;
 
 export type KnownProvider =
 	| "amazon-bedrock"
@@ -46,7 +46,7 @@ export type KnownProvider =
 	| "kimi-coding"
 	| "ali-token-plan-openai"
 	| "ali-token-plan-anthropic";
-export type Provider = KnownProvider | string;
+export type Provider = string;
 
 export type ThinkingLevel = "minimal" | "low" | "medium" | "high" | "xhigh";
 
@@ -182,7 +182,7 @@ export interface ToolCall {
 	type: "toolCall";
 	id: string;
 	name: string;
-	arguments: Record<string, any>;
+	arguments: Record<string, unknown>;
 	thoughtSignature?: string; // Google-specific: opaque signature for reusing thought context
 }
 
@@ -223,7 +223,7 @@ export interface AssistantMessage {
 	timestamp: number; // Unix timestamp in milliseconds
 }
 
-export interface ToolResultMessage<TDetails = any> {
+export interface ToolResultMessage<TDetails = unknown> {
 	role: "toolResult";
 	toolCallId: string;
 	toolName: string;
@@ -301,9 +301,7 @@ export interface OpenAICompletionsCompat {
 }
 
 /** Compatibility settings for OpenAI Responses APIs. */
-export interface OpenAIResponsesCompat {
-	// Reserved for future use
-}
+export type OpenAIResponsesCompat = Record<string, never>;
 
 /**
  * OpenRouter provider routing preferences.

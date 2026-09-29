@@ -1,3 +1,4 @@
+import { readLegacyContent } from "./compat.js";
 /**
  * [WHO]: dedupeMemoryEntries, dedupeWorkEntries, mergeRelatedIds
  * [FROM]: Depends on ./scoring.js, ./types.js, ./update.js
@@ -15,8 +16,8 @@ const NOOP_CONTENT_THRESHOLD = 0.8;
 
 function isMemoryDuplicate(a: MemoryEntry, b: MemoryEntry): boolean {
 	if (a.type !== b.type) return false;
-	const aText = `${a.name || ""} ${a.summary || ""} ${a.content || ""}`.trim();
-	const bText = `${b.name || ""} ${b.summary || ""} ${b.content || ""}`.trim();
+	const aText = `${a.name || ""} ${a.summary || ""} ${readLegacyContent(a) || ""}`.trim();
+	const bText = `${b.name || ""} ${b.summary || ""} ${readLegacyContent(b) || ""}`.trim();
 	const tagMatch = tagOverlap(a.tags, b.tags) >= NOOP_TAG_THRESHOLD;
 	const contentMatch = contentSimilarity(aText, bText) >= NOOP_CONTENT_THRESHOLD;
 	return tagMatch || contentMatch;

@@ -664,3 +664,114 @@ test('general preferences and writing extensions both extract, persist and recal
   assert.equal(review.byType['writing-preference'], 1)
   assert.equal(review.byType.decision, 1)
 })
+
+test('extraction repairs invalid fields once and keeps source attribution checks', async () => {
+  const requests: Array<{ transcript: Array<{ content: string }> }> = []
+  const repairing = {
+    async *stream(request: { transcript: Array<{ content: string }> }) {
+      requests.push(request)
+      yield {
+        type: 'done',
+        reply: {
+          text: '',
+          calls: [
+            {
+              name: 'submit_memories',
+              args: {
+                memories: [
+                  input({
+                    confidence: requests.length === 1 ? 10 : 0.8,
+                    sources: [
+                      { kind: 'user', stance: 'endorsed', excerpt: 'fabricated endorsement' },
+                    ],
+                  }),
+                ],
+              },
+            },
+          ],
+        },
+      }
+    },
+  }
+  const result = await extractWritingMemories(job(), model, repairing, new AbortController().signal)
+  assert.equal(requests.length, 2)
+  assert.match(requests[1].transcript[1].content, /\/memories\/0\/confidence/)
+  assert.equal(result[0].confidence, 0.8)
+  assert.equal(result[0].sources[0].kind, 'inferred')
+})
+
+test('extraction repairs malformed JSON and accepts fenced empty results', async () => {
+  let calls = 0
+  const repairing = {
+    async *stream() {
+      calls++
+      yield {
+        type: 'done',
+        reply: { calls: [], text: calls === 1 ? '{broken' : '  ```json\n{"memories":[]}\n```  ' },
+      }
+    },
+  }
+  assert.deepEqual(
+    await extractWritingMemories(job(), model, repairing, new AbortController().signal),
+    [],
+  )
+  assert.equal(calls, 2)
+})
+
+test('failed repair is bounded, persists field diagnostics and does not commit a partial batch', async (t) => {
+  const { vault, store } = await fixture(t)
+  let calls = 0
+  const invalid = {
+    async *stream() {
+      calls++
+      yield {
+        type: 'done',
+        reply: {
+          text: '',
+          calls: [
+            {
+              name: 'submit_memories',
+              args: {
+                memories: [input(), input({ confidence: 42, detail: 'private note text' })],
+              },
+            },
+          ],
+        },
+      }
+    },
+  }
+  const service = new MemoryService(
+    vault,
+    () => model,
+    () => {},
+    invalid,
+  )
+  await service.enqueue(job())
+  await service.process()
+  assert.equal(calls, 2)
+  const pending = JSON.parse(
+    await readFile(join(vault, '.catea/memory/pending-turns.json'), 'utf8'),
+  )
+  assert.equal(pending[0].attempts, 1)
+  assert.match(pending[0].error, /\/memories\/1\/confidence/)
+  assert.doesNotMatch(pending[0].error, /private note text/)
+  assert.equal((await store.read()).records.length, 0)
+  service.close()
+})
+
+test('transport errors and cancellation do not trigger an extraction repair request', async () => {
+  for (const cancel of [false, true]) {
+    const abort = new AbortController()
+    let calls = 0
+    const failing = {
+      async *stream() {
+        calls++
+        if (cancel) abort.abort()
+        throw new Error('transport unavailable')
+        yield { type: 'done', reply: { text: '', calls: [] } }
+      },
+    }
+    await assert.rejects(extractWritingMemories(job(), model, failing, abort.signal))
+    assert.equal(calls, 1)
+  }
+})

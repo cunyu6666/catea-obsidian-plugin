@@ -1,3 +1,4 @@
+import { readLegacyContent } from "./compat.js";
 /**
  * [WHO]: contentSimilarity, applyExtraction, checkConsolidationEntry, checkWorkDuplicate, applyWorkExtraction
  * [FROM]: Depends on ./config.js, ./linking.js, ./privacy.js, ./scoring.js, ./store.js, ./types.js
@@ -42,7 +43,7 @@ export function contentSimilarity(a: string, b: string): number {
 function isDuplicate(entries: MemoryEntry[], type: string, tags: string[], nameSummary: string): boolean {
 	return entries.some((e) => {
 		if (e.type !== type) return false;
-		const existingNameSummary = `${e.name || ""} ${e.summary || e.content || ""}`.trim();
+		const existingNameSummary = `${e.name || ""} ${e.summary || readLegacyContent(e) || ""}`.trim();
 		// Check both tag overlap and content similarity
 		const tagMatch = tagOverlap(e.tags, tags) >= NOOP_SIMILARITY_THRESHOLD;
 		const contentMatch = contentSimilarity(existingNameSummary, nameSummary) >= CONTENT_SIMILARITY_THRESHOLD;
@@ -121,12 +122,12 @@ export function applyExtraction(
 	cfg: NanomemConfig,
 ): void {
 	if (item.type === "retract") {
-		applyDelete(entries, item.detail || item.content || item.summary || "");
+		applyDelete(entries, item.detail || readLegacyContent(item) || item.summary || "");
 		return;
 	}
 
 	const memType = mapType(item.type);
-	const rawDetail = item.detail || item.content || "";
+	const rawDetail = item.detail || readLegacyContent(item) || "";
 	const detail = filterPII(rawDetail);
 	const name = item.name || deriveNameFromContent(detail);
 	const summary = item.summary || deriveSummaryFromContent(detail);
@@ -140,7 +141,7 @@ export function applyExtraction(
 
 	const updateIdx = findUpdateCandidate(entries, memType, tags);
 	if (updateIdx >= 0) {
-		const existing = entries[updateIdx]!;
+		const existing = entries[updateIdx];
 		entries[updateIdx] = {
 			...existing,
 			name,
@@ -257,14 +258,14 @@ export function checkWorkDuplicate(
 ): { action: "skip" } | { action: "update"; index: number } | { action: "add" } {
 	const candidateText = `${candidate.goal} ${candidate.summary}`.trim();
 	for (let i = 0; i < entries.length; i++) {
-		const e = entries[i]!;
+		const e = entries[i];
 		const existingText = `${e.goal} ${e.summary}`.trim();
 		const tagMatch = tagOverlap(e.tags, candidate.tags) >= WORK_DEDUP_TAG_THRESHOLD;
 		const contentMatch = contentSimilarity(existingText, candidateText) >= WORK_DEDUP_CONTENT_THRESHOLD;
 		if (tagMatch || contentMatch) return { action: "skip" };
 	}
 	for (let i = 0; i < entries.length; i++) {
-		const e = entries[i]!;
+		const e = entries[i];
 		if (tagOverlap(e.tags, candidate.tags) >= WORK_UPDATE_TAG_THRESHOLD) return { action: "update", index: i };
 	}
 	return { action: "add" };

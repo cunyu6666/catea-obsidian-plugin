@@ -129,7 +129,7 @@ export class RunTraceRecorder {
 
 	async flush(): Promise<void> {
 		await this.#tail;
-		if (this.#requiredFailure !== undefined) throw this.#requiredFailure;
+		if (this.#requiredFailure !== undefined) throw this.#requiredFailure instanceof Error ? this.#requiredFailure : new Error("Required trace failed", { cause: this.#requiredFailure });
 	}
 }
 

@@ -1,3 +1,4 @@
+import { readLegacyContent } from "./compat.js";
 /**
  * [WHO]: extractMemories, extractWork, extractState
  * [FROM]: Depends on ./config.js, ./diagnostics.js, ./i18n.js, ./llm-json.js, ./store.js, ./types.js
@@ -52,7 +53,7 @@ async function extractWithLLM(conversation: string, cfg: NanomemConfig, llmFn: L
 		if (!Array.isArray(items)) throw new Error("LLM extraction response must be a JSON array");
 		// Normalize: ensure name/summary/detail are populated (backward compat with old LLM responses)
 		return items.map((item) => {
-			const detail = item.detail || item.content || "";
+			const detail = item.detail || readLegacyContent(item) || "";
 			return {
 				...item,
 				name: item.name || deriveNameFromContent(detail),
@@ -160,7 +161,7 @@ function extractHeuristic(text: string): ExtractedItem[] {
 	];
 	for (const pat of lessonPatterns) {
 		for (const match of text.matchAll(pat)) {
-			addItem("lesson", match[1]!);
+			addItem("lesson", match[1]);
 		}
 	}
 
@@ -172,7 +173,7 @@ function extractHeuristic(text: string): ExtractedItem[] {
 	];
 	for (const pat of prefPatterns) {
 		for (const match of text.matchAll(pat)) {
-			addItem("preference", match[1]!);
+			addItem("preference", match[1]);
 		}
 	}
 
@@ -186,7 +187,7 @@ function extractHeuristic(text: string): ExtractedItem[] {
 	];
 	for (const pat of factPatterns) {
 		for (const match of text.matchAll(pat)) {
-			addItem("fact", match[1]!);
+			addItem("fact", match[1]);
 		}
 	}
 
@@ -197,7 +198,7 @@ function extractHeuristic(text: string): ExtractedItem[] {
 	];
 	for (const pat of decisionPatterns) {
 		for (const match of text.matchAll(pat)) {
-			addItem("decision", match[1]!);
+			addItem("decision", match[1]);
 		}
 	}
 
@@ -210,13 +211,13 @@ function extractHeuristic(text: string): ExtractedItem[] {
 	];
 	for (const pat of eventPatterns) {
 		for (const match of text.matchAll(pat)) {
-			addItem("event", match[1]!);
+			addItem("event", match[1]);
 		}
 	}
 
 	for (const pat of STATE_PATTERNS) {
 		for (const match of text.matchAll(pat)) {
-			const mood = match[1]!;
+			const mood = match[1];
 			addItem("fact", `Current state: ${mood}`, {
 				summary: `Temporary state: ${mood}`,
 				stability: "situational",
@@ -239,7 +240,7 @@ function extractHeuristic(text: string): ExtractedItem[] {
 	];
 	for (const pat of patternPatterns) {
 		for (const match of text.matchAll(pat)) {
-			addItem("pattern", match[1]!);
+			addItem("pattern", match[1]);
 		}
 	}
 
@@ -251,7 +252,7 @@ function extractHeuristic(text: string): ExtractedItem[] {
 	];
 	for (const pat of strugglePatterns) {
 		for (const match of text.matchAll(pat)) {
-			addItem("struggle", match[1]!);
+			addItem("struggle", match[1]);
 		}
 	}
 

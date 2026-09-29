@@ -1,3 +1,4 @@
+import { readLegacyContent, syncLegacyContent } from "./compat.js";
 /**
  * [WHO]: Provides reinforceProcedural, reinforceEpisodeMemories, reinforceEpisodeFacets, reinforceV2SemanticMemories, reinforceWork, reconsolidateV2AfterRecall, reconsolidateIfNeeded
  * [FROM]: Depends on ./store.js, ./store-v2.js, ./eviction.js, ./linking.js, ./scoring.js, ./reconsolidate-v2.js, ./i18n.js, ./types.js, ./types-v2.js
@@ -6,10 +7,10 @@
  */
 
 import { PROMPTS } from "./i18n.js";
-import { reinforceRelations } from "./linking.js";
+
 import { reconsolidateV2Memories } from "./reconsolidate-v2.js";
 import { extractTags, tagOverlap } from "./scoring.js";
-import { saveEntries, saveWork } from "./store.js";
+import { saveWork } from "./store.js";
 import {
 	loadV2Meta,
 	saveV2Episodes,
@@ -21,7 +22,7 @@ import {
 } from "./store-v2.js";
 import type { LlmFn, MemoryEntry, WorkEntry } from "./types.js";
 import type { EpisodeFacet, EpisodeMemory, ProceduralMemory, SemanticMemory } from "./types-v2.js";
-import { utilityEntry, utilityWork } from "./eviction.js";
+import { utilityWork } from "./eviction.js";
 import type { NanomemConfig } from "./config.js";
 
 export async function reinforceProcedural(recalled: ProceduralMemory[], all: ProceduralMemory[], v2Paths: NanoMemV2Paths): Promise<void> {
@@ -135,7 +136,7 @@ export async function reconsolidateIfNeeded(
 		const overlap = tagOverlap(entry.tags, contextTags);
 		if (overlap >= 0.3) continue;
 		try {
-			const memText = entry.detail || entry.summary || entry.content || "";
+			const memText = entry.detail || entry.summary || readLegacyContent(entry) || "";
 			const updated = await llmFn(
 				p.reconsolidationSystem,
 				`Original memory: ${memText}\n\nCurrent context tags: ${contextTags.join(", ")}`,
@@ -143,7 +144,7 @@ export async function reconsolidateIfNeeded(
 			if (updated && updated.length > 10) {
 				const trimmed = updated.trim();
 				entry.detail = trimmed;
-				entry.content = trimmed;
+				syncLegacyContent(entry);
 				entry.summary = trimmed.length <= 150 ? trimmed : `${trimmed.slice(0, 147)}...`;
 				entry.tags = extractTags(trimmed);
 			}

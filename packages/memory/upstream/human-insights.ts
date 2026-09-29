@@ -1,3 +1,4 @@
+import { readLegacyContent } from "./compat.js";
 /**
  * [WHO]: DeveloperPersona, HumanInsightsReport, generateHumanInsights
  * [FROM]: Depends on ./llm-json.js, ./types.js
@@ -170,7 +171,7 @@ function buildHumanInsightsData(all: ExportAllResult) {
 		.slice()
 		.sort((a, b) => (b.accessCount + 1) * b.importance - (a.accessCount + 1) * a.importance)
 		.slice(0, 8)
-		.map((entry) => entry.summary || entry.detail || entry.content || "")
+		.map((entry) => entry.summary || entry.detail || readLegacyContent(entry) || "")
 		.filter(Boolean);
 
 	const projectCounts = all.episodes.reduce(
@@ -236,23 +237,23 @@ function parseHumanInsightsResponse(raw: string): {
 
 		const persona = parsed.persona
 			? {
-					whatTheyDo: String(parsed.persona.whatTheyDo || ""),
-					experienceLevel: String(parsed.persona.experienceLevel || ""),
+					whatTheyDo: plainText(parsed.persona.whatTheyDo || ""),
+					experienceLevel: plainText(parsed.persona.experienceLevel || ""),
 					superpowers: Array.isArray(parsed.persona.superpowers) ? parsed.persona.superpowers.map(String) : [],
 					painPoints: Array.isArray(parsed.persona.painPoints) ? parsed.persona.painPoints.map(String) : [],
-					workStyle: String(parsed.persona.workStyle || ""),
-					summary: String(parsed.persona.summary || ""),
+					workStyle: plainText(parsed.persona.workStyle || ""),
+					summary: plainText(parsed.persona.summary || ""),
 				}
 			: undefined;
 
 		const insights: HumanInsight[] = Array.isArray(parsed.insights)
 			? parsed.insights
 					.map((item) => ({
-						title: String(item.title || "").trim(),
-						content: String(item.content || "").trim(),
-						icon: String(item.icon || "Insight").trim(),
-						utility: ["high", "medium", "low"].includes(String(item.utility))
-							? (String(item.utility) as "high" | "medium" | "low")
+						title: plainText(item.title || "").trim(),
+						content: plainText(item.content || "").trim(),
+						icon: plainText(item.icon || "Insight").trim(),
+						utility: ["high", "medium", "low"].includes(plainText(item.utility))
+							? (plainText(item.utility) as "high" | "medium" | "low")
 							: "medium",
 						tags: Array.isArray(item.tags) ? item.tags.map(String) : [],
 					}))
@@ -262,10 +263,10 @@ function parseHumanInsightsResponse(raw: string): {
 		const rootCauses: RootCauseInsight[] = Array.isArray(parsed.rootCauses)
 			? parsed.rootCauses
 					.map((item) => ({
-						symptom: String(item.symptom || "").trim(),
-						rootCause: String(item.rootCause || "").trim(),
+						symptom: plainText(item.symptom || "").trim(),
+						rootCause: plainText(item.rootCause || "").trim(),
 						evidence: Array.isArray(item.evidence) ? item.evidence.map(String) : [],
-						suggestion: String(item.suggestion || "").trim(),
+						suggestion: plainText(item.suggestion || "").trim(),
 					}))
 					.filter((item) => item.symptom && item.rootCause)
 			: [];
@@ -342,4 +343,9 @@ export async function buildEnhancedInsightsReport(
 		rootCauses: humanData.rootCauses,
 		comparisons: [],
 	};
+}
+
+// Reject structured values where a human-readable text field is expected.
+function plainText(value: unknown): string {
+ return typeof value === "string" ? value : typeof value === "number" || typeof value === "boolean" ? String(value) : "";
 }

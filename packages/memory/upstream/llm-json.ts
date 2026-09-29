@@ -71,7 +71,7 @@ function extractFirstBalancedJson(value: string): string | undefined {
 		let escaped = false;
 
 		for (let index = start + 1; index < value.length; index++) {
-			const ch = value[index]!;
+			const ch = value[index];
 			if (inString) {
 				if (escaped) {
 					escaped = false;
@@ -127,7 +127,7 @@ function repairTruncatedJson(value: string): string | undefined {
 	let lastKeyEnd = -1; // track if we're mid-value (after a colon)
 
 	for (let i = 0; i < s.length; i++) {
-		const ch = s[i]!;
+		const ch = s[i];
 		if (inString) {
 			if (escaped) {
 				escaped = false;

@@ -1,4 +1,6 @@
 #!/usr/bin/env node
+import { format } from "node:util";
+import { readLegacyContent } from "./compat.js";
 /**
  * [WHO]: NanoMem CLI - stats, search, forget, export, insights commands
  * [FROM]: Depends on node:fs, engine, insights
@@ -17,7 +19,7 @@ const engine = new NanoMemEngine();
 
 async function main(): Promise<void> {
 	if (!sub || sub === "help" || sub === "-h" || sub === "--help") {
-		console.log(`nanomem — NanoMem memory CLI
+		writeOutput(`nanomem — NanoMem memory CLI
 
 Usage:
   nanomem stats              Show memory counts (sessions, knowledge, lessons, preferences, work, episodes, facets)
@@ -41,28 +43,28 @@ Usage:
 
 	if (sub === "stats") {
 		const [s, v2] = await Promise.all([engine.getStats(), engine.getV2Stats()]);
-		console.log(`Sessions: ${s.totalSessions}`);
-		console.log(`Knowledge: ${s.knowledge}`);
-		console.log(`Lessons: ${s.lessons}`);
-		console.log(`Preferences: ${s.preferences}`);
-		console.log(`Work: ${s.work}`);
-		console.log(`Archived Knowledge: ${s.archivedKnowledge}`);
-		console.log(`Archived Lessons: ${s.archivedLessons}`);
-		console.log(`Archived Events: ${s.archivedEvents}`);
-		console.log(`Archived Preferences: ${s.archivedPreferences}`);
-		console.log(`Archived Facets: ${s.archivedFacets}`);
-		console.log(`Archived Work: ${s.archivedWork}`);
-		console.log(`Episodes: ${s.episodes}`);
-		console.log(`V2 Episodes: ${v2.episodes}`);
-		console.log(`V2 Episode Facets: ${v2.facets}`);
-		console.log(`V2 Semantic: ${v2.semantic}`);
-		console.log(`V2 Procedures: ${v2.procedural}`);
-		console.log(`Archived V2 Semantic: ${v2.archivedSemantic}`);
-		console.log(`Archived V2 Procedures: ${v2.archivedProcedural}`);
-		console.log(`V2 Links: ${v2.links}`);
-		console.log(`V2 Embeddings: ${v2.embeddings}`);
-		if (v2.lastEmbeddingSyncAt) console.log(`V2 Last Embedding Sync: ${v2.lastEmbeddingSyncAt}`);
-		if (v2.lastReconsolidationAt) console.log(`V2 Last Reconsolidation: ${v2.lastReconsolidationAt}`);
+		writeOutput(`Sessions: ${s.totalSessions}`);
+		writeOutput(`Knowledge: ${s.knowledge}`);
+		writeOutput(`Lessons: ${s.lessons}`);
+		writeOutput(`Preferences: ${s.preferences}`);
+		writeOutput(`Work: ${s.work}`);
+		writeOutput(`Archived Knowledge: ${s.archivedKnowledge}`);
+		writeOutput(`Archived Lessons: ${s.archivedLessons}`);
+		writeOutput(`Archived Events: ${s.archivedEvents}`);
+		writeOutput(`Archived Preferences: ${s.archivedPreferences}`);
+		writeOutput(`Archived Facets: ${s.archivedFacets}`);
+		writeOutput(`Archived Work: ${s.archivedWork}`);
+		writeOutput(`Episodes: ${s.episodes}`);
+		writeOutput(`V2 Episodes: ${v2.episodes}`);
+		writeOutput(`V2 Episode Facets: ${v2.facets}`);
+		writeOutput(`V2 Semantic: ${v2.semantic}`);
+		writeOutput(`V2 Procedures: ${v2.procedural}`);
+		writeOutput(`Archived V2 Semantic: ${v2.archivedSemantic}`);
+		writeOutput(`Archived V2 Procedures: ${v2.archivedProcedural}`);
+		writeOutput(`V2 Links: ${v2.links}`);
+		writeOutput(`V2 Embeddings: ${v2.embeddings}`);
+		if (v2.lastEmbeddingSyncAt) writeOutput(`V2 Last Embedding Sync: ${v2.lastEmbeddingSyncAt}`);
+		if (v2.lastReconsolidationAt) writeOutput(`V2 Last Reconsolidation: ${v2.lastReconsolidationAt}`);
 		return;
 	}
 
@@ -70,11 +72,11 @@ Usage:
 		const query = args.slice(1).join(" ").trim() || " ";
 		const results = await engine.searchEntries(query);
 		if (!results.length) {
-			console.log("No matching memories.");
+			writeOutput("No matching memories.");
 			return;
 		}
 		for (const e of results) {
-			console.log(`[${e.type}] ${e.id} — ${(e.summary || e.detail || e.content || "").slice(0, 100)}`);
+			writeOutput(`[${e.type}] ${e.id} — ${(e.summary || e.detail || readLegacyContent(e) || "").slice(0, 100)}`);
 		}
 		return;
 	}
@@ -82,16 +84,16 @@ Usage:
 	if (sub === "search-v2") {
 		const query = args.slice(1).join(" ").trim();
 		if (!query) {
-			console.error("Usage: nanomem search-v2 <query>");
+			writeError("Usage: nanomem search-v2 <query>");
 			process.exit(1);
 		}
 		const results = await engine.searchV2Memories(query);
 		if (!results.length) {
-			console.log("No matching V2 memories.");
+			writeOutput("No matching V2 memories.");
 			return;
 		}
 		for (const item of results) {
-			console.log(`[${item.kind}] ${item.id} (${item.score.toFixed(3)}) — ${item.title}: ${item.summary.slice(0, 120)}`);
+			writeOutput(`[${item.kind}] ${item.id} (${item.score.toFixed(3)}) — ${item.title}: ${item.summary.slice(0, 120)}`);
 		}
 		return;
 	}
@@ -99,25 +101,25 @@ Usage:
 	if (sub === "forget") {
 		const id = args[1];
 		if (!id) {
-			console.error("Usage: nanomem forget <id>");
+			writeError("Usage: nanomem forget <id>");
 			process.exit(1);
 		}
 		const ok = await engine.forgetEntry(id);
-		console.log(ok ? `Removed entry ${id}` : `Entry ${id} not found`);
+		writeOutput(ok ? `Removed entry ${id}` : `Entry ${id} not found`);
 		return;
 	}
 
 	if (sub === "dedup") {
 		const result = await engine.deduplicateAll();
 		if (result.total === 0) {
-			console.log("No duplicates found. Memory is already deduplicated.");
+			writeOutput("No duplicates found. Memory is already deduplicated.");
 		} else {
-			console.log(`Deduplication complete. Removed ${result.total} duplicate(s):`);
-			if (result.knowledge) console.log(`  knowledge: ${result.knowledge}`);
-			if (result.lessons) console.log(`  lessons: ${result.lessons}`);
-			if (result.preferences) console.log(`  preferences: ${result.preferences}`);
-			if (result.facets) console.log(`  facets: ${result.facets}`);
-			if (result.work) console.log(`  work: ${result.work}`);
+			writeOutput(`Deduplication complete. Removed ${result.total} duplicate(s):`);
+			if (result.knowledge) writeOutput(`  knowledge: ${result.knowledge}`);
+			if (result.lessons) writeOutput(`  lessons: ${result.lessons}`);
+			if (result.preferences) writeOutput(`  preferences: ${result.preferences}`);
+			if (result.facets) writeOutput(`  facets: ${result.facets}`);
+			if (result.work) writeOutput(`  work: ${result.work}`);
 		}
 		return;
 	}
@@ -125,83 +127,83 @@ Usage:
 	if (sub === "archive") {
 		const result = await engine.archiveStaleMemories();
 		if (result.total === 0) {
-			console.log("No stale memories were archived.");
+			writeOutput("No stale memories were archived.");
 			return;
 		}
-		console.log(`Archived ${result.total} stale memory item(s):`);
-		if (result.knowledge) console.log(`  knowledge: ${result.knowledge}`);
-		if (result.lessons) console.log(`  lessons: ${result.lessons}`);
-		if (result.events) console.log(`  events: ${result.events}`);
-		if (result.preferences) console.log(`  preferences: ${result.preferences}`);
-		if (result.facets) console.log(`  facets: ${result.facets}`);
-		if (result.work) console.log(`  work: ${result.work}`);
-		if (result.semantic) console.log(`  semantic: ${result.semantic}`);
-		if (result.procedural) console.log(`  procedural: ${result.procedural}`);
+		writeOutput(`Archived ${result.total} stale memory item(s):`);
+		if (result.knowledge) writeOutput(`  knowledge: ${result.knowledge}`);
+		if (result.lessons) writeOutput(`  lessons: ${result.lessons}`);
+		if (result.events) writeOutput(`  events: ${result.events}`);
+		if (result.preferences) writeOutput(`  preferences: ${result.preferences}`);
+		if (result.facets) writeOutput(`  facets: ${result.facets}`);
+		if (result.work) writeOutput(`  work: ${result.work}`);
+		if (result.semantic) writeOutput(`  semantic: ${result.semantic}`);
+		if (result.procedural) writeOutput(`  procedural: ${result.procedural}`);
 		return;
 	}
 
 	if (sub === "restore") {
 		const id = args[1];
 		if (!id) {
-			console.error("Usage: nanomem restore <id>");
+			writeError("Usage: nanomem restore <id>");
 			process.exit(1);
 		}
 		const result = await engine.restoreArchivedEntry(id);
-		console.log(result.ok ? `Restored archived ${result.location} entry ${id}` : `Archived entry ${id} not found`);
+		writeOutput(result.ok ? `Restored archived ${result.location} entry ${id}` : `Archived entry ${id} not found`);
 		return;
 	}
 
 	if (sub === "export") {
 		const data = await engine.exportAll();
-		console.log(JSON.stringify(data, null, 2));
+		writeOutput(JSON.stringify(data, null, 2));
 		return;
 	}
 
 	if (sub === "export-archive") {
 		const data = await engine.exportArchive();
-		console.log(JSON.stringify(data, null, 2));
+		writeOutput(JSON.stringify(data, null, 2));
 		return;
 	}
 
 	if (sub === "export-v2") {
 		const data = await engine.exportAllV2();
-		console.log(JSON.stringify(data, null, 2));
+		writeOutput(JSON.stringify(data, null, 2));
 		return;
 	}
 
 	if (sub === "inspect-v2") {
 		const data = await engine.inspectV2Memory();
-		console.log(`Episodes: ${data.counts.episodes}`);
-		console.log(`Facets: ${data.counts.facets}`);
-		console.log(`Semantic: ${data.counts.semantic}`);
-		console.log(`Procedural: ${data.counts.procedural}`);
-		console.log(`Active Procedural: ${data.counts.activeProcedural}`);
-		console.log(`Superseded Procedural: ${data.counts.supersededProcedural}`);
-		console.log(`Procedure Chains: ${data.counts.procedureChains}`);
-		console.log(`Procedural Conflicts: ${data.counts.proceduralConflicts}`);
-		console.log(`Semantic Conflicts: ${data.counts.semanticConflicts}`);
+		writeOutput(`Episodes: ${data.counts.episodes}`);
+		writeOutput(`Facets: ${data.counts.facets}`);
+		writeOutput(`Semantic: ${data.counts.semantic}`);
+		writeOutput(`Procedural: ${data.counts.procedural}`);
+		writeOutput(`Active Procedural: ${data.counts.activeProcedural}`);
+		writeOutput(`Superseded Procedural: ${data.counts.supersededProcedural}`);
+		writeOutput(`Procedure Chains: ${data.counts.procedureChains}`);
+		writeOutput(`Procedural Conflicts: ${data.counts.proceduralConflicts}`);
+		writeOutput(`Semantic Conflicts: ${data.counts.semanticConflicts}`);
 
 		if (data.procedureChains.length) {
-			console.log("\nProcedure Version Chains:");
+			writeOutput("\nProcedure Version Chains:");
 			for (const chain of data.procedureChains) {
-				console.log(`- ${chain.name} [${chain.status}] depth=${chain.versionDepth} root=${chain.rootId}`);
-				console.log(`  ${chain.ids.join(" -> ")}`);
+				writeOutput(`- ${chain.name} [${chain.status}] depth=${chain.versionDepth} root=${chain.rootId}`);
+				writeOutput(`  ${chain.ids.join(" -> ")}`);
 			}
 		}
 
 		if (data.proceduralConflicts.length) {
-			console.log("\nProcedural Conflict Signals:");
+			writeOutput("\nProcedural Conflict Signals:");
 			for (const conflict of data.proceduralConflicts.slice(0, 20)) {
-				console.log(
+				writeOutput(
 					`- ${conflict.aName} (${conflict.aId}) <-> ${conflict.bName} (${conflict.bId}) score=${conflict.score} — ${conflict.reason}`,
 				);
 			}
 		}
 
 		if (data.semanticConflicts.length) {
-			console.log("\nSemantic Conflict Signals:");
+			writeOutput("\nSemantic Conflict Signals:");
 			for (const conflict of data.semanticConflicts.slice(0, 20)) {
-				console.log(`- ${conflict.aName} (${conflict.aId}) <-> ${conflict.bName} (${conflict.bId}) — ${conflict.reason}`);
+				writeOutput(`- ${conflict.aName} (${conflict.aId}) <-> ${conflict.bName} (${conflict.bId}) — ${conflict.reason}`);
 			}
 		}
 		return;
@@ -210,10 +212,10 @@ Usage:
 	if (sub === "sync-v2-embeddings") {
 		const count = await engine.syncV2Embeddings();
 		if (count === 0) {
-			console.log("No embeddings synced. Embeddings are currently disabled.");
+			writeOutput("No embeddings synced. Embeddings are currently disabled.");
 			return;
 		}
-		console.log(`Synced V2 embeddings for ${count} items.`);
+		writeOutput(`Synced V2 embeddings for ${count} items.`);
 		return;
 	}
 
@@ -243,15 +245,19 @@ Usage:
 			);
 			writeFileSync(outputPath, html, "utf-8");
 		}
-		console.log(`Insights report written to: ${outputPath}`);
+		writeOutput(`Insights report written to: ${outputPath}`);
 		return;
 	}
 
-	console.error(`Unknown command: ${sub}. Run 'nanomem help' for usage.`);
+	writeError(`Unknown command: ${sub}. Run 'nanomem help' for usage.`);
 	process.exit(1);
 }
 
 main().catch((err) => {
-	console.error(err);
+	writeError(err);
 	process.exit(1);
 });
+
+// CLI output is part of the command interface, not plugin console diagnostics.
+function writeOutput(...values: unknown[]): void { process.stdout.write(format(...values) + "\n"); }
+function writeError(...values: unknown[]): void { process.stderr.write(format(...values) + "\n"); }

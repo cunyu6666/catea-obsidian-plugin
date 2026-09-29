@@ -60,7 +60,7 @@ interface StructuredAdaptiveToolUseResult {
 
 export async function runStructuredAdaptiveTools(
 	toolCalls: StructuredAdaptiveToolCall[],
-	tools: AgentTool<any>[] | undefined,
+	tools: AgentTool[] | undefined,
 	signal: AbortSignal | undefined,
 	stream: EventStream<AgentEvent, AgentMessage[]>,
 	getSteeringMessages?: AgentLoopConfig["getSteeringMessages"],
@@ -145,14 +145,14 @@ export async function runToolBatch<T, TResult>(
 	maxConcurrency: number | undefined,
 ): Promise<TResult[]> {
 	const limit = resolveMaxToolConcurrency(maxConcurrency);
-	const results: TResult[] = new Array(items.length);
+	const results: TResult[] = new Array<TResult>(items.length);
 	let nextIndex = 0;
 
 	async function worker(): Promise<void> {
 		while (nextIndex < items.length) {
 			const index = nextIndex;
 			nextIndex += 1;
-			results[index] = await run(items[index]!);
+			results[index] = await run(items[index]);
 		}
 	}
 
@@ -176,8 +176,8 @@ export function resolveMaxToolConcurrency(maxConcurrency: number | undefined): n
 	return DEFAULT_MAX_TOOL_CONCURRENCY;
 }
 
-export function buildToolMap(tools: AgentTool<any>[] | undefined): Map<string, AgentTool<any>> {
-	const toolByName = new Map<string, AgentTool<any>>();
+export function buildToolMap(tools: AgentTool[] | undefined): Map<string, AgentTool> {
+	const toolByName = new Map<string, AgentTool>();
 	for (const tool of tools ?? []) {
 		toolByName.set(tool.name, tool);
 		for (const alias of tool.aliases ?? []) {
@@ -191,7 +191,7 @@ export function buildToolMap(tools: AgentTool<any>[] | undefined): Map<string, A
 
 export function partitionStructuredAdaptiveToolCalls(
 	toolCalls: StructuredAdaptiveToolCall[],
-	toolByName: Map<string, AgentTool<any>>,
+	toolByName: Map<string, AgentTool>,
 ): StructuredAdaptiveToolCall[][] {
 	const batches: StructuredAdaptiveToolCall[][] = [];
 	let safeBatch: StructuredAdaptiveToolCall[] = [];
@@ -219,7 +219,7 @@ export function partitionStructuredAdaptiveToolCalls(
 
 export function isStructuredAdaptiveToolCallConcurrencySafe(
 	toolCall: StructuredAdaptiveToolCall,
-	tool: AgentTool<any> | undefined,
+	tool: AgentTool | undefined,
 ): boolean {
 	if (!tool) return DEFAULT_SAFE_TOOL_NAMES.has(toolCall.name);
 	const safety = tool.isConcurrencySafe;
@@ -235,7 +235,7 @@ export function isStructuredAdaptiveToolCallConcurrencySafe(
 
 export function resolveStructuredAdaptiveToolInterruptBehavior(
 	toolCall: StructuredAdaptiveToolCall,
-	tool: AgentTool<any> | undefined,
+	tool: AgentTool | undefined,
 ): "cancel" | "block" {
 	if (!tool) return "block";
 	const behavior = tool?.interruptBehavior;
@@ -251,7 +251,7 @@ export function resolveStructuredAdaptiveToolInterruptBehavior(
 
 export async function runStructuredAdaptiveToolUse(
 	toolCall: StructuredAdaptiveToolCall,
-	tool: AgentTool<any> | undefined,
+	tool: AgentTool | undefined,
 	signal: AbortSignal | undefined,
 	stream: EventStream<AgentEvent, AgentMessage[]>,
 	canUseTool?: AgentLoopConfig["canUseTool"],
@@ -269,7 +269,7 @@ export async function runStructuredAdaptiveToolUse(
 		args: toolCall.arguments,
 	});
 
-	let result: AgentToolResult<any>;
+	let result: AgentToolResult<unknown>;
 	let isError = false;
 	let executedInput: unknown = toolCall.arguments;
 	let didExecute = false;
@@ -295,7 +295,7 @@ export async function runStructuredAdaptiveToolUse(
 				rawInput: toolCall.arguments,
 			})
 			: undefined;
-		if (policyDecision?.decision === "allow" && policyDecision.input !== undefined) validatedArgs = policyDecision.input;
+		if (policyDecision?.decision === "allow" && policyDecision.input !== undefined) validatedArgs = validateToolArguments(tool, { ...toolCall, arguments: policyDecision.input });
 		executedInput = validatedArgs;
 		const permission = policyDecision && policyDecision.decision !== "allow" ? policyDecision : await canUseTool?.({
 			toolCallId: toolCall.id,
@@ -472,7 +472,7 @@ function skipStructuredAdaptiveToolCall(
 	stream: EventStream<AgentEvent, AgentMessage[]>,
 ): ToolResultMessage {
 	const startedAt = Date.now();
-	const result: AgentToolResult<any> = {
+	const result: AgentToolResult<unknown> = {
 		content: [{ type: "text", text: "Skipped due to queued user message." }],
 		details: {},
 	};

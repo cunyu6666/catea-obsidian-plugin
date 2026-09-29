@@ -1,3 +1,4 @@
+import { readLegacyContent } from "./compat.js";
 /**
  * [WHO]: readJson, writeJson, deriveNameFromContent, deriveSummaryFromContent, ensureDir
  * [FROM]: Depends on node:fs, node:fs/promises, node:path, ./types.js
@@ -53,7 +54,7 @@ function deriveSummaryFromContent(content: string): string {
 /** Auto-migrate old-format entry (content only) to name/summary/detail */
 function migrateEntry(entry: MemoryEntry): MemoryEntry {
 	if (entry.name && entry.summary) return entry;
-	const content = entry.content || entry.detail || "";
+	const content = readLegacyContent(entry) || entry.detail || "";
 	return {
 		...entry,
 		name: entry.name || deriveNameFromContent(content),
@@ -95,7 +96,7 @@ export async function saveEntries(
 		entries.length = max;
 	}
 	// Keep content as alias of detail for backward compat with older NanoMem versions
-	const persisted = entries.map((e) => ({ ...e, content: e.detail || e.content || e.summary || "" }));
+	const persisted = entries.map((e) => ({ ...e, content: e.detail || readLegacyContent(e) || e.summary || "" }));
 	await writeJson(path, persisted);
 }
 

@@ -5,7 +5,7 @@
  * [HERE]: core/session/compaction/utils.ts - shared compaction utilities
  */
 import type { AgentMessage } from "@catui/agent-core";
-import type { Message } from "@catui/ai/types";
+
 
 // ============================================================================
 // File Operation Tracking

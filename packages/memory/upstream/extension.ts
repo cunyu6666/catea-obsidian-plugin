@@ -1,3 +1,4 @@
+import { readLegacyContent } from "./compat.js";
 /**
  * [WHO]: default export (Extension), nanomem extension for Catui integration, explicit remember/recall/search/alignment tools
  * [FROM]: Depends on node:fs, node:fs/promises, node:path, @sinclair/typebox, catui-protocol
@@ -6,7 +7,7 @@
  */
 
 
-import { existsSync, writeFileSync } from "node:fs";
+import { writeFileSync } from "node:fs";
 import { basename, join, resolve } from "node:path";
 import { Type } from "@sinclair/typebox";
 import type { ExtensionAPI, ExtensionContext } from "catui-protocol";
@@ -14,11 +15,11 @@ import { NanoMemEngine } from "./engine.js";
 import { reportDiagnostic } from "./diagnostics.js";
 import { readDreamLockMtimeMs, rollbackDreamLock, tryAcquireDreamLock } from "./dream-lock.js";
 import { renderFullInsightsHtml } from "./full-insights-html.js";
-import { renderInsightsHtml } from "./insights-html.js";
+
 import { hasParseableLlmJson } from "./llm-json.js";
 import { extractTags } from "./scoring.js";
-import type { Episode, Meta, MemoryEntry, WorkEntry } from "./types.js";
-import { loadEntries, loadMeta } from "./store.js";
+import type { Episode, MemoryEntry, WorkEntry } from "./types.js";
+import { loadMeta } from "./store.js";
 
 type LlmCapableContext = ExtensionContext & {
 	completeSimple?: (systemPrompt: string, userMessage: string) => Promise<string | undefined>;
@@ -111,14 +112,14 @@ const memoryResolveActions = ["merge", "demote", "forget", "mark-situational"] a
 
 function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T | undefined> {
 	return new Promise((resolve) => {
-		const timer = setTimeout(() => resolve(undefined), timeoutMs);
+		const timer = window.setTimeout(() => resolve(undefined), timeoutMs);
 		promise
 			.then((value) => {
-				clearTimeout(timer);
+				window.clearTimeout(timer);
 				resolve(value);
 			})
 			.catch(() => {
-				clearTimeout(timer);
+				window.clearTimeout(timer);
 				resolve(undefined);
 			});
 	});
@@ -247,21 +248,21 @@ function extractObservation(
 			return { file: filePath };
 		case "edit":
 			if (filePath) {
-				const old = String(args.old_string ?? "").slice(0, 50);
-				const nw = String(args.new_string ?? "").slice(0, 50);
+				const old = plainText(args.old_string ?? "").slice(0, 50);
+				const nw = plainText(args.new_string ?? "").slice(0, 50);
 				return { file: filePath, observation: `Edit ${basename(filePath)}: "${old}" -> "${nw}"` };
 			}
 			return {};
 		case "write":
 			return filePath ? { file: filePath, observation: `Write ${basename(filePath)}` } : {};
 		case "bash": {
-			const cmd = String(args.command ?? "").slice(0, 100);
+			const cmd = plainText(args.command ?? "").slice(0, 100);
 			if (isError && typeof result === "string") return { lesson: `\`${cmd}\` failed: ${result.slice(0, 120)}` };
 			return cmd ? { observation: `Run: ${cmd}` } : {};
 		}
 		case "grep":
 		case "find":
-			return { observation: `Search: ${String(args.pattern ?? args.glob ?? "")}` };
+			return { observation: `Search: ${plainText(args.pattern ?? args.glob ?? "")}` };
 		default:
 			return {};
 	}
@@ -300,7 +301,7 @@ function scoreMemoryForRecall(entry: MemoryEntry): number {
 
 function formatMemoryLine(entry: MemoryEntry): string {
 	const title = entry.name || entry.summary || entry.id;
-	const summary = entry.summary || entry.detail || entry.content || "";
+	const summary = entry.summary || entry.detail || readLegacyContent(entry) || "";
 	return `- [${entry.type}] ${title}${summary ? `: ${summary.slice(0, 180)}` : ""}`;
 }
 
@@ -382,7 +383,7 @@ function getDreamConfig(ctx?: ExtensionContext) {
 async function readMetaLastConsolidationMs(memoryDir: string): Promise<number> {
 	try {
 		const metaPath = join(memoryDir, "meta.json");
-		const meta = (await loadMeta(metaPath)) as Meta;
+		const meta = (await loadMeta(metaPath));
 		if (!meta.lastConsolidation) return 0;
 		const t = new Date(meta.lastConsolidation).getTime();
 		return Number.isFinite(t) ? t : 0;
@@ -859,7 +860,7 @@ export default function nanomemExtension(api: ExtensionAPI, host?: {engine:NanoM
 				ctx.ui.notify("NanoMem: no matching memories found", "info");
 				return;
 			}
-			for (const e of results.slice(0, 10)) ctx.ui.notify(`[${e.type}] ${(e.summary || e.detail || e.content || "").slice(0, 80)}`, "info");
+			for (const e of results.slice(0, 10)) ctx.ui.notify(`[${e.type}] ${(e.summary || e.detail || readLegacyContent(e) || "").slice(0, 80)}`, "info");
 		},
 	});
 
@@ -992,7 +993,7 @@ export default function nanomemExtension(api: ExtensionAPI, host?: {engine:NanoM
 				field === "salience" || field === "ttl"
 					? ({ [field]: Number(value) } as Record<string, unknown>)
 					: ({ [field]: value } as Record<string, unknown>);
-			const updated = await engine.editEntryById(id, patch as never);
+			const updated = await engine.editEntryById(id, patch);
 			ctx.ui.notify(updated ? `NanoMem edit | updated ${id}` : `NanoMem edit | no memory found for ${id}`, "info");
 		},
 	});
@@ -1092,7 +1093,7 @@ export default function nanomemExtension(api: ExtensionAPI, host?: {engine:NanoM
 
 			const name = entry.name || "Untitled";
 			const summary = entry.summary || "";
-			const detail = entry.detail || entry.content || "";
+			const detail = entry.detail || readLegacyContent(entry) || "";
 			const lines = [`[${entry.type}] ${name}`];
 			if (summary) lines.push("", summary);
 			if (detail && detail !== summary) lines.push("", detail);
@@ -1129,7 +1130,7 @@ export default function nanomemExtension(api: ExtensionAPI, host?: {engine:NanoM
 			const lines = [`Found ${results.length} memories for "${params.query}":\n`];
 			for (const e of results) {
 				const name = e.name || "Untitled";
-				const summary = e.summary || e.content?.slice(0, 100) || "";
+				const summary = e.summary || readLegacyContent(e)?.slice(0, 100) || "";
 				lines.push(`- [ID: ${e.id}] [${e.type}] **${name}**: ${summary}`);
 			}
 			lines.push("", "Use `nanomem_recall` with an ID to get full details.");
@@ -1238,7 +1239,7 @@ export default function nanomemExtension(api: ExtensionAPI, host?: {engine:NanoM
 				params.field === "salience" || params.field === "ttl"
 					? ({ [params.field]: Number(params.value) } as Record<string, unknown>)
 					: ({ [params.field]: params.value } as Record<string, unknown>);
-			const updated = await engine.editEntryById(params.id, patch as never);
+			const updated = await engine.editEntryById(params.id, patch);
 			return {
 				content: [
 					{
@@ -1283,4 +1284,9 @@ export default function nanomemExtension(api: ExtensionAPI, host?: {engine:NanoM
 			};
 		},
 	});
+}
+
+// Reject structured values where a human-readable text field is expected.
+function plainText(value: unknown): string {
+ return typeof value === "string" ? value : typeof value === "number" || typeof value === "boolean" ? String(value) : "";
 }

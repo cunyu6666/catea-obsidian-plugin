@@ -1,3 +1,4 @@
+import { readLegacyContent } from "./compat.js";
 /**
  * [WHO]: Provides generateInsightsReport, generateRecommendations, generateRulesBasedRecommendations
  * [FROM]: Depends on ./i18n.js for PROMPTS; ./llm-json.js for tolerant structured parsing; ./types.js for memory types and insights
@@ -111,7 +112,7 @@ export async function generateRecommendations(
 			const input = JSON.stringify({
 				patterns: patterns.slice(0, 5).map((pa) => ({ trigger: pa.trigger, behavior: pa.behavior })),
 				struggles: struggles.slice(0, 5).map((s) => ({ problem: s.problem, resolved: s.resolved })),
-				lessons: lessons.slice(0, 5).map((l) => l.summary || l.detail || l.content || ""),
+				lessons: lessons.slice(0, 5).map((l) => l.summary || l.detail || readLegacyContent(l) || ""),
 			});
 			const raw = await llmFn(p.insightsRecommendationSystem, input);
 			const result = parseLlmJson<string[]>(raw);
@@ -136,7 +137,7 @@ export function generateRulesBasedRecommendations(
 
 	// High-weight patterns → automation suggestion
 	if (patterns.length > 0) {
-		const top = patterns[0]!;
+		const top = patterns[0];
 		recommendations.push(
 			`You consistently ${top.behavior} when ${top.trigger}. Consider automating this behavior.`,
 		);

@@ -5,7 +5,7 @@
  * [HERE]: core/lib/agent-core/src/types.ts -
  */
 
-import type {
+import type { Api,
 	AssistantMessageEvent,
 	DocumentContent,
 	ImageContent,
@@ -126,7 +126,7 @@ export type AgentModelErrorRecoveryResult =
  * Configuration for the agent loop.
  */
 export interface AgentLoopConfig extends SimpleStreamOptions {
-	model: Model<any>;
+	model: Model<Api>;
 	loopFramework?: AgentLoopFrameworkInput;
 
 	/**
@@ -218,7 +218,7 @@ export interface AgentLoopConfig extends SimpleStreamOptions {
 		requestedToolName: string;
 		input: unknown;
 		rawInput: unknown;
-		tool: AgentTool<any>;
+		tool: AgentTool;
 	}) => Promise<AgentToolPermissionDecision> | AgentToolPermissionDecision;
 
 	/** Ordered host policies evaluated before the legacy canUseTool adapter. */
@@ -364,7 +364,7 @@ export type ThinkingLevel = "off" | "minimal" | "low" | "medium" | "high" | "xhi
  * ```
  */
 export interface CustomAgentMessages {
-	// Empty by default - apps extend via declaration merging
+	compactionSummary: { role: "compactionSummary"; summary: string; tokensBefore: number; timestamp: number };
 }
 
 /**
@@ -379,9 +379,9 @@ export type AgentMessage = Message | CustomAgentMessages[keyof CustomAgentMessag
  */
 export interface AgentState {
 	systemPrompt: string;
-	model: Model<any>;
+	model: Model<Api>;
 	thinkingLevel: ThinkingLevel;
-	tools: AgentTool<any>[];
+	tools: AgentTool[];
 	messages: AgentMessage[]; // Can include attachments + custom message types
 	isStreaming: boolean;
 	streamMessage: AgentMessage | null;
@@ -404,7 +404,7 @@ export interface AgentToolResult<T> {
 }
 
 // Callback for streaming tool execution updates
-export type AgentToolUpdateCallback<T = any> = (partialResult: AgentToolResult<T>) => void;
+export type AgentToolUpdateCallback<T = unknown> = (partialResult: AgentToolResult<T>) => void;
 
 export type AgentToolConcurrencySafety<TParameters extends TSchema = TSchema> =
 	| boolean
@@ -416,7 +416,7 @@ export type AgentToolInterruptBehavior<TParameters extends TSchema = TSchema> =
 	| ((params: Static<TParameters>) => "cancel" | "block");
 
 // AgentTool extends Tool but adds the execute function
-export interface AgentTool<TParameters extends TSchema = TSchema, TDetails = any> extends Tool<TParameters> {
+export interface AgentTool<TParameters extends TSchema = TSchema, TDetails = unknown> extends Tool<TParameters> {
 	// A human-readable label for the tool to be displayed in UI
 	label: string;
 	/** Alternative model-facing names accepted for transcript/tool compatibility. */
@@ -446,7 +446,7 @@ export interface AgentTool<TParameters extends TSchema = TSchema, TDetails = any
 export interface AgentContext {
 	systemPrompt: string;
 	messages: AgentMessage[];
-	tools?: AgentTool<any>[];
+	tools?: AgentTool[];
 }
 
 /**
@@ -475,13 +475,13 @@ export type AgentEvent =
 	| { type: "message_update"; message: AgentMessage; assistantMessageEvent: AssistantMessageEvent }
 	| { type: "message_end"; message: AgentMessage }
 	// Tool execution lifecycle
-	| { type: "tool_execution_start"; toolCallId: string; toolName: string; args: any }
-	| { type: "tool_execution_update"; toolCallId: string; toolName: string; args: any; partialResult: any }
+	| { type: "tool_execution_start"; toolCallId: string; toolName: string; args: unknown }
+	| { type: "tool_execution_update"; toolCallId: string; toolName: string; args: unknown; partialResult: unknown }
 	| {
 			type: "tool_execution_end";
 			toolCallId: string;
 			toolName: string;
-			result: any;
+			result: unknown;
 			isError: boolean;
 			durationMs?: number;
 	  };

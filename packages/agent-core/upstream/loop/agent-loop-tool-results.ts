@@ -38,7 +38,7 @@ export function enforceToolResultBatchSize(
 		if (currentTotal <= limit) break;
 		const reductionNeeded = currentTotal - limit;
 		const targetSize = Math.max(0, candidate.size - reductionNeeded);
-		const truncated = truncateToolResultToTextChars(next[candidate.index]!, targetSize, limit);
+		const truncated = truncateToolResultToTextChars(next[candidate.index], targetSize, limit);
 		next[candidate.index] = truncated.result;
 		currentTotal = currentTotal - candidate.size + truncated.textChars;
 	}

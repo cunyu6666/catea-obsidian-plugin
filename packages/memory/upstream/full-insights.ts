@@ -1,3 +1,4 @@
+import { readLegacyContent } from "./compat.js";
 /**
  * [WHO]: FullInsightsReport, generateFullInsights
  * [FROM]: Depends on ./i18n.js, ./full-insights-sections.js, ./types.js
@@ -135,8 +136,8 @@ function buildPatternsAndStruggles(facets: MemoryEntry[]): { patterns: PatternIn
 		.map((e) => ({
 			entry: e,
 			weight: calcWeight(e),
-			trigger: e.facetData?.kind === "pattern" ? e.facetData.trigger : (e.summary || e.detail || e.content || "").slice(0, 50),
-			behavior: e.facetData?.kind === "pattern" ? e.facetData.behavior : (e.summary || e.detail || e.content || ""),
+			trigger: e.facetData?.kind === "pattern" ? e.facetData.trigger : (e.summary || e.detail || readLegacyContent(e) || "").slice(0, 50),
+			behavior: e.facetData?.kind === "pattern" ? e.facetData.behavior : (e.summary || e.detail || readLegacyContent(e) || ""),
 		}))
 		.sort((a, b) => b.weight - a.weight);
 	const struggles: StruggleInsight[] = struggleEntries
@@ -145,7 +146,7 @@ function buildPatternsAndStruggles(facets: MemoryEntry[]): { patterns: PatternIn
 			return {
 				entry: e,
 				weight: calcWeight(e, !isResolved),
-				problem: e.facetData?.kind === "struggle" ? e.facetData.problem : (e.summary || e.detail || e.content || ""),
+				problem: e.facetData?.kind === "struggle" ? e.facetData.problem : (e.summary || e.detail || readLegacyContent(e) || ""),
 				attempts: e.facetData?.kind === "struggle" ? e.facetData.attempts : [],
 				solution: e.facetData?.kind === "struggle" ? e.facetData.solution : "",
 				resolved: isResolved,
@@ -188,7 +189,7 @@ function fallbackWins(struggles: StruggleInsight[], lessons: MemoryEntry[]): Ful
 	}
 	const sortLessons = [...lessons].sort((a, b) => b.importance * (b.accessCount + 1) - a.importance * (a.accessCount + 1));
 	for (const l of sortLessons.slice(0, 3)) {
-		const text = l.summary || l.detail || l.content || "";
+		const text = l.summary || l.detail || readLegacyContent(l) || "";
 		wins.push({ title: text.slice(0, 60), description: text });
 	}
 	return wins.slice(0, 8);
@@ -213,7 +214,7 @@ function fallbackRecommendations(
 ): string[] {
 	const recs: string[] = [];
 	if (patterns.length > 0) {
-		const top = patterns[0]!;
+		const top = patterns[0];
 		recs.push(`You consistently ${top.behavior} when ${top.trigger}. Consider automating.`);
 	}
 	const unresolved = struggles.filter((s) => !s.resolved);
@@ -237,7 +238,7 @@ function fallbackFeaturesAndPatterns(
 	const featuresToTry: FullInsightsFeatureToTry[] = [];
 	const usagePatterns: FullInsightsUsagePattern[] = [];
 	if (toolRows.length > 0) {
-		const topTool = toolRows[0]!.label;
+		const topTool = toolRows[0].label;
 		featuresToTry.push({
 			title: "Automate frequent operations",
 			oneLiner: "Turn repeat workflows into skills or scripts",
@@ -261,7 +262,7 @@ interface ObservedReportLanguage {
 }
 
 function entryText(entry: MemoryEntry): string {
-	return [entry.name, entry.summary, entry.detail, entry.content, entry.tags.join(" ")].filter(Boolean).join("\n");
+	return [entry.name, entry.summary, entry.detail, readLegacyContent(entry), entry.tags.join(" ")].filter(Boolean).join("\n");
 }
 
 function languageFromExplicitPreference(text: string): ObservedReportLanguage | undefined {

@@ -1,10 +1,10 @@
 import type { AgentMessage } from "../loop/types";
-import type { AssistantMessage,Usage } from "../ai/types";
-type SessionEntry=any;type CompactionEntry=any;
+import type {Usage } from "../ai/types";
+import type { SessionEntry, CompactionEntry } from "../../../session";
 import {createFileOps,extractFileOpsFromMessage,type FileOperations} from "./file-ops";
-const createCompactionSummaryMessage=(summary:string)=>({role:"compactionSummary",summary});
-const createBranchSummaryMessage=(summary:string)=>({role:"branchSummary",summary});
-const createCustomMessage=(e:any)=>({role:"custom",content:e.content});
+const createCompactionSummaryMessage = (summary: string, tokensBefore: number, timestamp: string): AgentMessage => ({ role: "compactionSummary", summary, tokensBefore, timestamp: Date.parse(timestamp) });
+const createBranchSummaryMessage = (summary: string, fromId: string, timestamp: string): AgentMessage => ({ role: "branchSummary", summary, fromId, timestamp: Date.parse(timestamp) });
+const createCustomMessage = (customType: string, content: string | (import("../ai/types").TextContent | import("../ai/types").ImageContent)[], display: boolean, details: unknown, timestamp: string): AgentMessage => ({ role: "custom", customType, content, display, details, timestamp: Date.parse(timestamp) });
 export interface CompactionDetails {
 	readFiles: string[];
 	modifiedFiles: string[];
@@ -110,7 +110,7 @@ export function calculateContextTokens(usage: Usage): number {
  */
 function getAssistantUsage(msg: AgentMessage): Usage | undefined {
 	if (msg.role === "assistant" && "usage" in msg) {
-		const assistantMsg = msg as AssistantMessage;
+		const assistantMsg = msg;
 		if (assistantMsg.stopReason !== "aborted" && assistantMsg.stopReason !== "error" && assistantMsg.usage) {
 			return assistantMsg.usage;
 		}
@@ -207,7 +207,7 @@ export function estimateTokens(message: AgentMessage): number {
 			return Math.ceil(chars / 4);
 		}
 		case "assistant": {
-			const assistant = message as AssistantMessage;
+			const assistant = message;
 			for (const block of assistant.content) {
 				if (block.type === "text") {
 					chars += block.text.length;

@@ -1,11 +1,12 @@
+import { memoryHostGlobal } from "./compat.js";
 /**
  * [WHO]: Provides TurnContext, MemoryRecallRecord, getTurnContext(), setTurnContext(), TURN_CONTEXT_GLOBAL_KEY
- * [FROM]: Depends on nothing; reads/writes globalThis using the documented key
+ * [FROM]: Depends on ./compat.js; reads/writes the explicit host registry using the documented key
  * [TO]: Consumed by engine-scoring-v2.ts (reads structuralAnchor), engine.ts (writes memoryRecallSnapshot)
- * [HERE]: packages/mem-core/src/turn-context.ts - structural mirror of core/runtime/turn-context; mem-core cannot reverse-import the main app, so the contract is shared via the globalThis key string and schema, not the source file
+ * [HERE]: packages/mem-core/src/turn-context.ts - structural mirror of core/runtime/turn-context; mem-core cannot reverse-import the main app, so the contract is shared via the host-global key string and schema, not the source file
  *
- * Keep this file structurally aligned with core/runtime/turn-context.ts.
- * If the schema changes there, mirror the change here.
+ * Host integrations sharing state across bundles must explicitly install their
+ * registry using configureMemoryHost; the standalone CLI is module-local.
  */
 
 export interface MemoryRecallRecord {
@@ -35,9 +36,9 @@ export interface TurnContext {
 export const TURN_CONTEXT_GLOBAL_KEY = "__catuiTurnContext";
 
 function store(): TurnContext {
-	const g = globalThis as unknown as Record<string, TurnContext | undefined>;
+	const g = memoryHostGlobal() as unknown as Record<string, TurnContext | undefined>;
 	if (!g[TURN_CONTEXT_GLOBAL_KEY]) g[TURN_CONTEXT_GLOBAL_KEY] = {};
-	return g[TURN_CONTEXT_GLOBAL_KEY] as TurnContext;
+	return g[TURN_CONTEXT_GLOBAL_KEY];
 }
 
 /** Read the current value of a turn-context channel. Returns undefined when no producer has published. */

@@ -21,7 +21,7 @@ import {
 	tierEntries,
 } from "./scoring.js";
 import type { ProgressiveRecallConfig } from "./config.js";
-import type { MemoryEntry, MemoryScope, WorkEntry, Episode } from "./types.js";
+import type { MemoryEntry, WorkEntry, Episode } from "./types.js";
 import type { EpisodeFacet, EpisodeMemory, ProceduralMemory, SemanticMemory } from "./types-v2.js";
 
 export interface RecallSelectionResult {

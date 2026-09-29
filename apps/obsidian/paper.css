@@ -609,7 +609,7 @@ body.gp-enabled.gp-enabled .gp-duplicate-inline-title .inline-title { display: n
 /* Per-editor text zoom controls; the toolbar itself keeps its normal size. */
 body.gp-enabled .catea-editor-zoom { display: flex; align-items: center; gap: 2px; margin-left: 8px; padding-left: 8px; border-left: 1px solid var(--background-modifier-border); flex-shrink: 0; }
 body.gp-enabled .catea-editor-zoom .gp-tool:disabled { opacity: .35; cursor: default; }
-body.gp-enabled .catea-editor-zoom-label { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
+body.gp-enabled .catea-editor-zoom-label { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; opacity: 0; white-space: nowrap; border: 0; }
 
 /* Local Git history uses the same paper surfaces and quiet green accents. */
 .catea-git-view { padding: 0; overflow: hidden; }
@@ -719,4 +719,4 @@ body.gp-enabled.gp-tabler-on .nav-files-container .nav-folder-title[data-catea-f
 .catea-folder-picker button:focus-visible {outline:2px solid var(--interactive-accent);outline-offset:2px;}
 .catea-folder-picker__actions {display:flex;justify-content:flex-end;gap:8px;margin-top:24px;}
 .catea-folder-picker__actions button:first-child {margin-right:auto;}
-.catea-folder-picker__sr {position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap;}
+.catea-folder-picker__sr {position:absolute;width:1px;height:1px;overflow:hidden;opacity:0;white-space:nowrap;}
