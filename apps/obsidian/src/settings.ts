@@ -246,9 +246,9 @@ async function syncHostedBillingModel(owner: Catea, status?: BillingStatus) {
         model: 'catea/pro',
         contextWindow: 1000000,
         capabilities: {
-          tools: true,
+          tools: false,
           streaming: true,
-          parallelTools: true,
+          parallelTools: false,
           structuredOutput: true,
         },
       },

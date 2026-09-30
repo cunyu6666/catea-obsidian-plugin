@@ -9,7 +9,11 @@ import { attachmentIsText } from './attachments'
 
 export function modelCapabilities(model: ModelConfig): Partial<ModelCapabilities> {
   const known = /^MiniMax-M2(?:\.|$)/i.test(model.model) ? { vision: false, documents: false } : {}
-  return { ...known, ...model.capabilities }
+  const hosted =
+    model.model === 'catea/pro' || /\/billing\/hosted\/v1\/?$/.test(model.baseUrl)
+      ? { tools: false, parallelTools: false }
+      : {}
+  return { ...known, ...model.capabilities, ...hosted }
 }
 
 export function unsupportedAttachment(
