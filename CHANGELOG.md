@@ -3,9 +3,12 @@
 Notable changes per release. The version is the one in `manifest.json`; the GitHub
 release tag is that same number with no `v` prefix.
 
-## Unreleased
+## 0.3.21
 
 ### Added
+
+- Add separately configured image, video and speech generation tools, secure API
+  key storage, local media playback and resumable video task IDs.
 
 - Ship two read-only skill presets inside the bundle: `skill-creator` for authoring
   and validating `.catea/skills` packages, and `find-skill` for locating existing
@@ -33,6 +36,16 @@ release tag is that same number with no `v` prefix.
   Keys reuse the existing encrypted/secret-storage paths, an existing key for the
   same vendor prefills the form, and endpoint derivation now respects explicit
   `/v2`–`/v4` API versions instead of inserting a second `/v1`.
+
+### Fixed
+
+- Retry automatic conversation titles, persist selected quotes and skill tags,
+  simplify tool loading indicators, and keep response footer controls on one row.
+- Recover stale sidebar leaves and prevent duplicate Agent/Git panels.
+- Confine skill package writes across symlinks, reject reserved path aliases and
+  conflicting resources, stage complete packages and serialize competing writes.
+- Include full licenses for bundled skill adaptations in release JavaScript.
+- Preserve the successful 0.3.20 marketplace source-analysis fixes.
 
 ## 0.3.20
 
