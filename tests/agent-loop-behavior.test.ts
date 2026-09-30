@@ -150,12 +150,14 @@ test('livelock records every result from an already completed safe batch', async
   const streamFn = () => {
     const stream = new AssistantMessageEventStream()
     const message = assistant(
-      ++turn === 1
-        ? [{ id: 'first', args: { key: 'same' } }]
-        : [
-            { id: 'repeat', args: { key: 'same' } },
-            { id: 'other', args: { key: 'other' } },
-          ],
+      ++turn > 2
+        ? []
+        : turn === 1
+          ? [{ id: 'first', args: { key: 'same' } }]
+          : [
+              { id: 'repeat', args: { key: 'same' } },
+              { id: 'other', args: { key: 'other' } },
+            ],
     )
     stream.push({ type: 'done', reason: 'toolUse', message })
     stream.end(message)
@@ -243,3 +245,91 @@ test('context overflow recovery retries once and then ends on a second error', a
     'error',
   )
 })
+
+for (const scenario of ['recover', 'repeat', 'changing', 'cancel'] as const) {
+  test(`no-progress recovery: ${scenario}`, async () => {
+    const { agentLoop, AssistantMessageEventStream } = await loopRuntime()
+    const controller = new AbortController()
+    let requests = 0
+    let hints = 0
+    const events: any[] = []
+    const streamFn = (_model: unknown, context: any) => {
+      requests++
+      const hasHint = context.messages.some(
+        (m: any) => typeof m.content === 'string' && m.content.startsWith('Tool-loop recovery:'),
+      )
+      if (hasHint) hints++
+      const message = assistant(
+        (scenario === 'recover' && hasHint) || (scenario === 'changing' && requests === 5)
+          ? []
+          : [{ id: `call-${requests}`, args: { key: 'same' } }],
+      )
+      const stream = new AssistantMessageEventStream()
+      stream.push({ type: 'done', reason: message.stopReason, message })
+      stream.end(message)
+      return stream
+    }
+    let executions = 0
+    for await (const event of agentLoop(
+      [{ role: 'user', content: 'go', timestamp: Date.now() }],
+      {
+        systemPrompt: '',
+        messages: [],
+        tools: [
+          readTool(async () => ({
+            content: [
+              { type: 'text', text: scenario === 'changing' ? String(++executions) : 'same' },
+            ],
+          })),
+        ],
+      },
+      {
+        model,
+        convertToLlm: (messages: unknown) => messages,
+        loopProgress: { repetitionThreshold: 3 },
+      },
+      controller.signal,
+      streamFn,
+    )) {
+      events.push(event)
+      if (
+        scenario === 'cancel' &&
+        event.type === 'message_end' &&
+        event.message.role === 'user' &&
+        String(event.message.content).startsWith('Tool-loop recovery:')
+      )
+        controller.abort()
+    }
+    const result = events.find((e) => e.type === 'agent_result')
+    const recovery = events.filter(
+      (e) =>
+        e.type === 'message_end' &&
+        e.message.role === 'user' &&
+        String(e.message.content).startsWith('Tool-loop recovery:'),
+    )
+    if (scenario === 'changing') {
+      assert.equal(recovery.length, 0)
+      assert.equal(requests, 5)
+    } else {
+      assert.equal(recovery.length, 1)
+      assert.match(recovery[0].message.content, /last batch: read/)
+      assert.match(
+        recovery[0].message.content,
+        /Do not repeat identical calls or retry denied actions/,
+      )
+    }
+    if (scenario === 'repeat') {
+      assert.equal(requests, 6)
+      assert.equal(result.errorSubtype, 'livelock_detected')
+    } else if (scenario === 'cancel') {
+      assert.equal(requests, 3)
+      assert.equal(result.stopReason, 'aborted')
+    } else {
+      assert.equal(result.stopReason, 'stop')
+      if (scenario === 'recover') {
+        assert.equal(requests, 4)
+        assert.equal(hints, 1)
+      }
+    }
+  })
+}

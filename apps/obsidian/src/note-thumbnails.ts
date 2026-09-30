@@ -9,8 +9,10 @@ import type Catea from './main'
 
 /** Small local content previews. No screenshots, external requests or vault writes. */
 export function installNoteThumbnails(plugin: Catea) {
-  const cache = new Map<string, { mtime: number; url: string }>(),
+  const cache = new Map<string, { mtime: number; palette: string; url: string }>(),
     pending = new Set<HTMLElement>()
+  const inFlight = new Set<HTMLElement>()
+  const rowPaths = new Map<HTMLElement, string>()
   const observed = new Set<HTMLElement>(),
     visible = new Set<HTMLElement>()
   let stopped = false,
@@ -24,8 +26,14 @@ export function installNoteThumbnails(plugin: Catea) {
     row.classList.remove('catea-has-thumbnail')
   }
   const render = async (file: TFile) => {
+    const styles = window.getComputedStyle(document.body)
+    const background = styles.getPropertyValue('--background-primary').trim() || '#fff'
+    const foreground = styles.getPropertyValue('--text-normal').trim() || '#25352e'
+    const muted = styles.getPropertyValue('--text-muted').trim() || '#829088'
+    const palette = [background, foreground, muted].join('|')
+    const renderGeneration = generation
     const hit = cache.get(file.path)
-    if (hit?.mtime === file.stat.mtime) return hit.url
+    if (hit?.mtime === file.stat.mtime && hit.palette === palette) return hit.url
     const mtime = file.stat.mtime
     const raw = (await plugin.app.vault.cachedRead(file))
       .slice(0, 20000)
@@ -34,7 +42,7 @@ export function installNoteThumbnails(plugin: Catea) {
     canvas.width = 108
     canvas.height = 144
     const ctx = canvas.getContext('2d')!
-    ctx.fillStyle = '#fff'
+    ctx.fillStyle = background
     ctx.fillRect(0, 0, 108, 144)
     const title = raw.match(/^#\s+(.+)$/m)?.[1] || file.basename
     const wrap = (text: string, y: number, font: string, color: string, maxLines: number) => {
@@ -58,7 +66,7 @@ export function installNoteThumbnails(plugin: Catea) {
       }
       return y
     }
-    let y = wrap(title, 15, 'bold 8px sans-serif', '#25352e', 3) + 5
+    let y = wrap(title, 15, 'bold 8px sans-serif', foreground, 3) + 5
     // Only resolve local raster embeds. SVG/HTML and remote resources never execute here.
     const embed = plugin.app.metadataCache
       .getFileCache(file)
@@ -94,7 +102,7 @@ export function installNoteThumbnails(plugin: Catea) {
       .replace(/[`#*>_]/g, '')
       .replace(/\[\[([^\]|]+)\|?([^\]]*)\]\]/g, (_match: string, p: string, l: string) => l || p)
       .trim()
-    wrap(excerpt, y, '6px sans-serif', '#829088', Math.max(0, Math.floor((136 - y) / 9)))
+    wrap(excerpt, y, '6px sans-serif', muted, Math.max(0, Math.floor((136 - y) / 9)))
     let url: string
     try {
       url = canvas.toDataURL('image/png')
@@ -102,7 +110,7 @@ export function installNoteThumbnails(plugin: Catea) {
       return ''
     }
     if (cache.size >= 256) cache.delete(cache.keys().next().value!)
-    cache.set(file.path, { mtime, url })
+    if (renderGeneration === generation) cache.set(file.path, { mtime, palette, url })
     return url
   }
   const pump = () => {
@@ -120,6 +128,8 @@ export function installNoteThumbnails(plugin: Catea) {
         file.stat.size > 2 * 1024 * 1024
       )
         continue
+      if (inFlight.has(row)) continue
+      inFlight.add(row)
       active++
       void render(file)
         .then((url) => {
@@ -146,6 +156,9 @@ export function installNoteThumbnails(plugin: Catea) {
         .catch(() => {})
         .finally(() => {
           active--
+          inFlight.delete(row)
+          if (!stopped && (version !== generation || pathOf(row) !== path) && visible.has(row))
+            pending.add(row)
           pump()
         })
     }
@@ -169,22 +182,41 @@ export function installNoteThumbnails(plugin: Catea) {
       if (!row.isConnected) {
         intersection.unobserve(row)
         observed.delete(row)
+        rowPaths.delete(row)
         visible.delete(row)
         pending.delete(row)
       }
     for (const row of document.querySelectorAll<HTMLElement>(
       '.nav-files-container .nav-file-title',
-    ))
+    )) {
+      const path = pathOf(row)
+      if (rowPaths.get(row) !== path) {
+        remove(row)
+        rowPaths.set(row, path)
+      }
       if (!observed.has(row)) {
         observed.add(row)
         intersection.observe(row)
+      } else if (
+        visible.has(row) &&
+        !inFlight.has(row) &&
+        !row.querySelector('.catea-note-thumbnail')
+      ) {
+        pending.add(row)
       }
+    }
+    pump()
   }
   const schedule = () => {
     if (!scheduled) scheduled = window.requestAnimationFrame(scan)
   }
   const mutation = new MutationObserver(schedule)
-  mutation.observe(document.body, { childList: true, subtree: true })
+  mutation.observe(document.body, {
+    childList: true,
+    subtree: true,
+    attributes: true,
+    attributeFilter: ['data-path'],
+  })
   const refresh = () => {
     generation++
     cache.clear()
@@ -194,7 +226,18 @@ export function installNoteThumbnails(plugin: Catea) {
     schedule()
     pump()
   }
-  plugin.registerEvent(plugin.app.vault.on('modify', refresh))
+  const themeMutation = new MutationObserver(refresh)
+  themeMutation.observe(document.body, {
+    attributes: true,
+    attributeFilter: ['data-catea-theme', 'class'],
+  })
+  plugin.registerEvent(plugin.app.workspace.on('css-change', refresh))
+  plugin.registerEvent(
+    plugin.app.vault.on('modify', (file) => {
+      // Session/config writes must not repeatedly invalidate the entire explorer.
+      if (file instanceof TFile && /^(md|png|jpe?g|webp|gif)$/i.test(file.extension)) refresh()
+    }),
+  )
   plugin.registerEvent(plugin.app.vault.on('rename', refresh))
   plugin.registerEvent(plugin.app.vault.on('delete', refresh))
   plugin.registerEvent(plugin.app.workspace.on('layout-change', schedule))
@@ -203,10 +246,12 @@ export function installNoteThumbnails(plugin: Catea) {
     stopped = true
     window.cancelAnimationFrame(scheduled)
     mutation.disconnect()
+    themeMutation.disconnect()
     intersection.disconnect()
     for (const row of observed) remove(row)
     cache.clear()
     pending.clear()
+    rowPaths.clear()
   })
   return refresh
 }

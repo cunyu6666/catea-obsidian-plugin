@@ -14,3 +14,6 @@
 
 .catea-message-skills { justify-content:flex-end; max-width:100%; padding:0; }
 .catea-message-skills .catea-skill-tag { padding:3px 10px; }
+
+.catea-skill-tags:not(.catea-message-skills) .catea-skill-tag { box-sizing:border-box; height:28px; padding:0 4px 0 10px; line-height:18px; }
+.catea-skill-tag > button { flex:none; width:20px; min-width:20px; height:20px; min-height:20px; padding:0; border-radius:50%; }

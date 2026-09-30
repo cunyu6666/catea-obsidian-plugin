@@ -525,8 +525,13 @@ export class Agent {
       await save()
       const key = JSON.stringify(config.mcp)
       if (this.mcpKey !== key) {
-        this.mcpTools = await this.pool.connect(config.mcp, this.vault, signal)
-        this.mcpKey = key
+        this.mcpKey = ''
+        let unavailable = false
+        this.mcpTools = await this.pool.connect(config.mcp, this.vault, signal, (id, reason) => {
+          unavailable = true
+          this.hooks.notice(`MCP_UNAVAILABLE ${JSON.stringify({ id, reason })}`)
+        })
+        this.mcpKey = unavailable ? '' : key
       }
       const [skills, memory] = await Promise.all([
         loadSkills(this.vault, config.skills),

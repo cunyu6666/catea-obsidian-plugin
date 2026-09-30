@@ -45,6 +45,30 @@ const changes = [
 
 \t\tconsumed += batch.length;`,
   },
+  {
+    before: `	let modelErrorRecoveryCount = 0;`,
+    after: `	let modelErrorRecoveryCount = 0;
+	let noProgressRecoveryCount = 0;`,
+  },
+  {
+    before: `				if (toolExecution.livelock) {
+					const limitMessage = createLoopLimitMessage(config,`,
+    after: `				if (toolExecution.livelock && noProgressRecoveryCount === 0) {
+					noProgressRecoveryCount++;
+					progressTracker?.reset();
+					const names = [...new Set(toolResults.map(result => result.toolName))].join(", ");
+					const recovery: AgentMessage = {
+						role: "user",
+						content: "Tool-loop recovery: repeated calls produced identical results. Tools in the last batch: " + names + ". Use the results already available or change your approach. Do not repeat identical calls or retry denied actions. For a pending background task, report its pending status and task ID rather than repeatedly polling or submitting it again. If blocked, explain the specific obstacle and the next useful step. You have one recovery opportunity; another repeated cycle will stop this run.",
+						timestamp: Date.now(),
+					};
+					currentContext.messages.push(recovery);
+					newMessages.push(recovery);
+					stream.push({ type: "message_start", message: recovery });
+					stream.push({ type: "message_end", message: recovery });
+				} else if (toolExecution.livelock) {
+					const limitMessage = createLoopLimitMessage(config,`,
+  },
 ]
 
 function sha256(text) {

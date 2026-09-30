@@ -206,10 +206,7 @@ button:not(.mod-cta):not(.mod-cta) {box-shadow:none}
 
 .catea-message-quotes { margin: 0 0 8px; max-height: none; }
 
-.catea-generated-images { display:grid; gap:12px; width:100%; }
-.catea-generated-images button { display:block; padding:0; height:auto; overflow:hidden; border-radius:12px; background:transparent; }
-.catea-generated-images img { display:block; width:100%; max-height:640px; object-fit:contain; }
 
-.catea-generated-media { display:grid; gap:12px; width:100%; min-width:0; }
-.catea-generated-media :is(video,audio) { display:block; width:100%; max-height:640px; border-radius:12px; }
-.catea-generated-media button { display:block; max-width:100%; overflow:hidden; text-overflow:ellipsis; margin-top:6px; }
+
+.catea-generated-files .anno-attachments { justify-content:flex-start; }
+.catea-generated-files .anno-attachment { max-width:100%; }

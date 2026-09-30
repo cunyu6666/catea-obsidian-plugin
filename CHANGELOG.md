@@ -3,6 +3,24 @@
 Notable changes per release. The version is the one in `manifest.json`; the GitHub
 release tag is that same number with no `v` prefix.
 
+## 0.3.22
+
+### Fixed
+
+- Restore thumbnails after explorer row reuse and redraw their canvas colors on
+  theme changes; match the vault switcher background to the sidebar.
+
+- Give the model one bounded recovery opportunity after repeated tool results,
+  with guidance to reuse evidence, change approach or report pending task status.
+  Retain the stop guard if repetition continues and explain the recovery failure.
+
+- Show generated images, videos and audio as compact clickable file cards, and
+  constrain composer skill tags to 28 px tall.
+
+- Keep chat and healthy MCP tools available when another server cannot start
+  (including missing `npx`), times out or fails tool discovery. Discard incomplete
+  catalogs, show localized recovery instructions, and retry on the next message.
+
 ## 0.3.21
 
 ### Added

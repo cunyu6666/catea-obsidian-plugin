@@ -370,6 +370,31 @@ export function translate(language: Language, text: string) {
 }
 
 export function humanizeError(raw: string, language: Language = 'zh') {
+  if (raw.startsWith('MCP_UNAVAILABLE ')) {
+    try {
+      const issue = JSON.parse(raw.slice('MCP_UNAVAILABLE '.length)) as {
+        id: string
+        reason: string
+      }
+      const reason =
+        issue.reason === 'missing-command'
+          ? language === 'en'
+            ? 'Obsidian cannot find its executable (such as npx). Install Node.js if needed, or set an absolute executable path in MCP settings.'
+            : 'Obsidian 找不到启动程序（例如 npx）。请确认已安装 Node.js，或在 MCP 设置中填写可执行程序的绝对路径。'
+          : issue.reason === 'timeout'
+            ? language === 'en'
+              ? 'Startup timed out.'
+              : '启动超时。'
+            : language === 'en'
+              ? 'Connection or tool discovery failed. Check the server address, credentials and configuration.'
+              : '连接或工具发现失败，请检查服务地址、凭据和配置。'
+      return language === 'en'
+        ? `MCP “${issue.id}” was skipped. ${reason} Chat remains available. Open Catea settings → MCP; after correcting the configuration, send another message to retry.`
+        : `已跳过 MCP「${issue.id}」。${reason} 普通聊天仍可继续。请打开 Catea 设置 → MCP；修改配置后，再次发送消息即可重试。`
+    } catch {
+      /* Fall through for malformed diagnostics. */
+    }
+  }
   const detail = raw.trim()
   const message = detail.replace(/^(?:上下文压缩失败|Context compaction failed)[:：]\s*/i, '')
   const pick = (zh: string, en: string) => (language === 'en' ? en : zh)
@@ -445,8 +470,8 @@ export function humanizeError(raw: string, language: Language = 'zh') {
     )
   else if (/Stopped after detecting a repeated no-progress tool cycle/i.test(message))
     friendly = pick(
-      '连续多次工具操作没有进展，已暂停以避免重复执行。请给出更具体的下一步。',
-      'The same tool actions made no progress, so the run paused. Give a more specific next step.',
+      '工具反复返回相同结果，自动调整后仍未恢复，已停止以避免继续重复。请查看上方工具记录中的失败原因或任务状态。',
+      'Tools kept returning identical results after an automatic recovery attempt. The run stopped to prevent further repetition. Check the tool records above for errors or pending task status.',
     )
   else if (
     /Provider stream ended without a final assistant message|Model stream ended without a final response/i.test(

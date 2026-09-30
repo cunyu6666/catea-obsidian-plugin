@@ -2812,3 +2812,316 @@ test('Skill creation rejects symlink entries, reserved aliases and concurrent ov
     await rm(outside, { recursive: true, force: true })
   }
 })
+
+async function mcpFixture(globals = {}) {
+  return load(
+    'packages/integrations/src/mcp.ts',
+    {
+      '@modelcontextprotocol/sdk/client/index.js': `export class Client {
+      async connect(transport, options) {
+        this.id = transport.command;
+        if (this.id === 'missing') throw Object.assign(new Error('secret arguments'), {code:'ENOENT'});
+        if (this.id === 'hang') return new Promise((resolve, reject) => {
+          options.signal.addEventListener('abort', () => reject(options.signal.reason), {once:true});
+          globalThis.started?.();
+        });
+      }
+      async listTools(params) {
+        if (this.id === 'partial' && params.cursor) throw new Error('secret response');
+        return {tools:[{name:this.id, inputSchema:{type:'object'}}],
+          nextCursor:this.id === 'partial' ? 'next' : undefined};
+      }
+      async callTool() { return {content:[{type:'text',text:this.id}]}; }
+      async close() { globalThis.closed?.(this.id); }
+    }`,
+      '@modelcontextprotocol/sdk/client/stdio.js':
+        'export class StdioClientTransport {constructor(options){Object.assign(this, options)}}',
+      '@modelcontextprotocol/sdk/client/streamableHttp.js':
+        'export class StreamableHTTPClientTransport {}',
+    },
+    globals,
+  )
+}
+
+const mcpServer = (id) => ({ id, enabled: true, transport: 'stdio', command: id })
+
+test('MCP missing executable and incomplete catalogs preserve healthy tools before and after failures', async () => {
+  const closed = [],
+    notices = []
+  const { McpPool } = await mcpFixture({ closed: (id) => closed.push(id) })
+  const pool = new McpPool(),
+    signal = new AbortController().signal
+  const tools = await pool.connect(
+    ['healthy', 'missing', 'partial', 'last'].map(mcpServer),
+    '/vault',
+    signal,
+    (...args) => notices.push(args),
+  )
+  assert.deepEqual(
+    Array.from(tools, (t) => t.description),
+    ['[healthy] healthy', '[last] last'],
+  )
+  assert.deepEqual(notices, [
+    ['missing', 'missing-command'],
+    ['partial', 'connection'],
+  ])
+  assert.ok(closed.includes('missing') && closed.includes('partial'))
+  assert.match(await pool.call(tools[1].name, {}, signal), /last/)
+  await assert.rejects(pool.call('mcp_2_1_partial', {}, signal), /MCP/)
+  await pool.close()
+})
+
+test('MCP deadline skips a hung server and continues discovery', async () => {
+  const notices = []
+  const { McpPool } = await mcpFixture({
+    window: { setTimeout: (callback) => setTimeout(callback, 10), clearTimeout },
+  })
+  const pool = new McpPool()
+  const tools = await pool.connect(
+    ['hang', 'healthy'].map(mcpServer),
+    '/vault',
+    new AbortController().signal,
+    (...args) => notices.push(args),
+  )
+  assert.equal(tools.length, 1)
+  assert.deepEqual(notices, [['hang', 'timeout']])
+  await pool.close()
+})
+
+test('MCP cancellation propagates instead of being treated as a server failure', async () => {
+  const controller = new AbortController(),
+    notices = [],
+    closed = []
+  const { McpPool } = await mcpFixture({
+    started: () => controller.abort(),
+    closed: (id) => closed.push(id),
+  })
+  const pool = new McpPool()
+  await assert.rejects(
+    pool.connect(
+      ['healthy', 'hang', 'last'].map(mcpServer),
+      '/vault',
+      controller.signal,
+      (...args) => notices.push(args),
+    ),
+    { name: 'AbortError' },
+  )
+  assert.deepEqual(notices, [])
+  assert.ok(closed.includes('healthy') && closed.includes('hang'))
+  await assert.rejects(pool.call('mcp_0_0_healthy', {}, new AbortController().signal), /MCP/)
+})
+
+test('MCP startup diagnostics explain recovery in both UI languages', async () => {
+  const { humanizeError } = await load('apps/obsidian/src/locale.ts')
+  const raw = 'MCP_UNAVAILABLE ' + JSON.stringify({ id: 'Figma', reason: 'missing-command' })
+  assert.match(humanizeError(raw, 'zh'), /Figma.*Node.js.*绝对路径.*普通聊天仍可继续/)
+  assert.match(humanizeError(raw, 'en'), /Figma.*Node.js.*absolute.*Chat remains available/)
+})
+
+test('Agent continues after MCP startup failure and retries discovery on the next message', async () => {
+  let recoveryAction = ''
+  let connections = 0
+  const notices = []
+  const { Agent } = await load(
+    'packages/agent-core/src/index.ts',
+    {
+      './transport':
+        'export const serviceFetch=async()=>{throw new Error("Unexpected network request")}',
+      '../../agent-core/src/transport':
+        'export const serviceFetch=async()=>{throw new Error("Unexpected network request")}',
+      '../../integrations/src/mcp':
+        'export class McpPool {async connect(_config,_vault,_signal,unavailable){globalThis.connected();unavailable("Figma","missing-command");return []}}',
+      '../../integrations/src/skills':
+        'export const loadSkills=async()=>[];export const readSkillResource=()=>{};export const listSkills=async()=>[];export const describeSkills=async()=>[];export const createSkill=async()=>({id:"x",path:"p",resources:[],replaced:false});export const presetSkillIds=[]',
+      '../upstream/loop/agent-loop': `export const agentLoop=async function*(_prompts,_context,options){
+      const failed={role:'assistant',content:[{type:'text',text:''}],stopReason:'error',errorMessage:'aborted',timestamp:Date.now()};
+      yield {type:'message_end',message:failed};
+      const recovery=await options.recoverModelError({message:failed,messages:[failed],errorSubtype:'model_error',attempt:1});
+      globalThis.recordRecovery(recovery.action);
+      if(recovery.action==='retry'){
+        const answer={role:'assistant',content:[{type:'text',text:'Finished after retry.'}],stopReason:'stop',timestamp:Date.now()};
+        yield {type:'message_update',message:answer};yield {type:'message_end',message:answer};
+      }
+      yield {type:'agent_end'};
+    }`,
+    },
+    {
+      connected: () => connections++,
+      structuredClone,
+      TransformStream,
+      recordRecovery: (action) => {
+        recoveryAction = action
+      },
+    },
+  )
+  const config = {
+    enabled: true,
+    models: [model],
+    modelId: model.id,
+    personaId: 'aria',
+    skills: [],
+    mcp: [],
+    memory: false,
+    web: false,
+    shell: false,
+  }
+  const agent = new Agent(
+    '/unused',
+    () => config,
+    {
+      change: () => {},
+      notice: (text) => notices.push(text),
+      approve: async () => true,
+      ask: async () => ({}),
+    },
+    {
+      conversations: { save: async () => {}, list: async () => [], load: async () => undefined },
+      memory: { close: () => {} },
+      modelClient: {},
+    },
+  )
+  await agent.send('Continue the task', '')
+  assert.equal(recoveryAction, 'retry')
+  assert.equal(agent.session.messages[1].status, 'complete')
+  assert.equal(agent.session.messages[1].text, 'Finished after retry.')
+  assert.equal(agent.session.messages[1].error, undefined)
+  await agent.send('Try again', '')
+  assert.equal(connections, 2)
+  assert.equal(notices.filter((text) => text.startsWith('MCP_UNAVAILABLE ')).length, 2)
+  assert.equal(agent.session.messages[3].status, 'complete')
+})
+
+test('Note thumbnails repaint recycled rows, removed images and theme changes', async () => {
+  const observers = [],
+    frames = [],
+    fills = [],
+    cleanups = [],
+    hooks = new Map()
+  let intersect,
+    dark = false,
+    img,
+    makeFile
+  const classes = new Set()
+  const row = {
+    dataset: { path: 'one.md' },
+    isConnected: true,
+    classList: { add: (name) => classes.add(name), remove: (name) => classes.delete(name) },
+    querySelector: () => img,
+    createEl: () => ({
+      setAttribute() {},
+      remove() {
+        img = undefined
+      },
+    }),
+    prepend: (image) => {
+      img = image
+    },
+  }
+  const { installNoteThumbnails } = await load(
+    'apps/obsidian/src/note-thumbnails.ts',
+    {
+      obsidian:
+        'export class TFile {constructor(path){this.path=path;this.basename=path;this.extension="md";this.stat={mtime:1,size:10}}}; globalThis.registerFileFactory((path)=>new TFile(path));',
+    },
+    {
+      document: { body: {}, querySelectorAll: () => [row] },
+      window: {
+        requestAnimationFrame: (cb) => {
+          frames.push(cb)
+          return frames.length
+        },
+        cancelAnimationFrame() {},
+        getComputedStyle: () => ({
+          getPropertyValue: (key) =>
+            key === '--background-primary' ? (dark ? '#222' : '#fff') : '#888',
+        }),
+      },
+      IntersectionObserver: class {
+        constructor(cb) {
+          intersect = cb
+        }
+        observe() {}
+        unobserve() {}
+        disconnect() {}
+      },
+      MutationObserver: class {
+        constructor(cb) {
+          observers.push(cb)
+        }
+        observe() {}
+        disconnect() {}
+      },
+      createEl: () => ({
+        width: 0,
+        height: 0,
+        getContext: () => ({
+          fillStyle: '',
+          fillRect() {
+            fills.push(this.fillStyle)
+          },
+          measureText: () => ({ width: 5 }),
+          fillText() {},
+        }),
+        toDataURL: () => `data:image/png;${fills.length}`,
+      }),
+      registerFileFactory: (factory) => {
+        makeFile = factory
+      },
+    },
+  )
+  const files = new Map(['one.md', 'two.md'].map((path) => [path, makeFile(path)]))
+  const on = (event, callback) => {
+    hooks.set(event, callback)
+    return {}
+  }
+  const refresh = installNoteThumbnails({
+    agentSettings: { noteThumbnails: true },
+    app: {
+      vault: {
+        getAbstractFileByPath: (path) => files.get(path),
+        cachedRead: async (file) => `# ${file.basename}`,
+        on,
+      },
+      metadataCache: { getFileCache: () => ({}) },
+      workspace: { on },
+    },
+    registerEvent() {},
+    register: (callback) => cleanups.push(callback),
+  })
+  const flush = async () => {
+    while (frames.length) frames.shift()()
+    await new Promise((resolve) => setImmediate(resolve))
+  }
+  await flush()
+  intersect([{ target: row, isIntersecting: true }])
+  await flush()
+  assert.ok(img)
+  assert.equal(fills.at(-1), '#fff')
+  const first = img.src
+  row.dataset.path = 'two.md'
+  observers[0]()
+  await flush()
+  assert.ok(img)
+  assert.notEqual(img.src, first)
+  img.remove()
+  observers[0]()
+  await flush()
+  assert.ok(img, 'a removed thumbnail is restored even when the row remains observed')
+  const configFile = makeFile('.catea/config.json')
+  configFile.extension = 'json'
+  const beforeConfigWrite = img
+  hooks.get('modify')(configFile)
+  await flush()
+  assert.equal(img, beforeConfigWrite, 'background config writes must not clear thumbnails')
+  dark = true
+  observers[1]()
+  await flush()
+  assert.equal(fills.at(-1), '#222')
+  assert.ok(img)
+  refresh()
+  await flush()
+  assert.ok(img)
+  cleanups.forEach((callback) => callback())
+  assert.equal(img, undefined)
+  assert.equal(classes.has('catea-has-thumbnail'), false)
+})

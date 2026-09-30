@@ -445,7 +445,7 @@ body.gp-enabled .sidebar-toggle-button svg {width:16px;height:16px;}
 
 .catea-note-thumbnail { display:none; }
 body.gp-enabled.gp-enabled .nav-file-title.catea-has-thumbnail .nav-file-title-content::before { display:none; }
-body.gp-enabled .nav-file-title .catea-note-thumbnail { display:block; width:18px; height:24px; flex:0 0 18px; object-fit:cover; margin-inline-end:8px; border:1px solid #b9c0bb; border-radius:3px; background:white; box-shadow:0 1px 2px #20382a14; pointer-events:none; }
+body.gp-enabled .nav-file-title .catea-note-thumbnail { display:block; width:18px; height:24px; flex:0 0 18px; object-fit:cover; margin-inline-end:8px; border:1px solid var(--background-modifier-border); border-radius:3px; background:var(--background-primary); box-shadow:0 1px 2px var(--background-modifier-border); pointer-events:none; }
 body.gp-enabled .nav-file-title.catea-has-thumbnail { display:flex; align-items:center; min-height:30px; }
 
 /* Preserve Obsidian's native traffic-light reservation when the left dock closes.
@@ -731,3 +731,17 @@ body.gp-enabled.gp-tabler-on .nav-files-container .nav-folder-title[data-catea-f
 .catea-folder-picker__actions {display:flex;justify-content:flex-end;gap:8px;margin-top:24px;}
 .catea-folder-picker__actions button:first-child {margin-right:auto;}
 .catea-folder-picker__sr {position:absolute;width:1px;height:1px;overflow:hidden;opacity:0;white-space:nowrap;}
+
+/* Match the vault switcher and its native button to the surrounding sidebar. */
+body.gp-enabled.gp-enabled .workspace-sidedock-vault-profile {
+  --background-primary:var(--gp-shell-background);
+  --background-secondary:var(--gp-shell-background);
+  --background-secondary-alt:var(--gp-shell-background);
+  background:var(--gp-shell-background);border-top:0;box-shadow:none;
+}
+body.gp-enabled .workspace-sidedock-vault-profile .workspace-drawer-vault-switcher {
+  background:transparent;box-shadow:none;
+}
+body.gp-enabled .workspace-sidedock-vault-profile .workspace-drawer-vault-switcher:hover {
+  background:var(--background-modifier-hover);
+}

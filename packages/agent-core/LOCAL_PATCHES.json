@@ -3,8 +3,8 @@
   "files": {
     "loop/agent-loop.ts": {
       "upstreamSha256": "726a7058cf133edc0159979021a22b1e8afccbdbeba46942426fdb0497abece8",
-      "localSha256": "294525db8772404323224bca8ac82b03e08fb2ed8df0e8a0625d04b29cd1800a",
-      "reason": "Keep host approval callbacks serial and retain every completed result in a concurrent tool batch."
+      "localSha256": "e1fd4ccdd7948bec932a602965fcc283f66ce9ada12dc4e36905b8f008f9ad62",
+      "reason": "Keep host approval callbacks serial and retain every completed result in a concurrent tool batch. Allow one bounded model recovery with tool-specific guidance before stopping a repeated no-progress cycle."
     }
   }
 }

@@ -1143,59 +1143,30 @@ export function Panel({ plugin }: { plugin: Catea }) {
                             )}
                           />
                         )}
-                        {!!m.generatedImages?.length && (
-                          <div className="catea-generated-images">
-                            {m.generatedImages
-                              .filter((path) =>
-                                /^Attachments\/Catea\/[a-zA-Z0-9-]+\.(png|jpg|webp)$/.test(path),
-                              )
-                              .map((path) => (
-                                <button
-                                  type="button"
-                                  key={path}
-                                  onClick={() => openNote(path)}
-                                  title={path}
-                                >
-                                  <img
-                                    src={plugin.app.vault.adapter.getResourcePath(path)}
-                                    alt={t('生成的图片')}
-                                    loading="lazy"
-                                  />
-                                </button>
-                              ))}
-                          </div>
-                        )}
-                        {!!m.generatedMedia?.length && (
-                          <div className="catea-generated-media">
-                            {m.generatedMedia
-                              .filter((media) =>
-                                media.kind === 'video'
-                                  ? /^Attachments\/Catea\/[a-zA-Z0-9-]+\.mp4$/.test(media.path)
-                                  : media.kind === 'audio' &&
-                                    /^Attachments\/Catea\/[a-zA-Z0-9-]+\.mp3$/.test(media.path),
-                              )
-                              .map((media) => (
-                                <div key={media.path}>
-                                  {media.kind === 'video' ? (
-                                    <video
-                                      src={plugin.app.vault.adapter.getResourcePath(media.path)}
-                                      controls
-                                      preload="metadata"
-                                      aria-label={t('生成的视频')}
-                                    />
-                                  ) : (
-                                    <audio
-                                      src={plugin.app.vault.adapter.getResourcePath(media.path)}
-                                      controls
-                                      preload="metadata"
-                                      aria-label={t('生成的音频')}
-                                    />
-                                  )}
-                                  <button type="button" onClick={() => openNote(media.path)}>
-                                    {media.path.split('/').at(-1)}
-                                  </button>
-                                </div>
-                              ))}
+                        {!!(m.generatedImages?.length || m.generatedMedia?.length) && (
+                          <div className="catea-generated-files">
+                            <AttachmentCards
+                              items={[
+                                ...(m.generatedImages || []).filter((path) =>
+                                  /^Attachments\/Catea\/[a-zA-Z0-9-]+\.(png|jpg|webp)$/.test(path),
+                                ),
+                                ...(m.generatedMedia || [])
+                                  .filter((media) =>
+                                    media.kind === 'video'
+                                      ? /^Attachments\/Catea\/[a-zA-Z0-9-]+\.mp4$/.test(media.path)
+                                      : media.kind === 'audio' &&
+                                        /^Attachments\/Catea\/[a-zA-Z0-9-]+\.mp3$/.test(media.path),
+                                  )
+                                  .map((media) => media.path),
+                              ].map((path) => ({
+                                id: path,
+                                path,
+                                name: path.split('/').at(-1) || path,
+                                kind: 'file',
+                                detail: path.split('.').at(-1)!.toUpperCase(),
+                              }))}
+                              onOpen={openNote}
+                            />
                           </div>
                         )}
                         {showStandaloneFileReview(

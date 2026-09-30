@@ -14,17 +14,27 @@ export function AttachmentCards({
   mode = 'message',
   removeLabel = 'Remove attachment',
   onRemove,
+  onOpen,
 }: {
   items: AttachmentCardItem[]
   mode?: 'composer' | 'message'
   removeLabel?: string
   onRemove?: (id: string) => void
+  onOpen?: (path: string) => void
 }) {
   if (!items.length) return null
   return (
     <div className="anno-attachments" data-mode={mode}>
       {items.map((item) => (
         <div className="anno-attachment" data-kind={item.kind} key={item.id} title={item.path}>
+          {onOpen && (
+            <button
+              type="button"
+              className="anno-attachment__open"
+              aria-label={item.name}
+              onClick={() => onOpen(item.path)}
+            />
+          )}
           {onRemove && (
             <button
               type="button"

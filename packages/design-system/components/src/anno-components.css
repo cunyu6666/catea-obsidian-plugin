@@ -206,3 +206,6 @@ button.anno-thinking__heading:focus-visible { outline: 2px solid var(--foregroun
 @media (prefers-reduced-motion: reduce) {
   .anno-activities__spinner { animation: none; }
 }
+
+.anno-attachment .anno-attachment__open { position:absolute; inset:0; width:100%; height:100%; padding:0; border:0; border-radius:inherit; background:transparent; box-shadow:none; cursor:pointer; }
+.anno-attachment__open:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
