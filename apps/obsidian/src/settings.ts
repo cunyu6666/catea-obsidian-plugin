@@ -2,9 +2,17 @@
  * [WHO]: Provides CateaSettings
  * [FROM]: Depends on obsidian, ./main, ../../../packages/agent-core/src/types, ../../../packages/agent-core/src/byok, ../../../packages/agent-core/src/vendor-presets, ../../../packages/integrations/src/skills, ../../../packages/integrations/src/mcp-presets, ../../../packages/personas/src, ./vendor-icons
  * [TO]: Consumed by apps/obsidian/src/main.tsx
- * [HERE]: apps/obsidian/src/settings.ts - plugin settings tab for language, paper toggles, Agent persona and capabilities, BYOK models with a vendor-preset grid, one-click MCP presets and MCP servers; ModelModal validates through normalizeModel
+ * [HERE]: apps/obsidian/src/settings.ts - plugin settings tab for language, paper toggles, Agent persona and capabilities, subscription status, BYOK models with a vendor-preset grid, one-click MCP presets and MCP servers; ModelModal validates through normalizeModel
  */
-import { App, PluginSettingTab, Setting, Notice, Modal, type SettingDefinitionItem } from 'obsidian'
+import {
+  App,
+  PluginSettingTab,
+  Setting,
+  Notice,
+  Modal,
+  requestUrl,
+  type SettingDefinitionItem,
+} from 'obsidian'
 import type Catea from './main'
 import type { ModelConfig } from '../../../packages/agent-core/src/types'
 import {
@@ -39,6 +47,133 @@ interface SettingsRow {
 interface SettingsSection {
   heading?: string
   rows: SettingsRow[]
+}
+type BillingPlan = 'monthly'
+type BillingCurrency = 'USD' | 'CNY'
+interface BillingStatus {
+  pro: boolean
+  email?: string
+  license_key?: string
+  plan?: string
+  status?: string
+  current_period_end?: string | null
+  display_name?: string
+  quota?: {
+    monthly?: { used_percent?: number; remaining_percent?: number; reset_at?: string | null }
+    window?: { used_percent?: number; remaining_percent?: number; reset_at?: string | null }
+  }
+  features?: { hosted_model?: boolean; byok?: boolean }
+}
+interface BillingPreferences {
+  billingEmail?: string
+  billingStatus?: BillingStatus
+  billingLastChecked?: number
+}
+const BILLING_API = 'https://asgard-api-utj6.onrender.com/billing'
+
+function isEmail(value: string) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)
+}
+
+function record(value: unknown): Record<string, unknown> {
+  return value && typeof value === 'object' && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : {}
+}
+
+function quotaStatus(value: unknown) {
+  const body = record(value),
+    monthly = record(body.monthly),
+    window = record(body.window)
+  const monthlyReset =
+    typeof monthly.reset_at === 'string' || monthly.reset_at === null ? monthly.reset_at : undefined
+  const windowReset =
+    typeof window.reset_at === 'string' || window.reset_at === null ? window.reset_at : undefined
+  return {
+    monthly: {
+      used_percent: typeof monthly.used_percent === 'number' ? monthly.used_percent : undefined,
+      remaining_percent:
+        typeof monthly.remaining_percent === 'number' ? monthly.remaining_percent : undefined,
+      reset_at: monthlyReset,
+    },
+    window: {
+      used_percent: typeof window.used_percent === 'number' ? window.used_percent : undefined,
+      remaining_percent:
+        typeof window.remaining_percent === 'number' ? window.remaining_percent : undefined,
+      reset_at: windowReset,
+    },
+  }
+}
+
+function billingStatus(value: unknown): BillingStatus {
+  const body = record(value),
+    features = record(body.features)
+  return {
+    pro: body.pro === true || body.plan === 'pro_monthly',
+    email: typeof body.email === 'string' ? body.email : undefined,
+    license_key: typeof body.license_key === 'string' ? body.license_key : undefined,
+    plan: typeof body.plan === 'string' ? body.plan : undefined,
+    display_name: typeof body.display_name === 'string' ? body.display_name : undefined,
+    status: typeof body.status === 'string' ? body.status : undefined,
+    current_period_end:
+      typeof body.current_period_end === 'string' || body.current_period_end === null
+        ? body.current_period_end
+        : undefined,
+    quota: quotaStatus(body.quota),
+    features: {
+      hosted_model: features.hosted_model === true,
+      byok: features.byok !== false,
+    },
+  }
+}
+
+function checkoutUrl(value: unknown): string {
+  const body = record(value)
+  const url = body.checkout_url
+  if (typeof url === 'string') return url
+  throw new Error('支付链接创建失败，请稍后重试')
+}
+
+async function fetchBillingStatus(email: string): Promise<BillingStatus> {
+  const response = await requestUrl({
+    url: `${BILLING_API}/me?email=${encodeURIComponent(email)}`,
+    headers: { Accept: 'application/json' },
+    throw: false,
+  })
+  if (response.status !== 200) throw new Error('无法读取 Pro 状态，请稍后重试')
+  return billingStatus(JSON.parse(response.text) as unknown)
+}
+
+async function createCheckout(
+  email: string,
+  plan: BillingPlan,
+  currency: BillingCurrency,
+): Promise<string> {
+  const response = await requestUrl({
+    url: `${BILLING_API}/creem/checkout`,
+    method: 'POST',
+    headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, plan, currency }),
+    throw: false,
+  })
+  if (response.status !== 200) throw new Error('支付链接创建失败，请稍后重试')
+  return checkoutUrl(JSON.parse(response.text) as unknown)
+}
+
+function billingSummary(
+  tr: (text: string) => string,
+  status?: BillingStatus,
+  checkedAt?: number,
+) {
+  if (!status) return tr('Free · 自备 API Key 使用 BYOK。订阅 Pro 后可直接使用 Catea 托管额度。')
+  const tier = status.pro ? tr('Pro · 开箱即用') : tr('Free · 自备 API Key')
+  const monthly = status.quota?.monthly?.remaining_percent
+  const quota =
+    status.pro && typeof monthly === 'number'
+      ? `${tr('本月剩余额度')}：${Math.max(0, Math.round(monthly))}%`
+      : ''
+  const checked = checkedAt ? `${tr('上次检查')}：${new Date(checkedAt).toLocaleString()}` : ''
+  return [tier, status.status, quota, checked].filter(Boolean).join(' · ')
 }
 
 export class CateaSettings extends PluginSettingTab {
@@ -94,6 +229,7 @@ export class CateaSettings extends PluginSettingTab {
     const p = this.owner,
       tr = p.t,
       c = p.agentSettings
+    const billingPrefs = c as typeof c & BillingPreferences
     const appearance: SettingsRow[] = [
       {
         name: tr('语言 / Language'),
@@ -531,6 +667,73 @@ export class CateaSettings extends PluginSettingTab {
         ],
       })
     }
+    const billing: SettingsRow[] = [
+      {
+        name: tr('当前套餐'),
+        desc: billingSummary(tr, billingPrefs.billingStatus, billingPrefs.billingLastChecked),
+        render: (s) => {
+          s.addButton((button) =>
+            button.setButtonText(tr('查看套餐')).setCta().onClick(() =>
+              new SubscriptionModal(
+                p,
+                billingPrefs,
+                () => this.refresh(),
+                (status) => {
+                  billingPrefs.billingStatus = status
+                  billingPrefs.billingLastChecked = Date.now()
+                },
+              ).open(),
+            ),
+          )
+        },
+      },
+      {
+        name: tr('订阅邮箱'),
+        desc: tr('用于绑定付款和同步套餐状态；Free 用户不需要注册或登录。'),
+        render: (s) => {
+          s.addText((input) =>
+            input
+              .setPlaceholder('you@example.com')
+              .setValue(billingPrefs.billingEmail || '')
+              .onChange(async (value) => {
+                billingPrefs.billingEmail = value.trim()
+                await p.saveAgentSettings()
+              }),
+          )
+        },
+      },
+      {
+        name: tr('同步套餐状态'),
+        desc: tr('支付完成后回到这里刷新状态。订阅信息由 Asgard 管理。'),
+        render: (s) => {
+          s.addButton((button) =>
+            button.setButtonText(tr('刷新套餐状态')).onClick(async () => {
+              const email = billingPrefs.billingEmail || ''
+              if (!isEmail(email)) {
+                new Notice(tr('请先填写有效邮箱'))
+                return
+              }
+              button.setDisabled(true)
+              button.setButtonText(tr('正在检查…'))
+              try {
+                billingPrefs.billingStatus = await fetchBillingStatus(email)
+                billingPrefs.billingLastChecked = Date.now()
+                await p.saveAgentSettings()
+                new Notice(
+                  billingPrefs.billingStatus.pro ? tr('已切换到 Pro 套餐') : tr('当前为 Free 套餐'),
+                )
+                this.refresh()
+              } catch (error) {
+                new Notice(tr(error instanceof Error ? error.message : '无法读取 Pro 状态，请稍后重试'))
+              } finally {
+                button.setDisabled(false)
+                button.setButtonText(tr('刷新套餐状态'))
+              }
+            }),
+          )
+        },
+      },
+    ]
     const skills: SettingsRow[] = [
       {
         name: tr('Obsidian 操作 · 内置'),
@@ -766,6 +969,7 @@ export class CateaSettings extends PluginSettingTab {
       { heading: tr('更新'), rows: updates },
       { heading: tr('外观'), rows: appearance },
       { heading: 'Agent', rows: agent },
+      { heading: tr('套餐'), rows: billing },
       { heading: tr('BYOK 模型'), rows: models },
       { heading: tr('图像生成'), rows: imageGeneration },
       ...mediaSections,
@@ -790,6 +994,137 @@ async function storeModel(owner: Catea, model: ModelConfig, select = false) {
     c.modelId = previousId
     owner.emit()
     throw error
+  }
+}
+
+class SubscriptionModal extends Modal {
+  private currency: BillingCurrency = 'USD'
+  constructor(
+    private owner: Catea,
+    private billing: BillingPreferences,
+    private saved: () => void,
+    private updateStatus: (status: BillingStatus) => void,
+  ) {
+    super(owner.app)
+  }
+  onOpen() {
+    const tr = this.owner.t,
+      el = this.contentEl
+    this.titleEl.setText(tr('选择 Catea 套餐'))
+    el.addClass('catea-plan-modal')
+    el.createEl('p', {
+      cls: 'catea-plan-modal__lede',
+      text: tr('Free 自备 API Key；Pro 订阅后无需 API Key，即可使用 Catea 托管 AI 额度。'),
+    })
+    new Setting(el)
+      .setName(tr('订阅邮箱'))
+      .setDesc(tr('用于绑定付款和同步套餐状态；不会创建 Catea 账号。'))
+      .addText((input) =>
+        input
+          .setPlaceholder('you@example.com')
+          .setValue(this.billing.billingEmail || '')
+          .onChange((value) => {
+            this.billing.billingEmail = value.trim()
+          }),
+      )
+    new Setting(el).setName(tr('支付币种')).addDropdown((dropdown) =>
+      dropdown
+        .addOption('USD', 'USD')
+        .addOption('CNY', 'CNY')
+        .setValue(this.currency)
+        .onChange((value) => {
+          this.currency = value === 'CNY' ? 'CNY' : 'USD'
+        }),
+    )
+    const grid = el.createDiv({ cls: 'catea-plan-grid' })
+    this.card(grid, {
+      title: 'Free',
+      eyebrow: tr('自备 API Key'),
+      price: '$0',
+      subtitle: tr('适合已有模型服务的用户。'),
+      features: [
+        tr('使用你自己的 API Key'),
+        tr('模型和密钥仍保存在本机'),
+        tr('基础 Agent 和笔记工作流'),
+      ],
+      action: tr('当前默认套餐'),
+      disabled: true,
+    })
+    this.card(grid, {
+      title: 'Pro',
+      eyebrow: tr('限时折扣'),
+      price: tr('月付订阅'),
+      subtitle: tr('开箱即用，无需配置 API Key。'),
+      features: [
+        tr('包含 Catea 托管 AI 额度'),
+        tr('更多用量，适合长文档和 Agent 工作流'),
+        tr('额度自动恢复，月度周期重置'),
+        tr('高级功能优先开放：连接器、自定义 Persona、媒体生成'),
+      ],
+      action: tr('订阅 Pro'),
+      cta: true,
+      onClick: (button) => void this.subscribe(button),
+    })
+  }
+  private card(
+    parent: HTMLElement,
+    options: {
+      title: string
+      eyebrow: string
+      price: string
+      subtitle: string
+      features: string[]
+      action: string
+      cta?: boolean
+      disabled?: boolean
+      onClick?: (button: import('obsidian').ButtonComponent) => void
+    },
+  ) {
+    const tr = this.owner.t,
+      card = parent.createDiv({ cls: 'catea-plan-card' })
+    if (options.cta) card.addClass('is-pro')
+    card.createDiv({ cls: 'catea-plan-card__eyebrow', text: options.eyebrow })
+    card.createEl('h3', { text: options.title })
+    card.createDiv({ cls: 'catea-plan-card__price', text: options.price })
+    card.createEl('p', { text: options.subtitle })
+    const list = card.createEl('ul')
+    for (const feature of options.features) list.createEl('li', { text: feature })
+    new Setting(card).addButton((button) => {
+      button.setButtonText(options.action)
+      if (options.cta) button.setCta()
+      if (options.disabled) button.setDisabled(true)
+      if (options.onClick) button.onClick(() => options.onClick?.(button))
+      if (!options.cta && !options.disabled) button.onClick(() => new Notice(tr('当前默认套餐')))
+    })
+  }
+  private async subscribe(button: import('obsidian').ButtonComponent) {
+    const tr = this.owner.t,
+      email = this.billing.billingEmail || ''
+    if (!isEmail(email)) {
+      new Notice(tr('请先填写有效邮箱'))
+      return
+    }
+    button.setDisabled(true)
+    try {
+      await this.owner.saveAgentSettings()
+      const url = await createCheckout(email, 'monthly', this.currency)
+      window.open(url, '_blank', 'noopener,noreferrer')
+      new Notice(tr('支付页已打开，完成后回到这里刷新套餐状态'))
+      try {
+        this.updateStatus(await fetchBillingStatus(email))
+        await this.owner.saveAgentSettings()
+        this.saved()
+      } catch {
+        // Checkout completion is asynchronous; status refresh can be retried from Settings.
+      }
+    } catch (error) {
+      new Notice(tr(error instanceof Error ? error.message : '支付链接创建失败，请稍后重试'))
+    } finally {
+      button.setDisabled(false)
+    }
+  }
+  onClose() {
+    this.contentEl.empty()
   }
 }
 
