@@ -1,12 +1,13 @@
 // Reproduce the scorecard's missing-Node-types failure without changing node_modules.
 // Keep all five unsafe-value rules enabled, including for vendored runtime source.
+import './verify-node-contracts.mjs'
 import assert from 'node:assert/strict'
 import { readFile, readdir } from 'node:fs/promises'
 import { fileURLToPath } from 'node:url'
 import { dirname, resolve, relative } from 'node:path'
 import ts from 'typescript'
 import { ESLint } from 'eslint'
-import tseslint from 'typescript-eslint'
+import obsidianmd from 'eslint-plugin-obsidianmd'
 import postcss from 'postcss'
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..')
@@ -21,26 +22,6 @@ async function files(directory) {
     )
   ).flat()
 }
-for (const [snapshot, installed] of [
-  ['node', '@types/node'],
-  ['undici-types', 'undici-types'],
-]) {
-  const target = resolve(root, 'typings', snapshot)
-  const source = resolve(root, 'node_modules', installed)
-  const paths = (await files(source)).map((path) => relative(source, path)).sort()
-  assert.deepEqual(
-    (await files(target)).map((path) => relative(target, path)).sort(),
-    paths,
-    `typings/${snapshot} must contain the complete installed declaration package`,
-  )
-  for (const path of paths)
-    assert.deepEqual(
-      await readFile(resolve(target, path)),
-      await readFile(resolve(source, path)),
-      `typings/${snapshot}/${path} must match the lockfile-installed package byte-for-byte`,
-    )
-}
-
 const config = ts.readConfigFile(resolve(root, 'tsconfig.json'), ts.sys.readFile)
 assert.equal(config.error, undefined)
 const parsed = ts.parseJsonConfigFileContent(config.config, ts.sys, root)
@@ -59,12 +40,16 @@ for (const method of ['fileExists', 'readFile', 'directoryExists']) {
         : false
       : original(path, ...args)
 }
-const program = ts.createProgram(parsed.fileNames, parsed.options, host)
+const program = ts.createProgram(
+  parsed.fileNames.filter((file) => !file.includes('/__tests__/')),
+  parsed.options,
+  host,
+)
 assert.ok(
   program
     .getSourceFiles()
-    .some((file) => file.fileName === resolve(root, 'typings/node/index.d.ts')),
-  'The dependency-poor scan must load checked-in official Node declarations',
+    .some((file) => file.fileName === resolve(root, 'typings/node-runtime.d.ts')),
+  'The dependency-poor scan must load checked-in Node runtime contracts',
 )
 assert.ok(
   !program
@@ -82,29 +67,24 @@ assert.equal(
     getNewLine: () => '\n',
   }),
 )
-const rules = Object.fromEntries(
-  ['call', 'member-access', 'assignment', 'argument', 'return'].map((name) => [
-    `@typescript-eslint/no-unsafe-${name}`,
-    'error',
-  ]),
-)
 const eslint = new ESLint({
   cwd: root,
   overrideConfigFile: true,
   overrideConfig: [
+    ...obsidianmd.configs.recommended,
     {
       files: ['**/*.{ts,tsx}'],
-      linterOptions: { reportUnusedDisableDirectives: 'off' },
-      languageOptions: { parser: tseslint.parser, parserOptions: { programs: [program] } },
-      plugins: { '@typescript-eslint': tseslint.plugin },
-      rules,
+      languageOptions: { parserOptions: { programs: [program] } },
     },
   ],
 })
 const sourceFiles = parsed.fileNames.filter(
   (file) => /\.(ts|tsx)$/.test(file) && !file.endsWith('.d.ts') && !/\/__tests__\//.test(file),
 )
-const results = await eslint.lintFiles(sourceFiles)
+const results = await eslint.lintFiles([
+  ...sourceFiles,
+  ...(await files(resolve(root, 'typings'))).filter((file) => file.endsWith('.d.ts')),
+])
 const findings = results.flatMap((result) =>
   result.messages.map(
     (message) =>
@@ -128,5 +108,5 @@ assert.deepEqual(
   'Compile-only Tailwind directives must not leak into browser CSS sources',
 )
 console.log(
-  `marketplace regression: ${sourceFiles.length} source files, 0 unsafe-type findings without installed Node types; declaration provenance and CSS checks passed`,
+  `marketplace regression: ${sourceFiles.length} source files, 0 unsafe-type findings without installed Node types; Node runtime contracts and CSS checks passed`,
 )

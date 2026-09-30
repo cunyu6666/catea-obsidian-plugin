@@ -1,5 +1,51 @@
 # Marketplace review follow-up
 
+## Release 0.3.20: official source findings cleared
+
+The public listing now reports **0.3.20**, **Health: Excellent** and
+**Review: Satisfactory**. The source findings and errors are zero. Three warnings
+remain for environment access, direct filesystem access and shell execution;
+three further capability notices describe vault enumeration, clipboard access
+and dynamic validation code. These describe supported functionality, not the
+resolved type/declaration errors. Seven additional informational notices remain.
+
+The official build check reproduced `main.js` byte-for-byte. Both built assets
+have verified GitHub attestations, and no vulnerable dependencies were found.
+The exact returned findings are in
+[the captured inventory](./reviews/2026-09-30-scorecard-0.3.20.json).
+
+Before publishing, the official branch preview completed with no source findings.
+Local and release gates passed: 378 tests, 40 behavior regressions, formatting,
+typecheck, full official lint, dependency-poor analysis and build. The release
+commit is `210d7e1baf5041719240475d0de39b0e52bd9597`; runtime behavior is unchanged.
+
+The following sections preserve the failed attempts and their causes.
+
+## Release 0.3.19 failed: bundled declarations were linted
+
+The signed-in management page reports commit `001550741e6088e5f0c788af70bf107d1c79666c`
+as **Failed**. All 434 original unsafe-type reports disappeared. However, the
+scanner also linted the imported official Node/Undici declaration packages,
+including six errors for undescribed lint directives and numerous declaration
+style warnings. At the earlier check the public page still displayed the preceding scan;
+it later displayed the failed 0.3.19 report as well. The public page alone was
+not sufficient evidence of the latest review status while a new scan was pending.
+
+The follow-up replaces the complete declaration packages with a small, authored
+Node runtime contract. Every declared module value and global is structurally
+checked against the lockfile-installed official types using isolated module
+names. This prevents the fallback declarations from validating themselves.
+The dependency-poor regression now runs the full official recommended rules,
+including on the declaration files. No runtime functionality changes.
+
+The signed-in branch preview for `013846d9e6de95a0c7d9b4d267c317044f0bb957`
+completed on September 30, 2026 with status **Completed**. Its report contains
+only "Pass: No vulnerable dependencies found" and no source findings. This
+preview does not establish the release-bundle capability or build results;
+those must be checked again after publishing.
+
+The following sections preserve the earlier investigation and its limitations.
+
 ## Release 0.3.18 online result: type fix did not take effect
 
 The online scan now points to `9e0301c04dc10a63ce62f90d888a94c6f4d42338`

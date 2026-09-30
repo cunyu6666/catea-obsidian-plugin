@@ -1,6 +1,6 @@
 {
   "name": "catea-source",
-  "version": "0.3.18",
+  "version": "0.3.20",
   "private": true,
   "description": "Source workspace for the Catea Obsidian agent plugin",
   "license": "GPL-3.0-only",

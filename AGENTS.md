@@ -107,7 +107,7 @@ docs/specs/                  # Approved design specifications
 docs/skills/                 # Skill templates users copy into <vault>/.catea/skills/
 .github/                     # CI, the release workflow, and issue and PR templates
 scripts/                     # Build tooling, the scoped typecheck gate, and the release script
-typings/                     # Official Node/Undici declarations for source-only marketplace analysis
+typings/                     # Minimal verified Node API contracts for source-only marketplace analysis
 tests/                       # DIP harness: contract parser, verify gate, governance gate
 ```
 

@@ -34,6 +34,28 @@ release tag is that same number with no `v` prefix.
   same vendor prefills the form, and endpoint derivation now respects explicit
   `/v2`–`/v4` API versions instead of inserting a second `/v1`.
 
+## 0.3.20
+
+### Fixed
+
+- Replace the full Node/Undici declaration snapshots that caused the 0.3.19
+  marketplace review to fail with minimal, structurally verified Node runtime
+  contracts. No runtime features or permissions change.
+- Apply the complete official source rules to declaration files as well as runtime
+  source in the dependency-poor regression, and check the contract independently
+  against the lockfile-installed official Node types.
+
+## 0.3.19
+
+### Fixed
+
+- Load the checked-in Node declarations through an explicit type-only source
+  import, rather than relying solely on automatic type-root discovery. The
+  marketplace regression now also disables automatic type inclusion and replaces
+  custom type roots to exercise this stricter environment.
+- Record the actual 0.3.18 marketplace result: 440 findings remained, including
+  all 434 type diagnostics. Only the two CSS findings cleared in that release.
+
 ## 0.3.18
 
 ### Fixed
