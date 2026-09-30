@@ -1,5 +1,5 @@
 /**
- * [WHO]: Provides CateaSettings
+ * [WHO]: Provides CateaSettings, syncSavedBillingStatus
  * [FROM]: Depends on obsidian, ./main, ../../../packages/agent-core/src/types, ../../../packages/agent-core/src/byok, ../../../packages/agent-core/src/vendor-presets, ../../../packages/integrations/src/skills, ../../../packages/integrations/src/mcp-presets, ../../../packages/personas/src, ./vendor-icons
  * [TO]: Consumed by apps/obsidian/src/main.tsx
  * [HERE]: apps/obsidian/src/settings.ts - plugin settings tab for language, paper toggles, Agent persona and capabilities, subscription status, BYOK models with a vendor-preset grid, one-click MCP presets and MCP servers; ModelModal validates through normalizeModel
@@ -212,7 +212,7 @@ async function syncHostedBillingModel(owner: Catea, status?: BillingStatus) {
       owner,
       {
         id: HOSTED_MODEL_ID,
-        name: 'Catea Pro Hosted',
+        name: 'Catea',
         protocol: 'openai',
         baseUrl: `${BILLING_API}/hosted/v1`,
         apiKey: license,
@@ -243,6 +243,18 @@ async function syncHostedBillingModel(owner: Catea, status?: BillingStatus) {
     owner.emit()
     throw error
   }
+}
+
+export async function syncSavedBillingStatus(owner: Catea) {
+  const prefs = owner.agentSettings as typeof owner.agentSettings & BillingPreferences,
+    email = prefs.billingEmail || prefs.billingStatus?.email || ''
+  if (prefs.billingStatus?.pro) await syncHostedBillingModel(owner, prefs.billingStatus)
+  if (!isEmail(email)) return
+  const status = await fetchBillingStatus(email)
+  prefs.billingStatus = status
+  prefs.billingLastChecked = Date.now()
+  await syncHostedBillingModel(owner, status)
+  await owner.saveAgentSettings()
 }
 
 export class CateaSettings extends PluginSettingTab {

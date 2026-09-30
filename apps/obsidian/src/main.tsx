@@ -46,7 +46,7 @@ import { Panel } from './panel'
 import { ObsidianTools, obsidianTools } from './obsidian-tools'
 import obsidianSkill from './skills/obsidian.md'
 import { ChangePreview } from 'catea-components'
-import { CateaSettings } from './settings'
+import { CateaSettings, syncSavedBillingStatus } from './settings'
 import { createAgentFactory } from './composition'
 import { mkdir } from 'node:fs/promises'
 const VIEW = 'catea-agent'
@@ -230,6 +230,11 @@ export default class Catea extends Base {
       }
     }
     this.refreshPaperLanguage()
+    try {
+      await syncSavedBillingStatus(this)
+    } catch {
+      new Notice(this.t('无法读取 Pro 状态，请稍后重试'))
+    }
     await this.addMiniMaxModels()
     this.installRibbonHover()
     this.installScrollbarVisibility()
