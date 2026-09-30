@@ -74,7 +74,11 @@ interface BillingPreferences {
   billingStatus?: BillingStatus
   billingLastChecked?: number
 }
-const BILLING_API = 'https://api.pencil.chat/billing'
+const BILLING_APIS = [
+  'https://api.pencil.chat/billing',
+  'https://asgard-api-utj6.onrender.com/billing',
+] as const
+const BILLING_API = BILLING_APIS[0]
 const HOSTED_MODEL_ID = 'catea-pro-hosted'
 const PRO_PRICES: Record<BillingCurrency, PlanPrice> = {
   USD: { original: '$10', sale: '$3', suffix: '/ month' },
@@ -144,14 +148,39 @@ function checkoutUrl(value: unknown): string {
   throw new Error('支付链接创建失败，请稍后重试')
 }
 
+async function billingJson(
+  path: string,
+  options: { method?: string; body?: string; error: string },
+): Promise<unknown> {
+  let lastError: unknown
+  for (const base of BILLING_APIS) {
+    const response = await requestUrl({
+      url: `${base}${path}`,
+      method: options.method,
+      headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
+      body: options.body,
+      throw: false,
+    })
+    if (response.status !== 200) {
+      lastError = new Error(`${options.error} (${response.status})`)
+      continue
+    }
+    try {
+      return JSON.parse(response.text) as unknown
+    } catch (error) {
+      lastError = error
+    }
+  }
+  if (lastError instanceof Error) throw new Error(options.error)
+  throw new Error(options.error)
+}
+
 async function fetchBillingStatus(email: string): Promise<BillingStatus> {
-  const response = await requestUrl({
-    url: `${BILLING_API}/me?email=${encodeURIComponent(email)}`,
-    headers: { Accept: 'application/json' },
-    throw: false,
-  })
-  if (response.status !== 200) throw new Error('无法读取 Pro 状态，请稍后重试')
-  return billingStatus(JSON.parse(response.text) as unknown)
+  return billingStatus(
+    await billingJson(`/me?email=${encodeURIComponent(email)}`, {
+      error: '无法读取 Pro 状态，请稍后重试',
+    }),
+  )
 }
 
 async function createCheckout(
@@ -159,15 +188,13 @@ async function createCheckout(
   plan: BillingPlan,
   currency: BillingCurrency,
 ): Promise<string> {
-  const response = await requestUrl({
-    url: `${BILLING_API}/creem/checkout`,
-    method: 'POST',
-    headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email, plan, currency }),
-    throw: false,
-  })
-  if (response.status !== 200) throw new Error('支付链接创建失败，请稍后重试')
-  return checkoutUrl(JSON.parse(response.text) as unknown)
+  return checkoutUrl(
+    await billingJson('/creem/checkout', {
+      method: 'POST',
+      body: JSON.stringify({ email, plan, currency }),
+      error: '支付链接创建失败，请稍后重试',
+    }),
+  )
 }
 
 function billingSummary(
