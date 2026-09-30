@@ -560,7 +560,7 @@ export class CateaSettings extends PluginSettingTab {
       },
     ]
     models.push(
-      ...c.models.map((model) => ({
+      ...c.models.filter((model) => model.id !== HOSTED_MODEL_ID).map((model) => ({
         name: model.name,
         desc: `${matchVendorPreset(model)?.label ?? (isOpenRouterModel(model) ? 'OpenRouter' : model.protocol === 'openai' ? tr('OpenAI 兼容') : tr('Anthropic 兼容'))} · ${model.model} · ${model.baseUrl}${model.apiKey ? '' : tr(' · 请补充 API Key')}`,
         render: (s: Setting) => {
