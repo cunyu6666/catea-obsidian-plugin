@@ -74,7 +74,7 @@ interface BillingPreferences {
   billingStatus?: BillingStatus
   billingLastChecked?: number
 }
-const BILLING_API = 'https://asgard-api-utj6.onrender.com/billing'
+const BILLING_API = 'https://api.pencil.chat/billing'
 const PRO_PRICES: Record<BillingCurrency, PlanPrice> = {
   USD: { original: '$10', sale: '$3', suffix: '/ month' },
   CNY: { original: '¥60', sale: '¥18', suffix: '/ 月' },
