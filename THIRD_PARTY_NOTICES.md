@@ -25,4 +25,3 @@ Its license and those of its bundled dependencies (`@uidotdev/usehooks`,
 as `REACT-GIT-LOG-LICENSE.txt` in the built distribution.
 The component is styled for Catea; repository access is implemented separately
 using bounded, local, read-only Git commands.
-

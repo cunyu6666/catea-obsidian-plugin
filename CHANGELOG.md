@@ -3,6 +3,17 @@
 Notable changes per release. The version is the one in `manifest.json`; the GitHub
 release tag is that same number with no `v` prefix.
 
+## 0.3.20
+
+### Fixed
+
+- Replace the full Node/Undici declaration snapshots that caused the 0.3.19
+  marketplace review to fail with minimal, structurally verified Node runtime
+  contracts. No runtime features or permissions change.
+- Apply the complete official source rules to declaration files as well as runtime
+  source in the dependency-poor regression, and check the contract independently
+  against the lockfile-installed official Node types.
+
 ## 0.3.19
 
 ### Fixed
