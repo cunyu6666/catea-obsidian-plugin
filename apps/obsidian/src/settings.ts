@@ -75,6 +75,7 @@ interface BillingPreferences {
   billingLastChecked?: number
 }
 const BILLING_API = 'https://api.pencil.chat/billing'
+const HOSTED_MODEL_ID = 'catea-pro-hosted'
 const PRO_PRICES: Record<BillingCurrency, PlanPrice> = {
   USD: { original: '$10', sale: '$3', suffix: '/ month' },
   CNY: { original: '¥60', sale: '¥18', suffix: '/ 月' },
@@ -186,7 +187,8 @@ function billingSummary(
 }
 
 function defaultCurrency(language?: string): BillingCurrency {
-  return language === 'en' ? 'USD' : 'CNY'
+  void language
+  return 'USD'
 }
 
 function renderPrice(parent: HTMLElement, currency: BillingCurrency) {
@@ -200,6 +202,47 @@ function renderPrice(parent: HTMLElement, currency: BillingCurrency) {
 function priceText(currency: BillingCurrency) {
   const price = PRO_PRICES[currency]
   return `${price.sale}${price.suffix}`
+}
+
+async function syncHostedBillingModel(owner: Catea, status?: BillingStatus) {
+  const c = owner.agentSettings,
+    license = status?.license_key?.trim()
+  if (status?.pro && license) {
+    await storeModel(
+      owner,
+      {
+        id: HOSTED_MODEL_ID,
+        name: 'Catea Pro Hosted',
+        protocol: 'openai',
+        baseUrl: `${BILLING_API}/hosted/v1`,
+        apiKey: license,
+        model: 'catea/pro',
+        contextWindow: 1000000,
+        capabilities: {
+          tools: true,
+          streaming: true,
+          parallelTools: true,
+          structuredOutput: true,
+        },
+      },
+      true,
+    )
+    return
+  }
+  if (!c.models.some((model) => model.id === HOSTED_MODEL_ID)) return
+  const previous = c.models,
+    previousId = c.modelId
+  c.models = c.models.filter((model) => model.id !== HOSTED_MODEL_ID)
+  c.modelId = selectedModel(c.models, c.modelId)?.id || ''
+  try {
+    await owner.saveModels(HOSTED_MODEL_ID)
+    if (!owner.globalByok) owner.saveSecret(HOSTED_MODEL_ID, '')
+  } catch (error) {
+    c.models = previous
+    c.modelId = previousId
+    owner.emit()
+    throw error
+  }
 }
 
 export class CateaSettings extends PluginSettingTab {
@@ -704,9 +747,10 @@ export class CateaSettings extends PluginSettingTab {
                 p,
                 billingPrefs,
                 () => this.refresh(),
-                (status) => {
+                async (status) => {
                   billingPrefs.billingStatus = status
                   billingPrefs.billingLastChecked = Date.now()
+                  await syncHostedBillingModel(p, status)
                 },
               ).open(),
             ),
@@ -717,9 +761,10 @@ export class CateaSettings extends PluginSettingTab {
                 p,
                 billingPrefs,
                 () => this.refresh(),
-                (status) => {
+                async (status) => {
                   billingPrefs.billingStatus = status
                   billingPrefs.billingLastChecked = Date.now()
+                  await syncHostedBillingModel(p, status)
                 },
               ).open(),
             ),
@@ -742,6 +787,7 @@ export class CateaSettings extends PluginSettingTab {
               try {
                 billingPrefs.billingStatus = await fetchBillingStatus(email)
                 billingPrefs.billingLastChecked = Date.now()
+                await syncHostedBillingModel(p, billingPrefs.billingStatus)
                 await p.saveAgentSettings()
                 new Notice(
                   billingPrefs.billingStatus.pro ? tr('已切换到 Pro 套餐') : tr('当前为 Free 套餐'),
@@ -1027,7 +1073,7 @@ class SubscriptionModal extends Modal {
     private owner: Catea,
     private billing: BillingPreferences,
     private saved: () => void,
-    private updateStatus: (status: BillingStatus) => void,
+    private updateStatus: (status: BillingStatus) => void | Promise<void>,
   ) {
     super(owner.app)
     this.currency = defaultCurrency(owner.agentSettings.language)
@@ -1051,17 +1097,23 @@ class SubscriptionModal extends Modal {
             this.billing.billingEmail = value.trim()
           }),
       )
-    new Setting(el).setName(tr('支付币种')).addDropdown((dropdown) =>
+    new Setting(el).setName(tr('支付币种')).addDropdown((dropdown) => {
       dropdown
         .addOption('USD', 'USD')
-        .addOption('CNY', 'CNY')
+        .addOption('CNY', `${tr('人民币支付暂不可用')} · CNY`)
         .setValue(this.currency)
         .onChange((value) => {
-          this.currency = value === 'CNY' ? 'CNY' : 'USD'
+          this.currency = 'USD'
           this.contentEl.empty()
           this.onOpen()
-        }),
-    )
+        })
+      const cnyOption = dropdown.selectEl.querySelector<HTMLOptionElement>('option[value="CNY"]')
+      if (cnyOption) cnyOption.disabled = true
+    })
+    const cnyNote = el.createDiv({ cls: 'catea-currency-note' })
+    cnyNote.createSpan({ text: tr('人民币支付暂不可用') })
+    cnyNote.createSpan({ text: ' · ' })
+    renderPrice(cnyNote, 'CNY')
     const grid = el.createDiv({ cls: 'catea-plan-grid' })
     this.card(grid, {
       title: 'Free',
@@ -1138,7 +1190,7 @@ class SubscriptionModal extends Modal {
       window.open(url, '_blank', 'noopener,noreferrer')
       new Notice(tr('支付页已打开，完成后回到这里刷新套餐状态'))
       try {
-        this.updateStatus(await fetchBillingStatus(email))
+        await this.updateStatus(await fetchBillingStatus(email))
         await this.owner.saveAgentSettings()
         this.saved()
       } catch {
@@ -1161,7 +1213,7 @@ class QuickSubscribeModal extends Modal {
     private owner: Catea,
     private billing: BillingPreferences,
     private saved: () => void,
-    private updateStatus: (status: BillingStatus) => void,
+    private updateStatus: (status: BillingStatus) => void | Promise<void>,
   ) {
     super(owner.app)
     this.currency = defaultCurrency(owner.agentSettings.language)
@@ -1208,7 +1260,7 @@ class QuickSubscribeModal extends Modal {
       window.open(url, '_blank', 'noopener,noreferrer')
       new Notice(tr('支付页已打开，完成后回到这里刷新套餐状态'))
       try {
-        this.updateStatus(await fetchBillingStatus(email))
+        await this.updateStatus(await fetchBillingStatus(email))
         await this.owner.saveAgentSettings()
         this.saved()
       } catch {
