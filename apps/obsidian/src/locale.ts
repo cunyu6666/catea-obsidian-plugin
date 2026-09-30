@@ -434,10 +434,15 @@ export function humanizeError(raw: string, language: Language = 'zh') {
       'The model service is busy or rate limited. Try again later or switch models.',
     )
   else if (/模型请求失败（(?:401|403)）|\b(?:HTTP\s*)?(?:401|403)\b/.test(message))
-    friendly = pick(
-      '模型服务拒绝了请求。请检查 API Key、余额和模型权限。',
-      'The model service rejected the request. Check the API key, balance, and model access.',
-    )
+    friendly = /api\.pencil\.chat|asgard-api-utj6\.onrender\.com/.test(message)
+      ? pick(
+          'Catea Pro 授权未通过。请到设置 → 套餐刷新状态后重试。',
+          'Catea Pro authorization failed. Refresh plan status in Settings → Plan, then retry.',
+        )
+      : pick(
+          '模型服务拒绝了请求。请检查 API Key、余额和模型权限。',
+          'The model service rejected the request. Check the API key, balance, and model access.',
+        )
   else if (/模型请求失败（(?:400|422)）|\b(?:HTTP\s*)?(?:400|422)\b/.test(message))
     friendly = pick(
       '模型服务不接受这次请求。请检查所选模型是否支持当前工具和附件，或切换模型。',

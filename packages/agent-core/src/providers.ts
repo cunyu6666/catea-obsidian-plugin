@@ -84,7 +84,7 @@ export class ModelServiceError extends Error {
   readonly reason: 'context' | 'tools' | 'other'
   readonly status?: number
 
-  constructor(detail: string, status?: number) {
+  constructor(detail: string, status?: number, host?: string) {
     const reason =
       /context[_ ]length|too many tokens|maximum context|prompt is too long|input too long/i.test(
         detail,
@@ -96,7 +96,7 @@ export class ModelServiceError extends Error {
     super(
       status === undefined
         ? t('modelStreamFailed')
-        : t('modelRequestFailed', { status, detail: t('modelErrorDetailHidden') }),
+        : `${t('modelRequestFailed', { status, detail: t('modelErrorDetailHidden') })}${host ? ` [${host}]` : ''}`,
     )
     this.name = 'ModelServiceError'
     this.reason = reason
@@ -298,7 +298,13 @@ async function responseError(response: Response): Promise<Error> {
   // Provider error bodies can echo request fields, including the model ID or prompt.
   // Classify the detail for retries, but never put the raw body in chat or storage.
   const body = (await response.text()).slice(0, 2_000)
-  return new ModelServiceError(body, response.status)
+  let host = ''
+  try {
+    host = new URL(response.url).host
+  } catch {
+    host = ''
+  }
+  return new ModelServiceError(body, response.status, host)
 }
 
 export async function streamModel(
