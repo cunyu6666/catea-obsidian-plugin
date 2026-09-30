@@ -606,7 +606,7 @@ Object.assign(english, {
   套餐: 'Plan',
   当前套餐: 'Current plan',
   订阅套餐: 'Subscribe',
-  '一键订阅 Pro': 'Quick subscribe to Pro',
+  一键订阅: 'Quick subscribe',
   '订阅 Catea 套餐': 'Subscribe to a Catea plan',
   'Free 自备 API Key；Pro 订阅后无需 API Key，即可使用 Catea 托管 AI 额度。':
     'Free uses your own API key. Pro includes Catea-hosted AI usage with no API key required.',

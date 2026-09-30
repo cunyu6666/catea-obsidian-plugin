@@ -712,7 +712,7 @@ export class CateaSettings extends PluginSettingTab {
             ),
           )
           s.addButton((button) =>
-            button.setButtonText(tr('一键订阅 Pro')).onClick(() =>
+            button.setButtonText(tr('一键订阅')).onClick(() =>
               new QuickSubscribeModal(
                 p,
                 billingPrefs,
@@ -1169,7 +1169,7 @@ class QuickSubscribeModal extends Modal {
   onOpen() {
     const tr = this.owner.t,
       el = this.contentEl
-    this.titleEl.setText(tr('一键订阅 Pro'))
+    this.titleEl.setText(tr('一键订阅'))
     el.addClass('catea-plan-modal')
     el.createEl('p', {
       cls: 'catea-plan-modal__lede',
