@@ -20,15 +20,8 @@
       ],
       "@catui/agent-core": [
         "./packages/agent-core/upstream/loop/types.ts"
-      ],
-      "undici-types": [
-        "./typings/undici-types"
       ]
-    },
-    "typeRoots": [
-      "./typings",
-      "./node_modules/@types"
-    ]
+    }
   },
   "include": [
     "apps",

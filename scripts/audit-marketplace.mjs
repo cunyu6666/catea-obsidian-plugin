@@ -18,10 +18,11 @@ const eslint = new ESLint({
         parserOptions: { project: './tsconfig.marketplace.json', tsconfigRootDir: root },
       },
     },
-    { ignores: ['**/__tests__/**', '**/*.d.ts'] },
+    { ignores: ['**/__tests__/**'] },
   ],
 })
 const results = await eslint.lintFiles([
+  'typings/**/*.d.ts',
   'apps/*/src/**/*.{ts,tsx}',
   'packages/*/src/**/*.{ts,tsx}',
   'packages/*/upstream/**/*.{ts,tsx}',

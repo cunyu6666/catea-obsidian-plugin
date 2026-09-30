@@ -1,6 +1,4 @@
-/// <reference path="./node/index.d.ts" />
-
-// Load the official Node ambient declarations through the source import graph.
-// A source-only scanner may replace tsconfig's automatic typeRoots. The plugin
-// entry imports this module with `import type`, so no runtime dependency is emitted.
+// Source scanners can replace tsconfig's typeRoots, so load the runtime contract
+// through the entry point's type-only import. Nothing is emitted into main.js.
+import './node-runtime'
 export {}

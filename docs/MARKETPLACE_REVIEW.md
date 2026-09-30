@@ -1,5 +1,26 @@
 # Marketplace review follow-up
 
+## Release 0.3.19 failed: bundled declarations were linted
+
+The signed-in management page reports commit `001550741e6088e5f0c788af70bf107d1c79666c`
+as **Failed**. All 434 original unsafe-type reports disappeared. However, the
+scanner also linted the imported official Node/Undici declaration packages,
+including six errors for undescribed lint directives and numerous declaration
+style warnings. The public page still displayed the preceding completed scan;
+it was not sufficient evidence of the latest review status.
+
+The follow-up replaces the complete declaration packages with a small, authored
+Node runtime contract. Every declared module value and global is structurally
+checked against the lockfile-installed official types using isolated module
+names. This prevents the fallback declarations from validating themselves.
+The dependency-poor regression now runs the full official recommended rules,
+including on the declaration files. No runtime functionality changes.
+
+A branch preview on the signed-in management page is required before the next
+release. Until that preview completes, this remains a locally verified fix.
+
+The following sections preserve the earlier investigation and its limitations.
+
 ## Release 0.3.18 online result: type fix did not take effect
 
 The online scan now points to `9e0301c04dc10a63ce62f90d888a94c6f4d42338`
