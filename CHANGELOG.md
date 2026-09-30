@@ -3,6 +3,37 @@
 Notable changes per release. The version is the one in `manifest.json`; the GitHub
 release tag is that same number with no `v` prefix.
 
+## Unreleased
+
+### Added
+
+- Ship two read-only skill presets inside the bundle: `skill-creator` for authoring
+  and validating `.catea/skills` packages, and `find-skill` for locating existing
+  skills locally and in the public index. Presets are prompt text that never lands
+  in the vault; a vault directory of the same id shadows a preset, and a preset id
+  cannot be written. Both are seeded into the enabled set once behind
+  `presetSkillsVersion`, mirroring the existing permission defaults migration, so a
+  later disable survives upgrades.
+- Add the `skill_list` and `skill_create` tools. Creation is confined to
+  `.catea/skills/<id>/`, validates the frontmatter, id and resource paths before
+  touching the filesystem, refuses to overwrite without an explicit flag, and shows
+  the full body for approval because the text enters every later system prompt.
+  File, shell and native Obsidian tools keep rejecting hidden paths.
+- Surface the source and description of each skill in settings, and label presets
+  as built in.
+- Adapt the authoring method from `anthropics/skills` (Apache-2.0) and the discovery
+  method from `vercel-labs/skills` (MIT), replacing their Python evaluation harness
+  and `npx skills` transport with the tools Catea actually has. Provenance and the
+  substituted parts are recorded in `THIRD_PARTY_NOTICES.md`.
+- Add a BYOK vendor preset grid in Settings: pick from 21 official vendors
+  (OpenAI, Anthropic, Gemini, DeepSeek, Kimi, 智谱, 通义千问, 百度千帆, MiniMax,
+  豆包, xAI, Mistral, Groq, Nvidia, 硅基流动, ModelScope, 阶跃星辰, LongCat,
+  小米 MiMo, 腾讯混元 and more) with searchable icon tiles; protocol, endpoint,
+  default model and context window are prefilled so only an API key is needed.
+  Keys reuse the existing encrypted/secret-storage paths, an existing key for the
+  same vendor prefills the form, and endpoint derivation now respects explicit
+  `/v2`–`/v4` API versions instead of inserting a second `/v1`.
+
 ## 0.3.18
 
 ### Fixed

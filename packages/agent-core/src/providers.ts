@@ -5,7 +5,7 @@
  *   packages/agent-core/src/upstream-stream.ts, packages/integrations/src/mcp.ts,
  *   packages/integrations/src/tools.ts, packages/integrations/src/web.ts,
  *   packages/memory/src/tools.ts
- * [HERE]: packages/agent-core/src/providers.ts - streamModel maps transcripts to OpenAI or Anthropic requests and parses answer and provider reasoning streams; retries once without usage on 400/422
+ * [HERE]: packages/agent-core/src/providers.ts - streamModel maps transcripts to OpenAI or Anthropic requests and parses answer and provider reasoning streams; endpoint derivation respects any explicit trailing API version; retries once without usage on 400/422
  */
 import type { ChatAttachment, ModelConfig, TokenUsage, ToolCall, TranscriptItem } from './types'
 import { t } from './i18n'
@@ -107,9 +107,13 @@ export class ModelServiceError extends Error {
 function endpoint(base: string, suffix: string): string {
   const url = new URL(base.trim())
   const path = url.pathname.replace(/\/+$/, '')
+  // Insert the conventional /v1 segment unless the base already ends in any
+  // explicit API version (/v1, /v2, /v3, /v4 …), so vendors like Zhipu
+  // (/api/paas/v4), Qianfan (/v2) and Volcengine Ark (/api/v3) resolve to
+  // their real endpoints instead of a doubled version segment.
   const canonical = path.endsWith(suffix)
     ? path
-    : `${path}${path.endsWith('/v1') ? '' : '/v1'}${suffix}`
+    : `${path}${/\/v\d+$/.test(path) ? '' : '/v1'}${suffix}`
   url.pathname = canonical.replace(/\/v1\/v1\//, '/v1/')
   return url.toString()
 }

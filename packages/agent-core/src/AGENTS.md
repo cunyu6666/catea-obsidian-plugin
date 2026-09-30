@@ -14,18 +14,19 @@ byok.ts: Validates ModelConfig and resolves configured and selected models; prov
 context.ts: WorkingContext keeps the full journal while presenting a checkpoint-windowed message view; estimates prompt tokens as `(system + tools) / 3`.
 compaction.ts: Chooses safe user-turn or completed tool-cycle cuts, checks the current model budget and coordinates threshold or overflow compaction through narrow ports.
 compaction-summary.ts: Calls the injected BYOK model client to generate iterative context checkpoint summaries.
-conversation-title.ts: Uses the active BYOK model after the first completed reply to produce a validated 2-24 character JSON-formatted conversation title; failures retain the user-text fallback.
-contracts.ts: Host-neutral session data and conversation/memory ports used for dependency injection; assistant messages retain ordered thinking and tool activity records.
+conversation-title.ts: Uses the active BYOK model after a completed reply to produce a validated 2-24 character JSON title, accepting JSON fences, with a reasoning-capable token budget and a 20 s deadline; failed fallback titles are retried on later turns, at most three attempts per session.
+contracts.ts: Host-neutral session data and conversation/memory ports used for dependency injection; user messages retain selected skill IDs and quote snapshots and assistant messages retain ordered thinking and tool activity records.
 i18n.ts: Flat error-label map, `t()` interpolation and `textValue()` for safe formatting of unknown values.
-index.ts: `class Agent` owns one session, saves through `ConversationStore`, repairs interrupted tool calls, publishes pending turns before note preparation, assembles tools, records thinking, tool events and per-write file changes in order, enforces model-identity privacy in the system prompt, drives `agentLoop` and enqueues memory.
+index.ts: `class Agent` owns one session, saves through `ConversationStore`, repairs interrupted tool calls, publishes pending turns before note preparation, assembles tools (including `skill_list` and the approval-gated `skill_create`), records thinking, tool events and per-write file changes in order, enforces model-identity privacy in the system prompt, drives `agentLoop` and enqueues memory.
 model-client.ts: Adapts direct BYOK answer and provider reasoning streams into abortable events behind `ModelClient`.
 model-capabilities.ts: Resolves configured and known model capabilities and validates binary attachment support for UI and provider requests.
 permission-policy.ts: Evaluates read, write and execution requests under assist or full mode and gates approvals through one host-neutral function.
-providers.ts: `streamModel` maps transcripts to OpenAI or Anthropic requests and parses answer and available reasoning deltas from SSE or buffered JSON; retries once without usage on 400/422.
+providers.ts: `streamModel` maps transcripts to OpenAI or Anthropic requests and parses answer and available reasoning deltas from SSE or buffered JSON; endpoint derivation inserts the conventional `/v1` segment unless the base already ends in an explicit API version or the full endpoint path; retries once without usage on 400/422.
 protocol-repair.ts: Places interrupted tool results immediately after their calls in saved transcripts and journals before a session resumes.
 transport.ts: `serviceFetch` streams over Node http/https with a 120 s timeout and rejects redirects; falls back to Electron net only on X.509 chain errors, then to buffered requestUrl.
 types.ts: Shared type declarations for models, transcripts, attachments, tools and search configuration; type-only, emits no runtime code, and holds several currently unreferenced interfaces.
 upstream-stream.ts: Defines the RuntimeMessage adapter contract and converts provider answer and reasoning deltas into CatUI messages; `providerStream` retries 3x at 500*2^n ms and records delivery diagnostics; `streamSimple` throws to force host injection.
+vendor-presets.ts: Curated official-vendor BYOK presets (21 vendors); `createVendorModel` prefills protocol, endpoint, default model and context window through `normalizeModel` so users only supply an API key; `matchVendorPreset` detects a preset by protocol and normalized baseUrl.
 version.ts: Exports `PLUGIN_VERSION`, the single runtime source for the plugin version; a governance test keeps it equal to manifest.json and versions.json.
 
 ## Notes

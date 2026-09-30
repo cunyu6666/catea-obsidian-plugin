@@ -30,8 +30,9 @@ support-prompt.ts: Gates the optional GitHub support prompt, shown only when the
 tool-presenters.ts: Registry for tool activity card names, summaries and detail payloads; unknown tools use a fallback presenter.
 turn-review.ts: Coalesces repeated tool writes into one per-file diff and decides when an empty or failed turn needs a standalone review action.
 updates.ts: Checks stable GitHub releases at most daily, validates release assets and host compatibility, caches results and per-version dismissals, and supports manual checks.
+vendor-icons.ts: Inline vendor icon SVG strings keyed by BYOK preset id (adapted from cc-switch, MIT), plus pure data-URL and monogram generators for the settings vendor grid.
 theme.ts: Reversible per-window light/dark/system selection, with live operating-system appearance listeners and unload cleanup.
-settings.ts: Searchable setting definitions for Obsidian 1.13+, with an imperative fallback for older hosts; language, theme, release updates, support prompt, paper, Agent persona and capabilities, optional reply annotations and Git history (both off by default), global BYOK and MCP; OpenRouter quick setup and advanced ModelModal validate through core BYOK helpers.
+settings.ts: Searchable setting definitions for Obsidian 1.13+, with an imperative fallback for older hosts; language, theme, release updates, support prompt, paper, Agent persona and capabilities, optional reply annotations and Git history (both off by default), global BYOK and MCP; OpenRouter quick setup, a searchable vendor-preset grid that needs only an API key, and advanced ModelModal validate through core BYOK helpers.
 
 ## Submodules
 

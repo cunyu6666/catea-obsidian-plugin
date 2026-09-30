@@ -367,6 +367,111 @@ test('OpenRouter quick configuration selects Free or a model slug and uses the c
   assert.equal(requested.options.headers.Authorization, 'Bearer test-key')
   assert.equal(JSON.parse(requested.options.body).model, 'openrouter/free')
 })
+
+test('Vendor presets resolve to their documented endpoints and only need an API key', async () => {
+  const { vendorPresets, createVendorModel, matchVendorPreset } = await load(
+    'packages/agent-core/src/vendor-presets.ts',
+  )
+  const ids = vendorPresets.map((preset) => preset.id)
+  assert.equal(new Set(ids).size, ids.length)
+  assert.equal(ids.length, 21)
+  for (const preset of vendorPresets) {
+    assert.ok(preset.baseUrl.startsWith('https://'), preset.id)
+    assert.equal(preset.baseUrl.includes('?'), false, `${preset.id} baseUrl carries a query`)
+    assert.equal(preset.keyUrl.includes('aff='), false, `${preset.id} keyUrl keeps an affiliate`)
+    assert.equal(preset.keyUrl.includes('utm_'), false, `${preset.id} keyUrl keeps a utm tag`)
+    assert.equal(preset.keyUrl.includes('?ic='), false, `${preset.id} keyUrl keeps an invite code`)
+    assert.ok(
+      preset.contextWindow >= 4096 && preset.contextWindow <= 2000000,
+      `${preset.id} contextWindow out of range`,
+    )
+  }
+
+  const deepseek = vendorPresets.find((preset) => preset.id === 'deepseek')
+  const model = createVendorModel(deepseek, { id: 'm1', apiKey: ' sk-test ' })
+  assert.equal(model.name, 'DeepSeek · deepseek-flash')
+  assert.equal(model.apiKey, 'sk-test')
+  assert.equal(model.protocol, 'openai')
+  assert.equal(model.contextWindow, 1048576)
+  assert.throws(() => createVendorModel(deepseek, { id: 'm2', apiKey: '  ' }), /API Key/)
+  const renamed = createVendorModel(deepseek, {
+    id: 'm3',
+    apiKey: 'k',
+    model: 'deepseek-v4-pro',
+    name: '求索 Pro',
+  })
+  assert.equal(renamed.name, '求索 Pro')
+  assert.equal(renamed.model, 'deepseek-v4-pro')
+
+  assert.equal(matchVendorPreset(model)?.id, 'deepseek')
+  assert.equal(matchVendorPreset({ ...model, baseUrl: `${model.baseUrl}/` })?.id, 'deepseek')
+  assert.equal(
+    matchVendorPreset({ protocol: 'openai', baseUrl: 'https://example.invalid/v1' }),
+    undefined,
+  )
+  assert.equal(
+    matchVendorPreset({ protocol: 'openai', baseUrl: 'https://openrouter.ai/api/v1' }),
+    undefined,
+    'OpenRouter keeps its dedicated quick row',
+  )
+
+  const expected = {
+    openai: 'https://api.openai.com/v1/chat/completions',
+    anthropic: 'https://api.anthropic.com/v1/messages',
+    gemini: 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions',
+    deepseek: 'https://api.deepseek.com/v1/chat/completions',
+    kimi: 'https://api.moonshot.cn/v1/chat/completions',
+    'kimi-global': 'https://api.moonshot.ai/v1/chat/completions',
+    zhipu: 'https://open.bigmodel.cn/api/paas/v4/chat/completions',
+    qwen: 'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions',
+    qianfan: 'https://qianfan.baidubce.com/v2/chat/completions',
+    minimax: 'https://api.minimax.io/v1/chat/completions',
+    doubao: 'https://ark.cn-beijing.volces.com/api/v3/chat/completions',
+    xai: 'https://api.x.ai/v1/chat/completions',
+    mistral: 'https://api.mistral.ai/v1/chat/completions',
+    groq: 'https://api.groq.com/openai/v1/chat/completions',
+    nvidia: 'https://integrate.api.nvidia.com/v1/chat/completions',
+    siliconflow: 'https://api.siliconflow.cn/v1/chat/completions',
+    modelscope: 'https://api-inference.modelscope.cn/v1/chat/completions',
+    stepfun: 'https://api.stepfun.com/v1/chat/completions',
+    longcat: 'https://api.longcat.chat/openai/v1/chat/completions',
+    mimo: 'https://api.xiaomimimo.com/v1/chat/completions',
+    hunyuan: 'https://tokenhub.tencentmaas.com/v1/chat/completions',
+  }
+  let requested
+  const { streamModel } = await load(
+    'packages/agent-core/src/providers.ts',
+    { './transport': 'export const serviceFetch=globalThis.testFetch' },
+    {
+      testFetch: async (url, options) => {
+        requested = { url, options }
+        return url.endsWith('/messages')
+          ? Response.json({ content: [{ type: 'text', text: 'ok' }] })
+          : Response.json({ choices: [{ message: { content: 'ok' } }] })
+      },
+    },
+  )
+  for (const preset of vendorPresets) {
+    const configured = createVendorModel(preset, { id: `id-${preset.id}`, apiKey: 'key-test' })
+    await streamModel(
+      configured,
+      [{ role: 'user', content: 'hi' }],
+      '',
+      [],
+      new Map(),
+      () => {},
+      new AbortController().signal,
+    )
+    assert.equal(requested.url, expected[preset.id], `final endpoint for ${preset.id}`)
+    if (preset.protocol === 'anthropic') {
+      assert.equal(requested.options.headers['x-api-key'], 'key-test')
+      assert.ok(requested.options.headers['anthropic-version'])
+    } else {
+      assert.equal(requested.options.headers.Authorization, 'Bearer key-test')
+    }
+    assert.equal(JSON.parse(requested.options.body).model, preset.model)
+  }
+})
 const stream = (frames) =>
   new Response(
     frames
@@ -747,7 +852,37 @@ test('Settings offer a dedicated OpenRouter quick entry alongside advanced model
   const { tab } = await settingsFixture()
   const names = rows(tab).map((item) => item.name)
   assert.ok(names.includes('添加 OpenRouter'))
+  assert.ok(names.includes('添加厂商（预设）'))
   assert.ok(names.includes('添加其他模型'))
+})
+
+test('Vendor icons stay pure data URLs and every preset resolves an icon or monogram', async () => {
+  const { vendorIcons, vendorIconDataUrl, vendorMonogram } = await load(
+    'apps/obsidian/src/vendor-icons.ts',
+  )
+  const { vendorPresets } = await load('packages/agent-core/src/vendor-presets.ts')
+  for (const preset of vendorPresets) {
+    const svg = vendorIcons[preset.id]
+    if (preset.id === 'groq') {
+      assert.equal(svg, undefined, 'Groq intentionally falls back to the monogram')
+      continue
+    }
+    assert.ok(svg, `missing icon for ${preset.id}`)
+    const url = vendorIconDataUrl(svg, '#121212')
+    assert.ok(url.startsWith('data:image/svg+xml,%3Csvg'), preset.id)
+    assert.equal(decodeURIComponent(url.slice(23)).includes('currentColor'), false, preset.id)
+  }
+  const mono = vendorMonogram('G', '#F55036')
+  assert.ok(mono.includes('<rect') && mono.includes('>G<') && mono.includes('#F55036'))
+  assert.ok(
+    vendorMonogram('<script>', '#000').includes('&lt;'),
+    'monogram letters must be XML-escaped',
+  )
+  const kept = vendorIconDataUrl('<svg fill="currentColor"></svg>', '')
+  assert.ok(
+    decodeURIComponent(kept.slice(23)).includes('currentColor'),
+    'an empty color must leave the SVG untouched',
+  )
 })
 test('Settings refresh uses the modern API when present and keeps a legacy fallback', async () => {
   const fixture = await settingsFixture()

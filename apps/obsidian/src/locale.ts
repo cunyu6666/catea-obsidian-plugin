@@ -314,6 +314,17 @@ Object.assign(english, {
   已启用: 'Enabled',
   移除技能: 'Remove skill',
 })
+Object.assign(english, {
+  '添加厂商（预设）': 'Add a vendor (preset)',
+  '从常用官方厂商中选择；协议、地址和默认模型已自动填好，只需填写 API Key。':
+    'Pick from common official vendors; the protocol, endpoint and default model are prefilled, so you only enter an API key.',
+  搜索厂商: 'Search vendors',
+  没有找到匹配的厂商: 'No matching vendor',
+  '获取 API Key ↗': 'Get an API key ↗',
+  返回厂商列表: 'Back to vendors',
+  '模型 ID 已按厂商默认预填，可修改；请求直连该厂商，笔记内容会发送给它。':
+    'The model ID is prefilled with the vendor default and stays editable; requests go directly to this vendor, which receives your note content.',
+})
 export function translate(language: Language, text: string) {
   return language === 'en' ? english[text] || text : text
 }

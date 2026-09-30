@@ -1,8 +1,8 @@
 /**
  * [WHO]: Provides CateaSettings
- * [FROM]: Depends on obsidian, ./main, ../../../packages/agent-core/src/types, ../../../packages/agent-core/src/byok, ../../../packages/integrations/src/skills, ../../../packages/integrations/src/mcp-presets, ../../../packages/personas/src
+ * [FROM]: Depends on obsidian, ./main, ../../../packages/agent-core/src/types, ../../../packages/agent-core/src/byok, ../../../packages/agent-core/src/vendor-presets, ../../../packages/integrations/src/skills, ../../../packages/integrations/src/mcp-presets, ../../../packages/personas/src, ./vendor-icons
  * [TO]: Consumed by apps/obsidian/src/main.tsx
- * [HERE]: apps/obsidian/src/settings.ts - plugin settings tab for language, paper toggles, Agent persona and capabilities, BYOK models, one-click MCP presets and MCP servers; ModelModal validates through normalizeModel
+ * [HERE]: apps/obsidian/src/settings.ts - plugin settings tab for language, paper toggles, Agent persona and capabilities, BYOK models with a vendor-preset grid, one-click MCP presets and MCP servers; ModelModal validates through normalizeModel
  */
 import { App, PluginSettingTab, Setting, Notice, Modal, type SettingDefinitionItem } from 'obsidian'
 import type Catea from './main'
@@ -16,6 +16,12 @@ import {
   normalizeModel,
   selectedModel,
 } from '../../../packages/agent-core/src/byok'
+import {
+  createVendorModel,
+  matchVendorPreset,
+  vendorPresets,
+  type VendorPreset,
+} from '../../../packages/agent-core/src/vendor-presets'
 import { listSkills } from '../../../packages/integrations/src/skills'
 import {
   createPresetServer,
@@ -23,6 +29,7 @@ import {
   matchPreset,
   mcpPresets,
 } from '../../../packages/integrations/src/mcp-presets'
+import { vendorIconDataUrl, vendorIcons, vendorMonogram } from './vendor-icons'
 import { persona, personas } from '../../../packages/personas/src'
 interface SettingsRow {
   name: string
@@ -311,7 +318,7 @@ export class CateaSettings extends PluginSettingTab {
     models.push(
       ...c.models.map((model) => ({
         name: model.name,
-        desc: `${isOpenRouterModel(model) ? 'OpenRouter' : model.protocol === 'openai' ? tr('OpenAI 兼容') : tr('Anthropic 兼容')} · ${model.model} · ${model.baseUrl}${model.apiKey ? '' : tr(' · 请补充 API Key')}`,
+        desc: `${matchVendorPreset(model)?.label ?? (isOpenRouterModel(model) ? 'OpenRouter' : model.protocol === 'openai' ? tr('OpenAI 兼容') : tr('Anthropic 兼容'))} · ${model.model} · ${model.baseUrl}${model.apiKey ? '' : tr(' · 请补充 API Key')}`,
         render: (s: Setting) => {
           s.addButton((b) =>
             b
@@ -365,6 +372,18 @@ export class CateaSettings extends PluginSettingTab {
                 () => this.refresh(),
               ).open(),
             ),
+        )
+      },
+    })
+    models.push({
+      name: tr('添加厂商（预设）'),
+      desc: tr('从常用官方厂商中选择；协议、地址和默认模型已自动填好，只需填写 API Key。'),
+      render: (s) => {
+        s.addButton((b) =>
+          b
+            .setButtonText(tr('添加厂商（预设）'))
+            .setCta()
+            .onClick(() => new VendorGridModal(p, () => this.refresh()).open()),
         )
       },
     })
@@ -848,5 +867,165 @@ class ModelModal extends Modal {
   onClose() {
     this.contentEl.empty()
     this.draft.apiKey = ''
+  }
+}
+
+class VendorGridModal extends Modal {
+  private key = ''
+  constructor(
+    private owner: Catea,
+    private saved: () => void,
+  ) {
+    super(owner.app)
+  }
+  private iconUrl(preset: VendorPreset): string {
+    const themeColor =
+      getComputedStyle(document.body).getPropertyValue('--text-normal').trim() || '#888888'
+    const color = preset.iconColor || themeColor
+    const svg = vendorIcons[preset.id]
+    if (svg) return vendorIconDataUrl(svg, color)
+    const letter = (
+      preset.label.replace(/[^A-Za-z]/g, '').slice(0, 1) || preset.id.slice(0, 1)
+    ).toUpperCase()
+    return vendorIconDataUrl(vendorMonogram(letter, color), '')
+  }
+  onOpen() {
+    this.renderGrid()
+  }
+  private renderGrid() {
+    const tr = this.owner.t,
+      el = this.contentEl
+    el.empty()
+    this.titleEl.setText(tr('添加厂商（预设）'))
+    el.createEl('p', {
+      text: tr('从常用官方厂商中选择；协议、地址和默认模型已自动填好，只需填写 API Key。'),
+      cls: 'catea-vendor-intro',
+    })
+    const search = el.createEl('input', {
+      type: 'text',
+      placeholder: tr('搜索厂商'),
+      cls: 'catea-vendor-search',
+    })
+    const list = el.createDiv({ cls: 'catea-vendor-grid' })
+    const paint = () => {
+      list.empty()
+      const query = search.value.trim().toLowerCase()
+      const matches = vendorPresets.filter(
+        (preset) =>
+          !query ||
+          preset.label.toLowerCase().includes(query) ||
+          preset.id.includes(query) ||
+          (preset.aliases || []).some((alias) => alias.toLowerCase().includes(query)),
+      )
+      if (!matches.length) {
+        list.createEl('p', { text: tr('没有找到匹配的厂商'), cls: 'catea-vendor-empty' })
+        return
+      }
+      for (const preset of matches) {
+        const tile = list.createEl('button', {
+          cls: 'catea-vendor-tile',
+          attr: { type: 'button', 'aria-label': preset.label },
+        })
+        tile.createEl('img', {
+          cls: 'catea-vendor-icon',
+          attr: { src: this.iconUrl(preset), alt: '' },
+        })
+        tile.createDiv({ cls: 'catea-vendor-name', text: preset.label })
+        tile.addEventListener('click', () => this.renderForm(preset))
+      }
+    }
+    search.addEventListener('input', paint)
+    paint()
+    search.focus()
+  }
+  private renderForm(preset: VendorPreset) {
+    const tr = this.owner.t,
+      el = this.contentEl
+    // Reuse a key already stored for this vendor in any vault on this machine.
+    this.key =
+      this.owner.agentSettings.models.find((model) => matchVendorPreset(model)?.id === preset.id)
+        ?.apiKey || ''
+    el.empty()
+    this.titleEl.setText(preset.label)
+    new Setting(el).addButton((button) =>
+      button.setButtonText(tr('返回厂商列表')).onClick(() => this.renderGrid()),
+    )
+    new Setting(el)
+      .setName(tr('协议'))
+      .setDesc(preset.protocol === 'openai' ? tr('OpenAI 兼容') : tr('Anthropic 兼容'))
+    new Setting(el).setName(tr('API 地址')).setDesc(preset.baseUrl)
+    let modelId = preset.model
+    let displayName = ''
+    new Setting(el)
+      .setName(tr('模型 ID'))
+      .setDesc(tr('模型 ID 已按厂商默认预填，可修改；请求直连该厂商，笔记内容会发送给它。'))
+      .addText((input) =>
+        input.setValue(modelId).onChange((value) => {
+          modelId = value
+        }),
+      )
+    new Setting(el).setName(tr('显示名称')).addText((input) => {
+      input.setPlaceholder(`${preset.label} · ${preset.model}`)
+      input.onChange((value) => {
+        displayName = value
+      })
+    })
+    new Setting(el)
+      .setName('API key')
+      .setDesc(
+        tr(
+          this.owner.globalByok
+            ? '加密保存在本机，跨知识库共享；不写入 .catea。'
+            : '优先保存到 Obsidian 安全存储；不可用时仅本次运行有效，不写入 .catea。',
+        ),
+      )
+      .addText((input) => {
+        input.inputEl.type = 'password'
+        input.inputEl.autocomplete = 'off'
+        input.setValue(this.key).onChange((value) => {
+          this.key = value
+        })
+      })
+    el.createEl('a', {
+      text: tr('获取 API Key ↗'),
+      href: preset.keyUrl,
+      attr: { target: '_blank', rel: 'noopener noreferrer' },
+      cls: 'catea-vendor-keylink',
+    })
+    const error = el.createEl('p', { attr: { role: 'alert' } })
+    new Setting(el)
+      .addButton((button) => button.setButtonText(tr('取消')).onClick(() => this.close()))
+      .addButton((button) =>
+        button
+          .setButtonText(tr('保存并使用'))
+          .setCta()
+          .onClick(async () => {
+            let model: ModelConfig
+            try {
+              model = createVendorModel(preset, {
+                id: crypto.randomUUID(),
+                apiKey: this.key,
+                model: modelId,
+                name: displayName || undefined,
+              })
+            } catch (reason) {
+              error.setText(tr(reason instanceof Error ? reason.message : '请检查配置'))
+              return
+            }
+            button.setDisabled(true)
+            try {
+              await storeModel(this.owner, model, true)
+              this.saved()
+              this.close()
+            } catch (reason) {
+              error.setText(tr(reason instanceof Error ? reason.message : '保存失败，请重试'))
+              button.setDisabled(false)
+            }
+          }),
+      )
+  }
+  onClose() {
+    this.contentEl.empty()
+    this.key = ''
   }
 }
