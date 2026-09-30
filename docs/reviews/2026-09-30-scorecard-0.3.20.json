@@ -1,0 +1,89 @@
+{
+  "url": "https://community.obsidian.md/plugins/catea-paper",
+  "version": "0.3.20",
+  "commit": "210d7e1baf5041719240475d0de39b0e52bd9597",
+  "observedAt": "2026-09-30",
+  "health": "Excellent",
+  "review": "Satisfactory",
+  "sourceFindings": 0,
+  "errors": 0,
+  "warnings": 3,
+  "findings": [
+    {
+      "severity": "pass",
+      "message": "The `main.js` release asset has a verified GitHub artifact attestation."
+    },
+    {
+      "severity": "pass",
+      "message": "The `styles.css` release asset has a verified GitHub artifact attestation."
+    },
+    {
+      "severity": "pass",
+      "message": "**Vault Read**: Reads individual vault files via the Obsidian API (`vault.read`, `vault.cachedRead`)"
+    },
+    {
+      "severity": "pass",
+      "message": "**Vault Write**: Creates or modifies vault files via the Obsidian API (`vault.modify`, `vault.create`, etc.)"
+    },
+    {
+      "severity": "info",
+      "message": "License `GPL-3.0` is a copyleft license"
+    },
+    {
+      "severity": "info",
+      "message": "Number of network request calls"
+    },
+    {
+      "severity": "info",
+      "message": "Built file contains TypeScript ES5 transpilation helpers (`__awaiter`, `__generator`, `__spreadArray`)"
+    },
+    {
+      "severity": "medium",
+      "message": "Plugin reads system identity information (hostname, user info, or environment variables)"
+    },
+    {
+      "severity": "medium",
+      "message": "**Direct Filesystem Access**: Uses the Node.js `fs` module to access the filesystem outside of the Obsidian vault API. Can read and write any file on the system."
+    },
+    {
+      "severity": "medium",
+      "message": "**Shell Execution**: Executes shell commands via `child_process`. Gives the plugin full control over the system."
+    },
+    {
+      "severity": "pass",
+      "message": "No vulnerable dependencies found."
+    },
+    {
+      "severity": "pass",
+      "message": "Build reproduced the release main.js byte-for-byte"
+    },
+    {
+      "severity": "info",
+      "message": "Code uses runtime base64 encode or decode calls"
+    },
+    {
+      "severity": "info",
+      "message": "Malware scan not available."
+    },
+    {
+      "severity": "info",
+      "message": "Obfuscation scan not available."
+    },
+    {
+      "severity": "info",
+      "message": "Network requests scan not available."
+    },
+    {
+      "severity": "info",
+      "message": "**Vault Enumeration**: Enumerates all files in the vault (`vault.getFiles`, `getMarkdownFiles`, etc.). Gives the plugin access to every file path in the vault."
+    },
+    {
+      "severity": "info",
+      "message": "**Clipboard Access**: Reads or writes the system clipboard. May expose content copied from outside Obsidian."
+    },
+    {
+      "severity": "info",
+      "message": "**Dynamic Code Execution**: Executes dynamically generated code via `eval()` or `new Function()`. Prevents full static analysis of plugin behavior."
+    }
+  ]
+}
