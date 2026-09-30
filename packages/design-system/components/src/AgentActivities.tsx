@@ -1,7 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { useReducedMotion } from 'motion/react'
 import { Icon } from './Icon'
-import { DitherLoader } from './DitherLoader'
 
 export interface AgentToolActivityItem {
   type: 'tool'
@@ -92,7 +91,7 @@ export function AgentActivities({
               >
                 <span className={`anno-activities__status is-${item.status}`}>
                   {item.status === 'running' ? (
-                    <DitherLoader label={item.name} />
+                    <Icon name="loader-2" size={14} className="anno-activities__spinner" />
                   ) : (
                     <Icon name={item.status === 'error' ? 'tool-error' : 'tool-done'} size={12} />
                   )}
@@ -180,7 +179,7 @@ export function ThinkingIndicator({
   const heading = (
     <>
       <span className="anno-thinking__icon">
-        {active ? <DitherLoader label={labels.thinking} /> : <Icon name="chat" size={14} />}
+        <Icon name="brain" size={14} />
       </span>
       <span>
         {active ? labels.thinking : labels.thought}

@@ -30,8 +30,11 @@ the web, call MCP servers, and keep a long-term memory of the user's notes.
   preferences, projects, concepts, materials, methods and editorial decisions.
   Prior NanoMem formats are imported once with backups; extraction is durable
   and queued. Local hashing and PII helpers retain their upstream provenance.
-- **Vault data stays in the vault** — sessions, memory, and skills are written under
-  `.catea/` inside the user's own vault and are never distributed with the plugin.
+- **Vault data stays in the vault** — sessions, memory, and user-installed skills
+  are written under `.catea/` inside the user's own vault and are never distributed
+  with the plugin. Two read-only skill presets ship in the bundle as prompt text;
+  they are never written into the vault, and a vault directory of the same id
+  takes precedence over a preset.
 
 ---
 
@@ -230,7 +233,7 @@ Vault-specific runtime data is written inside the user's vault, never into the p
 | `.catea/config.json` | Vault toggles, selected model, MCP servers; model metadata only when global encryption is unavailable. **Never contains API keys** |
 | `.catea/sessions/index.json` | Session list, capped at 500 entries |
 | `.catea/sessions/<id>.json` | Raw conversation and tool transcript for one session |
-| `.catea/skills/<id>/SKILL.md` | User-installed skill packages, enabled explicitly |
+| `.catea/skills/<id>/SKILL.md` | User-installed skill packages, enabled explicitly; shadows the bundled preset of the same id |
 | `.catea/memory/pending-turns.json` | Durable queue of turns awaiting memory extraction |
 | `.catea/memory/global/memories.json` | Canonical shared writing and knowledge memory |
 | `.catea/memory/aria/`, `.catea/memory/vex/`, `.catea/memory/pencil/`, `.catea/memory/dazai/` | Per-persona isolation; each contains one canonical `memories.json` |
@@ -239,7 +242,7 @@ BYOK models and API keys are held in encrypted `<Obsidian userData>/catea/byok.e
 when OS-backed Electron safeStorage is available (Linux `basic_text` is rejected).
 Otherwise models remain vault-local and keys use Obsidian's vault-scoped secure
 storage, keyed `catea-<id>`; when that is unavailable they exist only for the
-current session. MCP tokens remain vault-scoped. `.catea/` is git-ignored because
+current session. MCP tokens and the separate image/video/speech generation API keys remain vault-scoped. Media generation uses Obsidian secure storage with an in-memory fallback; generated media are saved under `Attachments/Catea/`. `.catea/` is git-ignored because
 it may contain private note content.
 
 ---
@@ -332,7 +335,7 @@ the contributor-facing procedure and [SECURITY.md](./SECURITY.md) for the threat
 **Status**: complete for every in-scope file — all in-scope source files carry a P3 header
 and a matching contract test, and `npm test` passes.
 
-Four deliberate exclusions:
+Five deliberate exclusions:
 
 1. **Vendored upstream** — 74 files under `packages/*/upstream/` are excluded
    from DIP. Agent-core source digests are recorded in
@@ -341,12 +344,22 @@ Four deliberate exclusions:
    `packages/agent-core/LOCAL_PATCHES.json`. Source adaptations are recorded separately in `packages/UPSTREAM_ADAPTATIONS.json`;
    verification reverses each edit to check the unchanged original digests.
    Do not modify snapshots without updating these auditable adaptation records.
-2. **`scripts/`** — the scope rule above covers `apps/*/src` and `packages/*/src`
+2. **Vendored, generated assets inside `apps/`** — a few files are neither
+   hand-written source nor build output of this repository. `apps/obsidian/src/paper.cjs`
+   is one: a generated 1.6 MB bundle of the Paper base class with an embedded Tabler
+   icon set (5,166 icons, 98.7% of its bytes on a single line), imported by
+   `apps/obsidian/src/main.tsx` and unbuildable from this checkout. These are named in
+   `apps/obsidian/src/VENDOR_MANIFEST.json`, which `tests/dip-contract.ts` reads to
+   exclude them from DIP scope, so the exclusion is declared rather than an accident of
+   the file-extension rule. `tests/vendor-assets.test.ts` then pins each digest: a
+   hand-edit to `paper.cjs` fails `npm test` instead of passing silently.
+   Never hand-edit these assets — regenerate upstream and re-record the digest.
+3. **`scripts/`** — the scope rule above covers `apps/*/src` and `packages/*/src`
    only, so `scripts/build.mjs` is unheadered. Adding a header now would also race
    the concurrent marketplace work that edits that file.
-3. **Tests** — files under `__tests__/` are out of scope, since a contract test
+4. **Tests** — files under `__tests__/` are out of scope, since a contract test
    for a contract test is circular.
-4. **The vendored design system** — `packages/design-system/**` sits outside the
+5. **The vendored design system** — `packages/design-system/**` sits outside the
    `apps/*/src` and `packages/*/src` scope rule, so it carries no P3 headers. It is
    our own code, edited here directly, and `npm run typecheck` does cover it.
 

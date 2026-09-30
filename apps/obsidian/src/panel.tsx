@@ -1,6 +1,6 @@
 /**
  * [WHO]: Provides Panel
- * [FROM]: Depends on ../../../packages/agent-core/src/attachments, ../../../packages/agent-core/src/types, ./StreamingChatResponse, react, ./ChatMarkdown, catea-components, obsidian, ../../../packages/agent-core/src, ../../../packages/agent-core/src/byok, ../../../packages/agent-core/src/model-capabilities, ./session-drafts, ./locale, ./tool-presenters, ./turn-review, ../cat-welcome.png, ./main
+ * [FROM]: Depends on ../../../packages/agent-core/src/attachments, ../../../packages/agent-core/src/types, ./StreamingChatResponse, ./MessageQuotes, react, ./ChatMarkdown, catea-components, obsidian, ../../../packages/agent-core/src, ../../../packages/agent-core/src/byok, ../../../packages/agent-core/src/model-capabilities, ./session-drafts, ./locale, ./tool-presenters, ./turn-review, ../cat-welcome.png, ./main
  * [TO]: Consumed by apps/obsidian/src/main.tsx
  * [HERE]: apps/obsidian/src/panel.tsx - React sidebar root composing a header session dropdown, history, message list and composer; maps model picker, approvals, quotes and attachments
  */
@@ -9,6 +9,7 @@ import {
   readPickedAttachments,
 } from '../../../packages/agent-core/src/attachments'
 import type { ChatAttachment, ToolEvent } from '../../../packages/agent-core/src/types'
+import { MessageQuotes } from './MessageQuotes'
 import { StreamingChatResponse } from './StreamingChatResponse'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { ChatMarkdown } from './ChatMarkdown'
@@ -572,8 +573,10 @@ export function Panel({ plugin }: { plugin: Catea }) {
     }
     void (
       agent.running
-        ? context().then((attached) => agent.steer(value, attached, sendingFiles, sendingSkills))
-        : agent.send(value, context, sendingFiles, sendingSkills)
+        ? context().then((attached) =>
+            agent.steer(value, attached, sendingFiles, sendingSkills, quotes),
+          )
+        : agent.send(value, context, sendingFiles, sendingSkills, quotes)
     )
       .catch((e: unknown) => {
         if (plugin.agent === agent) setError(e instanceof Error ? e.message : String(e))
@@ -1003,10 +1006,20 @@ export function Panel({ plugin }: { plugin: Catea }) {
                   >
                     {m.role === 'user' ? (
                       <div className="chat-user-content">
+                        <MessageQuotes quotes={m.quotes} />
                         {fileCards(
                           (agent.session.attachments || []).filter((file) =>
                             m.attachmentIds?.includes(file.id),
                           ),
+                        )}
+                        {!!m.skills?.length && (
+                          <div className="catea-skill-tags catea-message-skills">
+                            {m.skills.map((id) => (
+                              <span className="catea-skill-tag" key={id} title={id}>
+                                <span className="catea-skill-tag__name">{id}</span>
+                              </span>
+                            ))}
+                          </div>
                         )}
                         <div className="chat-message-body">
                           {m.delivery === 'queued' || m.delivery === 'deferred' ? (
@@ -1129,6 +1142,61 @@ export function Panel({ plugin }: { plugin: Catea }) {
                               />
                             )}
                           />
+                        )}
+                        {!!m.generatedImages?.length && (
+                          <div className="catea-generated-images">
+                            {m.generatedImages
+                              .filter((path) =>
+                                /^Attachments\/Catea\/[a-zA-Z0-9-]+\.(png|jpg|webp)$/.test(path),
+                              )
+                              .map((path) => (
+                                <button
+                                  type="button"
+                                  key={path}
+                                  onClick={() => openNote(path)}
+                                  title={path}
+                                >
+                                  <img
+                                    src={plugin.app.vault.adapter.getResourcePath(path)}
+                                    alt={t('生成的图片')}
+                                    loading="lazy"
+                                  />
+                                </button>
+                              ))}
+                          </div>
+                        )}
+                        {!!m.generatedMedia?.length && (
+                          <div className="catea-generated-media">
+                            {m.generatedMedia
+                              .filter((media) =>
+                                media.kind === 'video'
+                                  ? /^Attachments\/Catea\/[a-zA-Z0-9-]+\.mp4$/.test(media.path)
+                                  : media.kind === 'audio' &&
+                                    /^Attachments\/Catea\/[a-zA-Z0-9-]+\.mp3$/.test(media.path),
+                              )
+                              .map((media) => (
+                                <div key={media.path}>
+                                  {media.kind === 'video' ? (
+                                    <video
+                                      src={plugin.app.vault.adapter.getResourcePath(media.path)}
+                                      controls
+                                      preload="metadata"
+                                      aria-label={t('生成的视频')}
+                                    />
+                                  ) : (
+                                    <audio
+                                      src={plugin.app.vault.adapter.getResourcePath(media.path)}
+                                      controls
+                                      preload="metadata"
+                                      aria-label={t('生成的音频')}
+                                    />
+                                  )}
+                                  <button type="button" onClick={() => openNote(media.path)}>
+                                    {media.path.split('/').at(-1)}
+                                  </button>
+                                </div>
+                              ))}
+                          </div>
                         )}
                         {showStandaloneFileReview(
                           m.text,

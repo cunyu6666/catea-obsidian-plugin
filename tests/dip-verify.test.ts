@@ -12,10 +12,13 @@ import assert from 'node:assert/strict'
 import {
   REPO_ROOT,
   extractP3,
+  gitIgnoredPaths,
+  gitTrackedFiles,
   inScopeDIPFiles,
   isDIPSource,
   listRepoFiles,
   toRepoPath,
+  trackedButIgnoredFiles,
 } from './dip-contract.ts'
 
 const P1 = 'AGENTS.md'
@@ -188,12 +191,44 @@ test('DIP | vendored upstream is excluded and documented', () => {
 })
 
 test('DIP | no generated or runtime artifacts are tracked', () => {
-  const tracked = listRepoFiles()
+  // Read the git index, not the disk: dist/, node_modules/ and .catea/ are skipped
+  // by the disk walk, so filtering that list by prefix can never report anything.
+  const tracked = gitTrackedFiles()
   const forbidden = tracked.filter(
     (rel) =>
-      rel.startsWith('node_modules/') || rel.startsWith('dist/') || rel.startsWith('.catea/'),
+      rel.startsWith('node_modules/') ||
+      rel.startsWith('dist/') ||
+      rel.startsWith('.catea/') ||
+      rel.startsWith('.obsidian/') ||
+      rel.startsWith('.catui/') ||
+      rel === 'preview-ui/app.js' ||
+      rel.endsWith('.tmp') ||
+      rel.endsWith('.log') ||
+      rel === '.DS_Store',
   )
   assert.deepEqual(forbidden, [], `must never be tracked: ${forbidden.join(', ')}`)
+  // A force-added file satisfies .gitignore's absence from the rule list but still
+  // sits in the index; nothing but this check catches that.
+  const ignored = trackedButIgnoredFiles()
+  assert.deepEqual(ignored, [], `tracked but git-ignored: ${ignored.join(', ')}`)
+})
+
+test('DIP | the artifact guard itself is not vacuous', () => {
+  // A guard that can match nothing proves nothing. The rules above assume these
+  // paths are generated and ignored; if an ignore line is ever deleted, the guard
+  // silently stops being the thing that keeps them out of a commit.
+  const artifacts = [
+    'dist/catea-paper/main.js',
+    'preview-ui/app.js',
+    '.obsidian/plugins/catea-paper/main.js',
+    'node_modules/typescript/package.json',
+  ]
+  const unguarded = artifacts.filter((rel) => !gitIgnoredPaths(artifacts).has(rel))
+  assert.deepEqual(
+    unguarded,
+    [],
+    `no longer ignored by git, so a stray add would commit them: ${unguarded.join(', ')}`,
+  )
 })
 
 test('DIP | P2 maps are listed in the repository index at the expected paths', () => {

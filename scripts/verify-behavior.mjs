@@ -101,7 +101,7 @@ test('Conversation titles use a bounded fixed-format model request and reject ma
   )
   assert.equal(title, '快照清理方案')
   assert.equal(request.tools.length, 0)
-  assert.equal(request.maxTokens, 64)
+  assert.equal(request.maxTokens, 2048)
   assert.match(request.system, /exactly one JSON object/)
 
   const malformed = {
@@ -118,6 +118,29 @@ test('Conversation titles use a bounded fixed-format model request and reject ma
       new AbortController().signal,
     ),
     null,
+  )
+})
+
+test('Title generation tolerates fenced JSON and never uses reasoning as a title', async () => {
+  const { generateConversationTitle } = await load('packages/agent-core/src/conversation-title.ts')
+  const client = {
+    async *stream(request, signal) {
+      assert.ok(request.maxTokens >= 2048, 'reserve tokens for reasoning before the answer')
+      assert.equal(signal.aborted, false)
+      yield { type: 'reasoning', text: 'Private reasoning is not the conversation title.' }
+      yield { type: 'delta', text: '```json\n{"title":"修复会话标题"}\n```' }
+      yield { type: 'done', reply: { text: '', calls: [] } }
+    },
+  }
+  assert.equal(
+    await generateConversationTitle(
+      client,
+      model,
+      'question',
+      'answer',
+      new AbortController().signal,
+    ),
+    '修复会话标题',
   )
 })
 
@@ -771,7 +794,8 @@ const hostMock = `
 async function settingsFixture() {
   const { CateaSettings } = await load('apps/obsidian/src/settings.ts', {
     obsidian: hostMock,
-    '../../../packages/integrations/src/skills': 'export const listSkills=async()=>[]',
+    '../../../packages/integrations/src/skills':
+      'export const listSkills=async()=>[];export const describeSkills=async()=>[]',
   })
   let saves = 0,
     stops = 0,
@@ -1195,7 +1219,7 @@ test('A provider-aborted stream retries once without repeating completed tools',
         'export const serviceFetch=async()=>{throw new Error("Unexpected network request")}',
       '../../integrations/src/mcp': 'export class McpPool {async connect(){return []}}',
       '../../integrations/src/skills':
-        'export const loadSkills=async()=>[];export const readSkillResource=()=>{};export const listSkills=async()=>[]',
+        'export const loadSkills=async()=>[];export const readSkillResource=()=>{};export const listSkills=async()=>[];export const describeSkills=async()=>[];export const createSkill=async()=>({id:"x",path:"p",resources:[],replaced:false});export const presetSkillIds=[]',
       '../upstream/loop/agent-loop': `export const agentLoop=async function*(_prompts,_context,options){
       const failed={role:'assistant',content:[{type:'text',text:''}],stopReason:'error',errorMessage:'aborted',timestamp:Date.now()};
       yield {type:'message_end',message:failed};
@@ -1244,6 +1268,283 @@ test('A provider-aborted stream retries once without repeating completed tools',
   assert.equal(agent.session.messages[1].error, undefined)
 })
 
+test('User quotes and skill tags survive send, queued steering, persistence and reopening', async () => {
+  const { Agent } = await load(
+    'packages/agent-core/src/index.ts',
+    {
+      './transport':
+        'export const serviceFetch=async()=>{throw new Error("Unexpected network request")}',
+      '../../agent-core/src/transport':
+        'export const serviceFetch=async()=>{throw new Error("Unexpected network request")}',
+      '../../integrations/src/mcp': 'export class McpPool {async connect(){return []}}',
+      '../../integrations/src/skills':
+        'export const loadSkills=async()=>[];export const readSkillResource=()=>{};export const listSkills=async()=>[];export const describeSkills=async()=>[];export const createSkill=async()=>({id:"x",path:"p",resources:[],replaced:false});export const presetSkillIds=[]',
+      '../upstream/loop/agent-loop': `export const agentLoop=async function*(){
+        const answer={role:'assistant',content:[{type:'text',text:'Completed response.'}],stopReason:'stop',timestamp:Date.now()};
+        yield {type:'message_update',message:answer};yield {type:'message_end',message:answer};
+        yield {type:'agent_end'};
+      }`,
+    },
+    { structuredClone, TransformStream },
+  )
+  const config = {
+    enabled: true,
+    models: [model],
+    modelId: model.id,
+    personaId: 'aria',
+    skills: [],
+    mcp: [],
+    memory: false,
+    web: false,
+    shell: false,
+  }
+  let saved
+  const agent = new Agent(
+    '/unused',
+    () => config,
+    {
+      change: () => {},
+      notice: () => {},
+      approve: async () => true,
+      ask: async () => ({}),
+    },
+    {
+      conversations: {
+        save: async (session) => {
+          saved = structuredClone(session)
+        },
+        list: async () => [],
+        load: async () => structuredClone(saved),
+      },
+      memory: { close: () => {} },
+      modelClient: {
+        async *stream() {
+          yield { type: 'done', reply: { text: '{"title":"Quote discussion"}', calls: [] } }
+        },
+      },
+    },
+  )
+  const quotes = [
+    {
+      id: 'q1',
+      path: 'note.md',
+      text: 'Original selection\nSecond line',
+      comment: 'Please revise this',
+    },
+  ]
+  const queued = [{ id: 'q2', path: 'other.md', text: 'Queued selection' }]
+  const selectedSkills = ['writer', 'writer']
+  const queuedSkills = ['reviewer']
+  const context = JSON.stringify({ selectedQuotes: quotes })
+  await agent.send(
+    'Explain this',
+    async () => {
+      agent.steer(
+        'Also consider this',
+        JSON.stringify({ selectedQuotes: queued }),
+        [],
+        queuedSkills,
+        queued,
+      )
+      selectedSkills.length = 0
+      queuedSkills.length = 0
+      quotes[0].text = 'Draft changed after sending'
+      queued.length = 0
+      return context
+    },
+    [],
+    selectedSkills,
+    quotes,
+  )
+  const users = saved.messages.filter((message) => message.role === 'user')
+  assert.equal(users[0].text, 'Explain this')
+  assert.equal(users[0].skills.join(','), 'writer')
+  assert.equal(users[1].skills.join(','), 'reviewer')
+  assert.equal(users[0].quotes[0].text, 'Original selection\nSecond line')
+  assert.equal(users[0].quotes[0].comment, 'Please revise this')
+  assert.equal(users[1].quotes[0].text, 'Queued selection')
+  assert.ok(
+    saved.transcript.some(
+      (entry) => typeof entry.content === 'string' && entry.content.includes('Original selection'),
+    ),
+  )
+  await agent.open(saved.id)
+  assert.equal(agent.session.messages[0].quotes[0].path, 'note.md')
+  assert.equal(agent.session.messages[0].skills.join(','), 'writer')
+  // A legacy message retains only the exact model context, not the display metadata.
+  delete saved.messages[0].quotes
+  saved.transcript[0].content =
+    'Explain this\n\n<current-note-context>\n' +
+    JSON.stringify({
+      currentNote: { content: 'Automatically attached private note' },
+      selectedQuotes: [
+        { path: 'note.md', text: 'Original selection\nSecond line', comment: 'Please revise this' },
+      ],
+    }) +
+    '\n</current-note-context>'
+  await agent.open(saved.id)
+  assert.equal(agent.session.messages[0].quotes[0].text, 'Original selection\nSecond line')
+  assert.equal(agent.session.messages[0].quotes[0].comment, 'Please revise this')
+  assert.doesNotMatch(JSON.stringify(agent.session.messages[0].quotes), /private note/)
+  const branch = await agent.branchAt(users[0].id)
+  assert.equal(branch.quotes[0].text, 'Original selection\nSecond line')
+  assert.equal(branch.skills.join(','), 'writer')
+  await agent.steer(
+    'Idle steering',
+    '{}',
+    [],
+    ['editor'],
+    [{ id: 'q3', path: 'last.md', text: 'Idle selection' }],
+  )
+  assert.equal(
+    saved.messages
+      .filter((message) => message.role === 'user')
+      .at(-1)
+      .skills.join(','),
+    'editor',
+  )
+  assert.equal(
+    saved.messages.filter((message) => message.role === 'user').at(-1).quotes[0].text,
+    'Idle selection',
+  )
+})
+
+test('Sent quotes render source, original text and annotations without interpreting HTML', async () => {
+  const { renderToStaticMarkup } = await import('react-dom/server')
+  const { createElement } = await import('react')
+  const { MessageQuotes } = await load('apps/obsidian/src/MessageQuotes.tsx')
+  const html = renderToStaticMarkup(
+    createElement(MessageQuotes, {
+      quotes: [
+        {
+          id: 'q',
+          path: 'notes/source.md',
+          text: '<script>alert(1)</script>\nQuoted text',
+          comment: 'My annotation',
+        },
+      ],
+    }),
+  )
+  assert.match(html, /notes\/source.md/)
+  assert.match(html, /<blockquote>/)
+  assert.match(html, /&lt;script&gt;alert\(1\)&lt;\/script&gt;/)
+  assert.match(html, /Quoted text/)
+  assert.match(html, /My annotation/)
+  assert.doesNotMatch(html, /<script>/)
+  assert.equal(renderToStaticMarkup(createElement(MessageQuotes, {})), '')
+})
+
+test('Failed conversation titles retry after reopening, persist, and notify the UI', async () => {
+  const { Agent } = await load(
+    'packages/agent-core/src/index.ts',
+    {
+      './transport':
+        'export const serviceFetch=async()=>{throw new Error("Unexpected network request")}',
+      '../../agent-core/src/transport':
+        'export const serviceFetch=async()=>{throw new Error("Unexpected network request")}',
+      '../../integrations/src/mcp': 'export class McpPool {async connect(){return []}}',
+      '../../integrations/src/skills':
+        'export const loadSkills=async()=>[];export const readSkillResource=()=>{};export const listSkills=async()=>[];export const describeSkills=async()=>[];export const createSkill=async()=>({id:"x",path:"p",resources:[],replaced:false});export const presetSkillIds=[]',
+      '../upstream/loop/agent-loop': `export const agentLoop=async function*(){
+        const answer={role:'assistant',content:[{type:'text',text:'Completed response.'}],stopReason:'stop',timestamp:Date.now()};
+        yield {type:'message_update',message:answer};yield {type:'message_end',message:answer};
+        yield {type:'agent_end'};
+      }`,
+    },
+    { structuredClone, TransformStream },
+  )
+  const config = {
+    enabled: true,
+    models: [model],
+    modelId: model.id,
+    personaId: 'aria',
+    skills: [],
+    mcp: [],
+    memory: false,
+    web: false,
+    shell: false,
+  }
+  let saved,
+    requests = 0
+  const seenTitles = []
+  const ports = {
+    conversations: {
+      save: async (session) => {
+        saved = structuredClone(session)
+      },
+      list: async () => (saved ? [{ id: saved.id, title: saved.title }] : []),
+      load: async () => structuredClone(saved),
+    },
+    memory: { close: () => {} },
+    modelClient: {
+      async *stream(request) {
+        requests++
+        assert.match(request.transcript[0].content, /Original question/)
+        yield {
+          type: 'done',
+          reply: {
+            text: requests === 1 ? '{"title":' : '{"title":"Generated conversation"}',
+            calls: [],
+          },
+        }
+      },
+    },
+  }
+  const create = () => {
+    const agent = new Agent(
+      '/unused',
+      () => config,
+      {
+        change: () => seenTitles.push(agent.session.title),
+        notice: () => {},
+        approve: async () => true,
+        ask: async () => ({}),
+      },
+      ports,
+    )
+    return agent
+  }
+  const first = create()
+  await first.send('Original question', '')
+  assert.equal(saved.title, 'Original question')
+  assert.equal(saved.messages[1].status, 'complete')
+  assert.equal(saved.titleAttempts, 1)
+  const reopened = create()
+  await reopened.open(saved.id)
+  await reopened.send('Follow up', '')
+  assert.equal(saved.title, 'Generated conversation')
+  assert.equal(saved.titleGenerated, true)
+  assert.ok(seenTitles.includes('Generated conversation'))
+  assert.equal((await reopened.list())[0].title, 'Generated conversation')
+  await reopened.send('Another follow up', '')
+  assert.equal(requests, 2, 'a generated title is not overwritten on subsequent turns')
+
+  // Older sessions have no title metadata and should also recover on their next turn.
+  saved.title = 'Original question'
+  delete saved.titleGenerated
+  delete saved.titleAttempts
+  const legacy = create()
+  await legacy.open(saved.id)
+  await legacy.send('Repair legacy title', '')
+  assert.equal(saved.title, 'Generated conversation')
+  assert.equal(requests, 3)
+
+  saved.title = 'Manually named session'
+  delete saved.titleGenerated
+  const renamed = create()
+  await renamed.open(saved.id)
+  await renamed.send('Keep my title', '')
+  assert.equal(saved.title, 'Manually named session')
+  assert.equal(requests, 3)
+
+  saved.title = 'Original question'
+  saved.titleAttempts = 3
+  const exhausted = create()
+  await exhausted.open(saved.id)
+  await exhausted.send('No more metadata requests', '')
+  assert.equal(requests, 3, 'failed metadata requests have a persisted retry limit')
+})
+
 test('Per-message skill tags override the enabled set for exactly one turn', async () => {
   const loadSkillsCalls = []
   const { Agent } = await load(
@@ -1255,7 +1556,7 @@ test('Per-message skill tags override the enabled set for exactly one turn', asy
         'export const serviceFetch=async()=>{throw new Error("Unexpected network request")}',
       '../../integrations/src/mcp': 'export class McpPool {async connect(){return []}}',
       '../../integrations/src/skills':
-        'export const loadSkills=async(_vault,enabled)=>{globalThis.recordSkills(enabled.slice());return []};export const readSkillResource=()=>{};export const listSkills=async()=>["alpha","beta"]',
+        'export const loadSkills=async(_vault,enabled)=>{globalThis.recordSkills(enabled.slice());return []};export const readSkillResource=()=>{};export const listSkills=async()=>["alpha","beta"];export const describeSkills=async()=>[{id:"alpha",description:"alpha",source:"vault",enabled:false},{id:"beta",description:"beta",source:"vault",enabled:false}];export const createSkill=async()=>({id:"x",path:"p",resources:[],replaced:false});export const presetSkillIds=[]',
       '../upstream/loop/agent-loop': `export const agentLoop=async function*(){
         const answer={role:'assistant',content:[{type:'text',text:'ok'}],stopReason:'stop',timestamp:Date.now()};
         yield {type:'message_update',message:answer};yield {type:'message_end',message:answer};
@@ -1310,7 +1611,7 @@ test('Branching retains only attachments referenced before the branch point', as
         'export const serviceFetch=async()=>{throw new Error("Unexpected network request")}',
       '../../integrations/src/mcp': 'export class McpPool {async connect(){return []}}',
       '../../integrations/src/skills':
-        'export const loadSkills=async()=>[];export const readSkillResource=()=>{};export const listSkills=async()=>[]',
+        'export const loadSkills=async()=>[];export const readSkillResource=()=>{};export const listSkills=async()=>[];export const describeSkills=async()=>[];export const createSkill=async()=>({id:"x",path:"p",resources:[],replaced:false});export const presetSkillIds=[]',
       '../upstream/loop/agent-loop': 'export const agentLoop=async function*(){}',
     },
     { structuredClone, TransformStream },
@@ -1410,7 +1711,7 @@ test('Thinking steps stay in event order around tool calls and persist separatel
         'export const serviceFetch=async()=>{throw new Error("Unexpected network request")}',
       '../../integrations/src/mcp': 'export class McpPool {async connect(){return []}}',
       '../../integrations/src/skills':
-        'export const loadSkills=async()=>[];export const readSkillResource=()=>{};export const listSkills=async()=>[]',
+        'export const loadSkills=async()=>[];export const readSkillResource=()=>{};export const listSkills=async()=>[];export const describeSkills=async()=>[];export const createSkill=async()=>({id:"x",path:"p",resources:[],replaced:false});export const presetSkillIds=[]',
       '../upstream/loop/agent-loop': `export const agentLoop=async function*(){
       const first={role:'assistant',content:[{type:'thinking',thinking:'Find the note.'}],stopReason:'toolUse',timestamp:Date.now()};
       yield {type:'message_update',message:first};yield {type:'message_end',message:first};
@@ -1729,4 +2030,785 @@ test('Background memory diagnostics never use conversation notices', async () =>
     agent.memory.report(error)
   assert.equal(warnings.length, 3)
   assert.equal(notices.length, 0)
+})
+
+test('Sidebar restoration removes ghost duplicates and concurrent opens create only one leaf', async () => {
+  const { SidebarViews } = await load('apps/obsidian/src/sidebar-views.ts')
+  const leaves = []
+  let created = 0
+  let revealed = 0
+  const makeLeaf = (saved, actual = saved) => {
+    const leaf = {
+      view: { getViewType: () => actual },
+      getViewState: () => ({ type: saved }),
+      async setViewState(state) {
+        await new Promise((resolve) => setTimeout(resolve, 5))
+        saved = actual = state.type
+      },
+      detach() {
+        leaves.splice(leaves.indexOf(leaf), 1)
+      },
+    }
+    leaves.push(leaf)
+    return leaf
+  }
+  const workspace = {
+    iterateAllLeaves(fn) {
+      ;[...leaves].forEach(fn)
+    },
+    getRightLeaf() {
+      created++
+      return makeLeaf('empty')
+    },
+    async revealLeaf() {
+      revealed++
+    },
+  }
+  const sidebar = new SidebarViews(workspace)
+  makeLeaf('catea-git-history', 'empty')
+  makeLeaf('catea-git-history', 'empty')
+  const valid = makeLeaf('catea-git-history')
+  const unrelated = makeLeaf('other-plugin')
+  await sidebar.sync('catea-git-history', () => true)
+  assert.deepEqual(leaves, [valid, unrelated])
+  assert.equal(created, 0)
+  await sidebar.sync('catea-git-history', () => false)
+  const ghost = makeLeaf('catea-git-history', 'empty')
+  await sidebar.sync('catea-git-history', () => true)
+  assert.equal(ghost.view.getViewType(), 'catea-git-history')
+  assert.equal(created, 0)
+  await sidebar.sync('catea-git-history', () => false)
+  await Promise.all(
+    Array.from({ length: 3 }, () => sidebar.sync('catea-git-history', () => true, true)),
+  )
+  assert.equal(created, 1)
+  assert.equal(revealed, 3)
+  assert.equal(leaves.length, 2)
+  await sidebar.sync('catea-git-history', () => false)
+  let enabled = true
+  const opening = sidebar.sync('catea-git-history', () => enabled)
+  await new Promise((resolve) => setTimeout(resolve, 1))
+  enabled = false
+  await opening
+  assert.deepEqual(leaves, [unrelated])
+  sidebar.dispose()
+  await sidebar.sync('catea-git-history', () => true)
+  assert.deepEqual(leaves, [unrelated])
+})
+
+test('Bundled skill presets resolve without a vault copy and report their source', async () => {
+  const { mkdir, rm, writeFile } = await import('node:fs/promises')
+  const { loadSkills, listSkills, describeSkills, presetSkillIds } = await load(
+    'packages/integrations/src/skills.ts',
+  )
+  const vault = await mkdtemp(join(tmpdir(), 'catea-skills-'))
+  try {
+    assert.deepEqual([...presetSkillIds], ['find-skill', 'skill-creator'])
+    assert.deepEqual([...(await listSkills(vault))], ['find-skill', 'skill-creator'])
+
+    // An empty vault still resolves both presets, and each carries its own frontmatter.
+    const loaded = await loadSkills(vault, ['skill-creator', 'find-skill'])
+    assert.equal(loaded.length, 2)
+    for (const skill of loaded) {
+      assert.ok(skill.content.startsWith('---\nname: ' + skill.id), `${skill.id} frontmatter`)
+      assert.notEqual(skill.description, skill.id, `${skill.id} must declare a description`)
+      assert.ok(skill.content.length < 48000)
+    }
+
+    const listed = await describeSkills(vault, ['find-skill'])
+    assert.deepEqual(
+      [...listed].map((s) => [s.id, s.source, s.enabled]),
+      [
+        ['find-skill', 'preset', true],
+        ['skill-creator', 'preset', false],
+      ],
+    )
+
+    // A vault directory shadows the preset of the same id.
+    await mkdir(join(vault, '.catea/skills/skill-creator'), { recursive: true })
+    await writeFile(
+      join(vault, '.catea/skills/skill-creator/SKILL.md'),
+      '---\nname: skill-creator\ndescription: 本地覆盖版\n---\nbody\n',
+      'utf8',
+    )
+    const [shadowed] = await loadSkills(vault, ['skill-creator'])
+    assert.equal(shadowed.description, '本地覆盖版')
+    const afterShadow = await describeSkills(vault, [])
+    assert.deepEqual(
+      [...afterShadow].map((s) => [s.id, s.source]),
+      [
+        ['find-skill', 'preset'],
+        ['skill-creator', 'vault'],
+      ],
+    )
+    // A preset has no files on disk, so its resources are unreachable.
+    const { readSkillResource } = await load('packages/integrations/src/skills.ts')
+    await assert.rejects(
+      readSkillResource(vault, ['skill-creator'], 'skill-creator', 'references/schemas.md'),
+      /ENOENT|不存在|没有 such file|no such file/i,
+      'preset resources must not resolve to anything',
+    )
+    await assert.rejects(
+      readSkillResource(vault, [], 'skill-creator', 'SKILL.md'),
+      /未启用/,
+      'reading requires the skill to be enabled for this turn',
+    )
+  } finally {
+    await rm(vault, { recursive: true, force: true })
+  }
+})
+
+test('createSkill validates before writing and never leaves a half-written package', async () => {
+  const { mkdir, readFile, readdir, rm, writeFile } = await import('node:fs/promises')
+  const { createSkill, loadSkills } = await load('packages/integrations/src/skills.ts')
+  const vault = await mkdtemp(join(tmpdir(), 'catea-skill-create-'))
+  const body = (name) => `---\nname: ${name}\ndescription: 用于回归测试\n---\n# 正文\n`
+  try {
+    await assert.rejects(
+      createSkill(vault, { id: 'bad id', content: body('bad id') }),
+      /字母、数字/,
+      'ids must stay filesystem safe',
+    )
+    await assert.rejects(
+      createSkill(vault, { id: 'skill-creator', content: body('skill-creator') }),
+      /不可覆盖/,
+      'bundled presets must not be writable',
+    )
+    await assert.rejects(
+      createSkill(vault, { id: 'draft', content: '# 没有 frontmatter\n' }),
+      /frontmatter/,
+      'frontmatter is required',
+    )
+    await assert.rejects(
+      createSkill(vault, { id: 'draft', content: body('other') }),
+      /与 id 一致/,
+      'name must equal the id',
+    )
+    await assert.rejects(
+      createSkill(vault, { id: 'draft', content: '---\nname: draft\ndescription:\n---\nx\n' }),
+      /非空的 description/,
+      'description drives triggering, so it cannot be empty',
+    )
+
+    // A rejected resource must not leave the entry file behind.
+    await assert.rejects(
+      createSkill(vault, {
+        id: 'escaped',
+        content: body('escaped'),
+        resources: [{ path: '../outside.md', content: 'x' }],
+      }),
+      /无效 Skill 资源路径/,
+    )
+    assert.equal((await readdir(join(vault, '.catea/skills')).catch(() => [])).length, 0)
+
+    const created = await createSkill(vault, {
+      id: 'notes',
+      content: body('notes'),
+      resources: [{ path: 'references/detail.md', content: '# 细节\n' }],
+    })
+    assert.equal(created.path, '.catea/skills/notes/SKILL.md')
+    assert.deepEqual([...created.resources], ['references/detail.md'])
+    assert.equal(created.replaced, false)
+    assert.match(await readFile(join(vault, '.catea/skills/notes/SKILL.md'), 'utf8'), /回归测试/)
+    const [skill] = await loadSkills(vault, ['notes'])
+    assert.equal(skill.description, '用于回归测试')
+
+    await assert.rejects(
+      createSkill(vault, { id: 'notes', content: body('notes') }),
+      /已存在/,
+      'an existing package needs an explicit overwrite',
+    )
+    const again = await createSkill(vault, {
+      id: 'notes',
+      content: body('notes'),
+      overwrite: true,
+    })
+    assert.equal(again.replaced, true)
+  } finally {
+    await rm(vault, { recursive: true, force: true })
+  }
+})
+
+test('Image generation supports DashScope and OpenAI, saves locally and never forwards keys to downloads', async () => {
+  const vault = await mkdtemp(join(tmpdir(), 'catea-image-'))
+  const png = Buffer.from(
+    'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jRZkAAAAASUVORK5CYII=',
+    'base64',
+  )
+  const requests = []
+  let mode = 'dashscope'
+  const { generateImage } = await load(
+    'packages/integrations/src/image-generation.ts',
+    {
+      '../../agent-core/src/transport':
+        'export const serviceFetch=(...args)=>globalThis.imageFetch(...args)',
+    },
+    {
+      imageFetch: async (url, init) => {
+        requests.push({ url, init })
+        if (url === 'https://images.example.invalid/result') return new Response(png)
+        if (mode === 'error') return new Response('DO NOT LEAK test-secret', { status: 401 })
+        if (mode === 'invalid')
+          return Response.json({ data: [{ b64_json: Buffer.from('<svg/>').toString('base64') }] })
+        if (mode === 'large')
+          return new Response('', { headers: { 'content-length': '999999999' } })
+        if (mode === 'cancel') {
+          init.signal.throwIfAborted()
+          throw new Error('Unexpected request')
+        }
+        if (mode === 'openai')
+          return Response.json({ data: [{ b64_json: png.toString('base64') }] })
+        return Response.json({
+          output: {
+            choices: [
+              { message: { content: [{ image: 'https://images.example.invalid/result' }] } },
+            ],
+          },
+        })
+      },
+    },
+  )
+  const config = {
+    enabled: true,
+    protocol: 'dashscope',
+    baseUrl: 'https://token-plan.cn-beijing.maas.aliyuncs.com/apps/anthropic',
+    model: 'qwen-image-3.0-pro',
+    apiKey: 'test-secret',
+  }
+  const signal = new AbortController().signal
+  try {
+    const first = await generateImage(vault, config, { prompt: 'A cat', size: '1024x1024' }, signal)
+    assert.deepEqual(await readFile(join(vault, first.path)), png)
+    assert.match(first.path, /^Attachments\/Catea\/.+\.png$/)
+    assert.equal(
+      requests[0].url,
+      'https://token-plan.cn-beijing.maas.aliyuncs.com/api/v1/services/aigc/multimodal-generation/generation',
+    )
+    assert.equal(JSON.parse(requests[0].init.body).parameters.size, '1024*1024')
+    assert.equal(JSON.parse(requests[0].init.body).input.messages[0].content[0].text, 'A cat')
+    assert.equal(requests[1].init.headers, undefined)
+    assert.doesNotMatch(JSON.stringify(first), /test-secret|images.example/)
+    mode = 'openai'
+    const second = await generateImage(
+      vault,
+      { ...config, protocol: 'openai', baseUrl: 'https://api.example.invalid/v1' },
+      { prompt: 'A cat' },
+      signal,
+    )
+    assert.notEqual(first.path, second.path)
+    assert.equal(requests.at(-1).url, 'https://api.example.invalid/v1/images/generations')
+    assert.equal(JSON.parse(requests.at(-1).init.body).prompt, 'A cat')
+    assert.deepEqual(await readFile(join(vault, second.path)), png)
+    mode = 'error'
+    await assert.rejects(
+      generateImage(vault, config, { prompt: 'A cat' }, signal),
+      (error) => /HTTP 401/.test(error.message) && !/test-secret|DO NOT LEAK/.test(error.message),
+    )
+    mode = 'invalid'
+    await assert.rejects(
+      generateImage(vault, { ...config, protocol: 'openai' }, { prompt: 'A cat' }, signal),
+      /unsupported image/,
+    )
+    mode = 'large'
+    await assert.rejects(generateImage(vault, config, { prompt: 'A cat' }, signal), /oversized/)
+    const before = requests.length
+    await assert.rejects(
+      generateImage(vault, { ...config, enabled: false }, { prompt: 'A cat' }, signal),
+      /enable/,
+    )
+    await assert.rejects(generateImage(vault, config, { prompt: '' }, signal), /prompt/)
+    await assert.rejects(
+      generateImage(vault, config, { prompt: 'A cat' }, AbortSignal.abort()),
+      /abort/i,
+    )
+    assert.equal(requests.length, before)
+  } finally {
+    await rm(vault, { recursive: true, force: true })
+  }
+})
+
+test('Image settings are separate from chat models and keep keys in the secure store', async () => {
+  const { plugin, tab, secrets } = await settingsFixture()
+  const settingsRows = rows(tab)
+  assert.equal(plugin.agentSettings.imageGeneration.enabled, false)
+  let change
+  const input = {
+    inputEl: {},
+    setValue() {
+      return this
+    },
+    onChange(fn) {
+      change = fn
+      return this
+    },
+  }
+  settingsRows
+    .find((row) => row.name === '生图 API Key')
+    .render({
+      addText(fn) {
+        fn(input)
+        return this
+      },
+    })
+  assert.equal(input.inputEl.type, 'password')
+  await change('image-secret')
+  assert.equal(JSON.stringify(tab.getSettingDefinitions()).includes('image-secret'), false)
+  assert.equal(plugin.agentSettings.imageGeneration.apiKey, 'image-secret')
+  assert.equal(secrets().at(-1)[0], 'image-generation')
+  assert.equal(secrets().at(-1)[1], 'image-secret')
+  assert.equal(plugin.agentSettings.models.length, 0)
+})
+
+test('Agent exposes the configured image tool, gates writes and persists generated image paths', async () => {
+  let registered = false,
+    calls = 0,
+    approvals = 0,
+    saved
+  const config = {
+    enabled: true,
+    models: [model],
+    modelId: model.id,
+    personaId: 'aria',
+    skills: [],
+    mcp: [],
+    memory: false,
+    web: false,
+    shell: false,
+    imageGeneration: {
+      enabled: true,
+      baseUrl: 'https://example.invalid/v1',
+      model: 'image-model',
+      apiKey: 'image-secret',
+    },
+  }
+  const { Agent } = await load(
+    'packages/agent-core/src/index.ts',
+    {
+      './transport': 'export const serviceFetch=async()=>{throw new Error("Unexpected network")}',
+      '../../agent-core/src/transport':
+        'export const serviceFetch=async()=>{throw new Error("Unexpected network")}',
+      '../../integrations/src/mcp': 'export class McpPool {async connect(){return []}}',
+      '../../integrations/src/skills':
+        'export const loadSkills=async()=>[];export const readSkillResource=()=>{};export const listSkills=async()=>[];export const describeSkills=async()=>[];export const createSkill=async()=>({})',
+      '../../integrations/src/image-generation': `export const imageGenerationReady=c=>!!(c?.enabled && c.apiKey && c.model && c.baseUrl);export const imageGenerationTool={name:'generate_image',description:'Draw',parameters:{type:'object',properties:{prompt:{type:'string'}},required:['prompt']}};export const generateImage=async()=>{globalThis.generated();return {path:'Attachments/Catea/test.png',markdown:'[Image](Attachments/Catea/test.png)'}}`,
+      '../upstream/loop/agent-loop': `export const agentLoop=async function*(_,context){
+      const tool=context.tools.find(t=>t.name==='generate_image');globalThis.registered(!!tool);
+      if(tool){if(tool.isConcurrencySafe)throw new Error('Image tool must not run concurrently');await tool.execute('image-call',{prompt:'A cat'});}
+      const answer={role:'assistant',content:[{type:'text',text:'Done'}],stopReason:'stop',timestamp:Date.now()};yield {type:'message_end',message:answer};yield {type:'agent_end'};
+    }`,
+    },
+    {
+      structuredClone,
+      TransformStream,
+      registered: (value) => {
+        registered = value
+      },
+      generated: () => {
+        calls++
+      },
+    },
+  )
+  const agent = new Agent(
+    '/unused',
+    () => config,
+    {
+      change() {},
+      notice() {},
+      approve: async () => {
+        approvals++
+        return true
+      },
+      ask: async () => ({}),
+    },
+    {
+      conversations: {
+        save: async (value) => {
+          saved = structuredClone(value)
+        },
+        list: async () => [],
+        load: async () => structuredClone(saved),
+      },
+      memory: { close() {} },
+      modelClient: {
+        async *stream() {
+          yield { type: 'done', reply: { text: '{"title":"Image test"}', calls: [] } }
+        },
+      },
+    },
+  )
+  await agent.send('Draw a cat', '')
+  assert.equal(registered, true)
+  assert.equal(calls, 1)
+  assert.equal(approvals, 1)
+  assert.equal(saved.messages[1].generatedImages[0], 'Attachments/Catea/test.png')
+  await agent.open(saved.id)
+  assert.equal(agent.session.messages[1].generatedImages[0], 'Attachments/Catea/test.png')
+  config.imageGeneration.enabled = false
+  await agent.send('Do something else', '')
+  assert.equal(registered, false)
+  assert.equal(calls, 1)
+  config.imageGeneration.enabled = true
+  config.imageGeneration.apiKey = ''
+  await agent.send('Unconfigured image generation', '')
+  assert.equal(registered, false)
+})
+
+test('Video tasks poll, persist progress and resume without submitting; audio uses binary MP3', async () => {
+  const vault = await mkdtemp(join(tmpdir(), 'catea-media-'))
+  const mp4 = Buffer.from([0, 0, 0, 24, 102, 116, 121, 112, 105, 115, 111, 109, 0, 0, 0, 0])
+  const mp3 = Buffer.from([73, 68, 51, 4, 0, 0, 0, 0, 0, 0, 255, 251, 144, 0])
+  const requests = [],
+    progress = []
+  let polls = 0,
+    status = 'SUCCEEDED',
+    badAudio = false
+  const config = {
+    enabled: true,
+    baseUrl: 'https://token-plan.cn-beijing.maas.aliyuncs.com/apps/anthropic',
+    model: 'video-model',
+    apiKey: 'media-secret',
+    voice: 'voice-a',
+  }
+  const { generateVideo, generateAudio } = await load(
+    'packages/integrations/src/media-generation.ts',
+    {
+      '../../agent-core/src/transport':
+        'export const serviceFetch=(...args)=>globalThis.mediaFetch(...args)',
+    },
+    {
+      window: { setTimeout: (fn) => setTimeout(fn, 0), clearTimeout },
+      mediaFetch: async (url, init) => {
+        requests.push({ url, init })
+        if (url.includes('video-synthesis')) return Response.json({ output: { task_id: 'task-1' } })
+        if (url.includes('/tasks/'))
+          return Response.json({
+            output: {
+              task_status: polls++ === 0 ? 'RUNNING' : status,
+              video_url: 'https://cdn.example.invalid/video',
+            },
+          })
+        if (url.includes('SpeechSynthesizer'))
+          return badAudio
+            ? new Response('provider-error media-secret')
+            : Response.json({
+                output: { audio: { url: 'http://result.oss-cn-beijing.aliyuncs.com/audio' } },
+              })
+        if (url === 'https://result.oss-cn-beijing.aliyuncs.com/audio') return new Response(mp3)
+        if (url === 'https://cdn.example.invalid/video') return new Response(mp4)
+        throw new Error('Unexpected URL')
+      },
+    },
+  )
+  const signal = new AbortController().signal
+  try {
+    const result = await generateVideo(
+      vault,
+      config,
+      { prompt: 'Cat blinking' },
+      signal,
+      async (id, state) => {
+        progress.push({ id, state })
+      },
+    )
+    assert.deepEqual(await readFile(join(vault, result.path)), mp4)
+    assert.equal(result.task_id, 'task-1')
+    assert.equal(progress.map((item) => item.state).join(','), 'SUBMITTED,RUNNING,SUCCEEDED')
+    assert.equal(requests[0].init.headers['X-DashScope-Async'], 'enable')
+    assert.equal(JSON.parse(requests[0].init.body).parameters.duration, 5)
+    assert.equal(requests.at(-1).init.headers, undefined)
+    const countPosts = () => requests.filter((item) => item.init.method === 'POST').length
+    const posts = countPosts()
+    await generateVideo(vault, config, { task_id: 'task-1' }, signal)
+    assert.equal(countPosts(), posts)
+    status = 'FAILED'
+    await assert.rejects(
+      generateVideo(vault, config, { task_id: 'task-1' }, signal),
+      /FAILED.*task-1/,
+    )
+    const before = requests.length
+    await assert.rejects(generateVideo(vault, config, { task_id: '../outside' }, signal), /task ID/)
+    await assert.rejects(
+      generateVideo(vault, config, { prompt: 'test', duration: 500 }, signal),
+      /duration/,
+    )
+    await assert.rejects(
+      generateVideo(vault, config, { prompt: 'test' }, AbortSignal.abort()),
+      /abort/i,
+    )
+    assert.equal(requests.length, before)
+    const audio = await generateAudio(vault, config, { text: 'Hello Catea' }, signal)
+    assert.deepEqual(await readFile(join(vault, audio.path)), mp3)
+    assert.equal(JSON.parse(requests.at(-2).init.body).input.voice, 'voice-a')
+    assert.equal(JSON.parse(requests.at(-2).init.body).input.format, 'mp3')
+    assert.equal(requests.at(-1).init.headers, undefined)
+    assert.doesNotMatch(JSON.stringify(audio), /media-secret/)
+    badAudio = true
+    await assert.rejects(
+      generateAudio(vault, config, { text: 'Hello' }, signal),
+      (error) => /valid MP3/.test(error.message) && !/media-secret/.test(error.message),
+    )
+    await assert.rejects(
+      generateAudio(vault, { ...config, voice: '' }, { text: 'Hello' }, signal),
+      /voice/,
+    )
+    await assert.rejects(generateAudio(vault, config, { text: 'x'.repeat(6001) }, signal), /6000/)
+  } finally {
+    await rm(vault, { recursive: true, force: true })
+  }
+})
+
+test('Stopping video polling retains the submitted task and makes no further requests', async () => {
+  const vault = await mkdtemp(join(tmpdir(), 'catea-media-stop-'))
+  const controller = new AbortController()
+  let calls = 0,
+    taskId
+  const { generateVideo } = await load(
+    'packages/integrations/src/media-generation.ts',
+    {
+      '../../agent-core/src/transport':
+        'export const serviceFetch=(...args)=>globalThis.mediaFetch(...args)',
+    },
+    {
+      mediaFetch: async () => {
+        calls++
+        return Response.json({ output: { task_id: 'resume-me' } })
+      },
+    },
+  )
+  try {
+    await assert.rejects(
+      generateVideo(
+        vault,
+        { enabled: true, baseUrl: 'https://example.invalid', model: 'video', apiKey: 'key' },
+        { prompt: 'test' },
+        controller.signal,
+        async (id) => {
+          taskId = id
+          controller.abort()
+        },
+      ),
+      /abort/i,
+    )
+    assert.equal(taskId, 'resume-me')
+    assert.equal(calls, 1)
+  } finally {
+    await rm(vault, { recursive: true, force: true })
+  }
+})
+
+test('Video and speech settings use separate masked credentials and preserve the chat model', async () => {
+  const { tab, plugin, secrets } = await settingsFixture()
+  const allRows = rows(tab)
+  for (const [kind, name] of [
+    ['video', '视频 API Key'],
+    ['audio', '音频 API Key'],
+  ]) {
+    let change
+    const input = {
+      inputEl: {},
+      setValue() {
+        return this
+      },
+      onChange(fn) {
+        change = fn
+        return this
+      },
+    }
+    allRows
+      .find((row) => row.name === name)
+      .render({
+        addText(fn) {
+          fn(input)
+          return this
+        },
+      })
+    assert.equal(input.inputEl.type, 'password')
+    await change(`${kind}-secret`)
+    assert.equal(secrets().at(-1)[0], `${kind}-generation`)
+  }
+  assert.equal(plugin.agentSettings.videoGeneration.enabled, false)
+  assert.equal(plugin.agentSettings.audioGeneration.voice, 'longanhuan_v3.6')
+  assert.equal(plugin.agentSettings.models.length, 0)
+  assert.doesNotMatch(JSON.stringify(tab.getSettingDefinitions()), /video-secret|audio-secret/)
+})
+
+test('Agent registers video and audio independently and persists playback paths plus video task IDs', async () => {
+  let saved,
+    registered = [],
+    calls = [],
+    approvals = 0
+  const media = {
+    enabled: true,
+    baseUrl: 'https://example.invalid',
+    model: 'media',
+    apiKey: 'secret',
+    voice: 'voice',
+  }
+  const config = {
+    enabled: true,
+    models: [model],
+    modelId: model.id,
+    personaId: 'aria',
+    skills: [],
+    mcp: [],
+    memory: false,
+    web: false,
+    shell: false,
+    videoGeneration: { ...media },
+    audioGeneration: { ...media },
+  }
+  const { Agent } = await load(
+    'packages/agent-core/src/index.ts',
+    {
+      './transport': 'export const serviceFetch=async()=>{throw new Error("Unexpected network")}',
+      '../../agent-core/src/transport':
+        'export const serviceFetch=async()=>{throw new Error("Unexpected network")}',
+      '../../integrations/src/mcp': 'export class McpPool {async connect(){return []}}',
+      '../../integrations/src/skills':
+        'export const loadSkills=async()=>[];export const readSkillResource=()=>{};export const listSkills=async()=>[];export const describeSkills=async()=>[];export const createSkill=async()=>({})',
+      '../../integrations/src/media-generation': `export const mediaGenerationReady=c=>!!(c?.enabled&&c.apiKey&&c.model&&c.baseUrl);
+      export const videoGenerationTool={name:'generate_video',parameters:{type:'object'}};
+      export const audioGenerationTool={name:'generate_audio',parameters:{type:'object'}};
+      export const generateVideo=async(v,c,a,s,progress)=>{globalThis.called('video');await progress('task-persisted','RUNNING');return {path:'Attachments/Catea/movie.mp4'}};
+      export const generateAudio=async()=>{globalThis.called('audio');return {path:'Attachments/Catea/speech.mp3'}};`,
+      '../upstream/loop/agent-loop': `export const agentLoop=async function*(_,context){
+      const tools=context.tools.filter(t=>['generate_video','generate_audio'].includes(t.name));globalThis.registered(tools.map(t=>t.name));
+      for(const tool of tools){
+        if(tool.isConcurrencySafe)throw new Error('Media must not run concurrently');
+        yield {type:'tool_execution_start',toolCallId:tool.name,toolName:tool.name,args:{prompt:'Cat',text:'Hello'}};
+        const result=await tool.execute(tool.name,{prompt:'Cat',text:'Hello'});
+        yield {type:'tool_execution_end',toolCallId:tool.name,result,isError:false};
+      }
+      const answer={role:'assistant',content:[{type:'text',text:'Done'}],stopReason:'stop',timestamp:Date.now()};yield {type:'message_end',message:answer};yield {type:'agent_end'};
+    }`,
+    },
+    {
+      structuredClone,
+      TransformStream,
+      called: (value) => calls.push(value),
+      registered: (value) => {
+        registered = value
+      },
+    },
+  )
+  const agent = new Agent(
+    '/unused',
+    () => config,
+    {
+      change() {},
+      notice() {},
+      approve: async () => {
+        approvals++
+        return true
+      },
+      ask: async () => ({}),
+    },
+    {
+      conversations: {
+        save: async (value) => {
+          saved = structuredClone(value)
+        },
+        list: async () => [],
+        load: async () => structuredClone(saved),
+      },
+      memory: { close() {} },
+      modelClient: {
+        async *stream() {
+          yield { type: 'done', reply: { text: '{"title":"Media test"}', calls: [] } }
+        },
+      },
+    },
+  )
+  await agent.send('Make video and speech', '')
+  assert.equal(registered.join(','), 'generate_video,generate_audio')
+  assert.equal(calls.join(','), 'video,audio')
+  assert.equal(approvals, 2)
+  assert.equal(saved.messages[1].generatedMedia.map((item) => item.kind).join(','), 'video,audio')
+  assert.equal(saved.messages[1].tools[0].mediaTask.id, 'task-persisted')
+  await agent.open(saved.id)
+  assert.equal(agent.session.messages[1].generatedMedia[1].path, 'Attachments/Catea/speech.mp3')
+  config.videoGeneration.enabled = false
+  config.audioGeneration.voice = ''
+  await agent.send('No media', '')
+  assert.equal(registered.length, 0)
+  assert.equal(calls.length, 2)
+})
+
+test('Host transport fallback preserves binary audio and video bytes', async () => {
+  const binary = new Uint8Array([255, 251, 144, 0, 128, 254])
+  const { serviceFetch } = await load(
+    'packages/agent-core/src/transport.ts',
+    {
+      'node:https': `export const request=()=>({on(name,fn){if(name==='error')Promise.resolve().then(()=>fn({code:'SELF_SIGNED_CERT_IN_CHAIN'}));return this},setTimeout(){return this},end(){},write(){}})`,
+      'node:http': 'export const request=()=>{throw new Error("Unexpected HTTP")}',
+      electron: 'export const net=undefined',
+      '@electron/remote': 'export const net=undefined',
+      obsidian: 'export const requestUrl=async()=>globalThis.hostResponse',
+    },
+    {
+      hostResponse: {
+        status: 200,
+        headers: { 'content-type': 'audio/mpeg' },
+        text: 'corrupted text',
+        arrayBuffer: binary.buffer,
+      },
+    },
+  )
+  const response = await serviceFetch('https://cdn.example.invalid/audio')
+  assert.deepEqual(new Uint8Array(await response.arrayBuffer()), binary)
+})
+
+test('Skill creation rejects symlink entries, reserved aliases and concurrent overwrite races', async () => {
+  const { mkdir, writeFile, symlink, readdir } = await import('node:fs/promises')
+  const { createSkill, loadSkill } = await load('packages/integrations/src/skills.ts')
+  const vault = await mkdtemp(join(tmpdir(), 'catea-skill-review-'))
+  const outside = await mkdtemp(join(tmpdir(), 'catea-skill-outside-'))
+  const body = (id) => `---\nname: ${id}\ndescription: Test package\n---\nSafe content\n`
+  try {
+    await mkdir(join(vault, '.catea/skills/linked'), { recursive: true })
+    await writeFile(join(outside, 'private.md'), 'unchanged')
+    await symlink(join(outside, 'private.md'), join(vault, '.catea/skills/linked/SKILL.md'))
+    await assert.rejects(
+      createSkill(vault, { id: 'linked', content: body('linked'), overwrite: true }),
+      /边界|符号链接/,
+    )
+    assert.equal(await readFile(join(outside, 'private.md'), 'utf8'), 'unchanged')
+    for (const resources of [
+      [{ path: 'skill.md', content: 'bypass frontmatter' }],
+      [
+        { path: 'refs/a.md', content: 'one' },
+        { path: 'REFS/A.md', content: 'two' },
+      ],
+      [
+        { path: 'refs', content: 'file' },
+        { path: 'refs/a.md', content: 'nested' },
+      ],
+    ])
+      await assert.rejects(
+        createSkill(vault, { id: 'invalid', content: body('invalid'), resources }),
+        /正文|重复/,
+      )
+    const results = await Promise.allSettled(
+      [1, 2].map(() => createSkill(vault, { id: 'parallel', content: body('parallel') })),
+    )
+    assert.equal(results.filter((item) => item.status === 'fulfilled').length, 1)
+    assert.equal(results.filter((item) => item.status === 'rejected').length, 1)
+    await createSkill(vault, {
+      id: 'parallel',
+      content: body('parallel') + 'Updated',
+      overwrite: true,
+      resources: [{ path: 'refs/a.md', content: 'new' }],
+    })
+    assert.match((await loadSkill(vault, 'parallel')).content, /Updated/)
+    assert.equal(
+      (await readdir(join(vault, '.catea/skills'))).some(
+        (name) => name.startsWith('.stage-') || name.startsWith('.backup-'),
+      ),
+      false,
+    )
+    await assert.rejects(loadSkill(vault, 'toString'), /未找到/)
+  } finally {
+    await rm(vault, { recursive: true, force: true })
+    await rm(outside, { recursive: true, force: true })
+  }
 })

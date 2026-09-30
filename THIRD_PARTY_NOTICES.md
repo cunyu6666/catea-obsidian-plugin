@@ -34,3 +34,35 @@ declarations under `typings/`, both MIT licensed. Their original license files
 and package metadata are retained there. They enable source-only marketplace
 type analysis and are not bundled into runtime JavaScript. See `typings/README.md`
 for versions and the byte-for-byte provenance gate.
+
+## Bundled skill presets
+
+Two skill prompts ship inside the plugin bundle as text. They are adaptations, not
+copies, and neither is ever written into the user's vault.
+
+`packages/integrations/src/skill-creator.md` adapts `skill-creator` from
+`anthropics/skills` at commit `8a1541c4a3ffa5a20a5a91de0dcf3f0bab1d1ef4`
+(Apache-2.0; upstream file `skills/skill-creator/SKILL.md`, 33168 bytes,
+sha256 `dcd4803e61e913e6fc27294184cd3a71f09f5e924ff20c8a9a20173e7b3c2bcf`).
+Kept: intent capture from the conversation, description-as-trigger guidance,
+progressive disclosure, the Principle of Lack of Surprise, and explaining why
+instead of stacking MUSTs. Replaced: the evaluation loop, which is about 72% of
+the upstream body and requires Python scripts, the `claude -p` CLI, subagent
+fan-out, a local browser viewer and a `present_files` tool that Catea does not
+have. The upstream `scripts/`, `agents/`, `assets/` and `eval-viewer/` tree
+(about 192 KB) is not redistributed.
+
+`packages/integrations/src/find-skill.md` adapts `find-skills` from
+`vercel-labs/skills` at commit `3694740352eeef5cdd689af694c485f1ff62eec3`
+(MIT; upstream file `skills/find-skills/SKILL.md`, 5472 bytes,
+sha256 `c00eeea0e13e74fe4a9d84ba0a8542205a1b736d65f13134fe1a6647eb14976f`).
+Kept: the activation list, the quality ladder of install count, source reputation
+and repository standing, the structured presentation of candidates, and admitting
+when nothing exists. Replaced: every `npx skills` invocation, which needs a separately installed CLI and npx environment; discovery uses the skills.sh HTTP search endpoint
+through `web_fetch`, and installation uses `skill_create` after the user has read
+the full text. The upstream `-y` confirmation-skipping flag is deliberately not
+reproduced, because third-party text may only enter a system prompt on approval.
+
+The full upstream license texts are included in `SKILL-CREATOR-LICENSE.txt` and
+`FIND-SKILL-LICENSE.txt`, and in the release bundle header so plugin-manager
+installs that download only the three required assets retain these notices.

@@ -1,9 +1,9 @@
 /**
  * [WHO]: Provides ModelReply, ModelServiceError, ToolDefinition, streamModel
  * [FROM]: Depends on ./types, ./i18n, ./transport, ./attachments, ./model-capabilities
- * [TO]: Consumed by apps/obsidian/src/obsidian-tools.ts, packages/agent-core/src/index.ts,
+ * [TO]: Consumed by packages/integrations/src/media-generation.ts, apps/obsidian/src/obsidian-tools.ts, packages/agent-core/src/index.ts,
  *   packages/agent-core/src/upstream-stream.ts, packages/integrations/src/mcp.ts,
- *   packages/integrations/src/tools.ts, packages/integrations/src/web.ts,
+ *   packages/integrations/src/image-generation.ts, packages/integrations/src/tools.ts, packages/integrations/src/web.ts,
  *   packages/memory/src/tools.ts
  * [HERE]: packages/agent-core/src/providers.ts - streamModel maps transcripts to OpenAI or Anthropic requests and parses answer and provider reasoning streams; endpoint derivation respects any explicit trailing API version; retries once without usage on 400/422
  */

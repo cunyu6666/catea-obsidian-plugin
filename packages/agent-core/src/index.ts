@@ -1,10 +1,18 @@
 /**
  * [WHO]: Provides Agent, Hooks, Message, Session, Settings
- * [FROM]: Depends on ./i18n, ../upstream/loop/agent-loop, ./context, ./compaction, ./compaction-summary, ./contracts, ./upstream-stream, ./ask-user-question, ./types, ../../integrations/src/web, ./byok, ./model-capabilities, ./permission-policy, ./providers, ../../personas/src, ../../integrations/src/skills, ../../integrations/src/tools, ../../integrations/src/mcp, ../../memory/src/tools, ./protocol-repair, ./conversation-title
+ * [FROM]: Depends on ../../integrations/src/media-generation, ../../integrations/src/image-generation, ./i18n, ../upstream/loop/agent-loop, ./context, ./compaction, ./compaction-summary, ./contracts, ./upstream-stream, ./ask-user-question, ./types, ../../integrations/src/web, ./byok, ./model-capabilities, ./permission-policy, ./providers, ../../personas/src, ../../integrations/src/skills, ../../integrations/src/tools, ../../integrations/src/mcp, ../../memory/src/tools, ./protocol-repair, ./conversation-title
  * [TO]: Consumed by apps/obsidian/src/composition.ts, apps/obsidian/src/main.tsx,
  *   apps/obsidian/src/panel.tsx
  * [HERE]: packages/agent-core/src/index.ts - class Agent owns one session: persists it, repairs interrupted tool calls, assembles tools, drives agentLoop and enqueues memory; index capped at 500
  */
+import {
+  generateVideo,
+  generateAudio,
+  mediaGenerationReady,
+  videoGenerationTool,
+  audioGenerationTool,
+  type MediaGenerationConfig,
+} from '../../integrations/src/media-generation'
 import { textValue } from './i18n'
 import { agentLoop } from '../upstream/loop/agent-loop'
 import { WorkingContext } from './context'
@@ -35,8 +43,19 @@ import { modelCapabilities } from './model-capabilities'
 import { requirePermission } from './permission-policy'
 import { type ToolDefinition } from './providers'
 import type { ModelConfig, ChatAttachment, FileChange } from './types'
+import {
+  generateImage,
+  imageGenerationReady,
+  imageGenerationTool,
+  type ImageGenerationConfig,
+} from '../../integrations/src/image-generation'
 import { persona } from '../../personas/src'
-import { listSkills, loadSkills, readSkillResource } from '../../integrations/src/skills'
+import {
+  createSkill,
+  describeSkills,
+  loadSkills,
+  readSkillResource,
+} from '../../integrations/src/skills'
 import { VaultTools, fileTools, type Approve } from '../../integrations/src/tools'
 import { McpPool, type McpConfig } from '../../integrations/src/mcp'
 import { memoryTools, memoryReadOnly } from '../../memory/src/tools'
@@ -44,12 +63,16 @@ import { repairToolProtocol } from './protocol-repair'
 import { generateConversationTitle } from './conversation-title'
 
 export interface Settings {
+  videoGeneration?: MediaGenerationConfig
+  audioGeneration?: MediaGenerationConfig
+  imageGeneration?: ImageGenerationConfig
   gitHistory?: boolean
   noteThumbnails?: boolean
   showTokenUsage?: boolean
   enableReplyAnnotations?: boolean
   permissionMode?: 'assist' | 'full'
   permissionDefaultsVersion?: number
+  presetSkillsVersion?: number
   miniMaxPresetsAdded?: boolean
   language?: 'zh' | 'en'
   enabled: boolean
@@ -172,6 +195,50 @@ export class Agent {
   async list() {
     return this.conversations.list()
   }
+  private restoreQuotes() {
+    // Older versions saved explicit selections only in the model transcript.
+    // Recover that field alone; never expose the automatically attached current note.
+    let cursor = 0
+    for (const message of this.session.messages) {
+      if (message.role !== 'user') continue
+      const index = this.session.transcript.findIndex(
+        (item, i) =>
+          i >= cursor &&
+          item.role === 'user' &&
+          (item.content === message.text || item.content.startsWith(`${message.text}\n\n`)),
+      )
+      if (index < 0) continue
+      cursor = index + 1
+      const item = this.session.transcript[index]
+      if (message.quotes !== undefined || item.role !== 'user') continue
+      const context = item.content
+        .slice(message.text.length)
+        .trim()
+        .replace(/^<current-note-context>\s*/, '')
+        .replace(/\s*<\/current-note-context>$/, '')
+      if (!context) continue
+      try {
+        const parsed: unknown = JSON.parse(context)
+        if (!parsed || typeof parsed !== 'object' || !('selectedQuotes' in parsed)) continue
+        if (!Array.isArray(parsed.selectedQuotes)) continue
+        const quotes: NonNullable<Message['quotes']> = []
+        for (const value of parsed.selectedQuotes as unknown[]) {
+          if (!value || typeof value !== 'object') continue
+          const quote = value as Record<string, unknown>
+          if (typeof quote.path !== 'string' || typeof quote.text !== 'string') continue
+          quotes.push({
+            id: `${message.id}-quote-${quotes.length}`,
+            path: quote.path,
+            text: quote.text,
+            ...(typeof quote.comment === 'string' ? { comment: quote.comment } : {}),
+          })
+        }
+        message.quotes = quotes
+      } catch {
+        // Compacted or non-JSON legacy context cannot be reconstructed safely.
+      }
+    }
+  }
   async open(id: string) {
     if (this.historyBusy) return
     if (this.running) throw new Error('请先停止当前回复')
@@ -180,6 +247,7 @@ export class Agent {
     try {
       this.session = (await this.conversations.load(id)) || this.fresh()
       this.settings().personaId = this.session.personaId
+      this.restoreQuotes()
       repairToolProtocol(this.session)
       for (const m of this.session.messages) {
         if (m.status === 'streaming') {
@@ -297,6 +365,8 @@ export class Agent {
     return {
       sessionId: truncated.id,
       text: target.text,
+      quotes: structuredClone(target.quotes || []),
+      skills: [...(target.skills || [])],
       attachments: (this.session.attachments || []).filter((file) =>
         target.attachmentIds?.includes(file.id),
       ),
@@ -306,12 +376,18 @@ export class Agent {
     const snapshot = structuredClone({ ...this.session, updated: Date.now() })
     return this.conversations.save(snapshot)
   }
-  steer(text: string, noteContext: string, files: ChatAttachment[] = [], skills?: string[]) {
+  steer(
+    text: string,
+    noteContext: string,
+    files: ChatAttachment[] = [],
+    skills?: string[],
+    quotes: Message['quotes'] = [],
+  ) {
     // Forward the per-message skill selection: the run may finish while the
     // caller's asynchronous context resolves, and steer then delegates to send.
     // Mid-run steering cannot rebuild the system prompt, so tags only affect
     // the injection of a turn that has not started yet.
-    if (!this.running) return this.send(text, noteContext, files, skills)
+    if (!this.running) return this.send(text, noteContext, files, skills, quotes)
     this.addAttachments(files)
     const content = [text, noteContext].filter(Boolean).join('\n\n'),
       displayId = crypto.randomUUID()
@@ -319,6 +395,8 @@ export class Agent {
       id: displayId,
       role: 'user',
       text,
+      quotes: structuredClone(quotes),
+      skills: [...new Set(skills || [])],
       attachmentIds: files.map((f) => f.id),
       tools: [],
       status: 'complete',
@@ -339,18 +417,12 @@ export class Agent {
     this.abort?.abort()
   }
   /** Installed skill ids with best-effort descriptions for the composer picker. */
+  /** Installed and bundled-preset skills for the composer picker. */
   async installedSkills(): Promise<Array<{ id: string; description: string }>> {
-    const items: Array<{ id: string; description: string }> = []
-    for (const id of await listSkills(this.vault)) {
-      try {
-        // Per-id loading: one broken SKILL.md must not hide every later skill.
-        const [skill] = await loadSkills(this.vault, [id])
-        items.push({ id, description: skill?.description || id })
-      } catch {
-        items.push({ id, description: id })
-      }
-    }
-    return items
+    // Per-id loading: one broken SKILL.md must not hide every later skill.
+    return (await describeSkills(this.vault, this.settings().skills)).map(
+      ({ id, description }) => ({ id, description }),
+    )
   }
   async close(closeMemory = true) {
     this.stop()
@@ -369,6 +441,7 @@ export class Agent {
     noteContext: string | (() => Promise<string>),
     files: ChatAttachment[] = [],
     skills?: string[],
+    quotes: Message['quotes'] = [],
   ) {
     if (this.running || this.historyBusy || !text.trim()) return
     this.compaction = undefined
@@ -406,6 +479,8 @@ export class Agent {
         id: userId,
         role: 'user',
         text,
+        quotes: structuredClone(quotes),
+        skills: [...new Set(skills || [])],
         attachmentIds: files.map((f) => f.id),
         tools: [],
         status: 'complete',
@@ -460,6 +535,11 @@ export class Agent {
           : Promise.resolve(''),
       ])
       const tools: ToolDefinition[] = [
+        ...(mediaGenerationReady(config.videoGeneration) ? [videoGenerationTool] : []),
+        ...(mediaGenerationReady(config.audioGeneration) && config.audioGeneration?.voice?.trim()
+          ? [audioGenerationTool]
+          : []),
+        ...(imageGenerationReady(config.imageGeneration) ? [imageGenerationTool] : []),
         ...(this.hooks.host?.tools || []),
         ...(config.web ? [...webTools, ...linkWorldTools] : []),
         askUserQuestionTool,
@@ -475,6 +555,34 @@ export class Agent {
             type: 'object',
             properties: { skill: { type: 'string' }, path: { type: 'string' } },
             required: ['skill', 'path'],
+          },
+        },
+        {
+          name: 'skill_list',
+          description:
+            'List installed and built-in preset skills with their source and enabled state',
+          parameters: { type: 'object', properties: {} },
+        },
+        {
+          name: 'skill_create',
+          description:
+            'Write a Skill package to .catea/skills/<id>/SKILL.md after the user approves the full content',
+          parameters: {
+            type: 'object',
+            properties: {
+              id: { type: 'string' },
+              content: { type: 'string' },
+              resources: {
+                type: 'array',
+                items: {
+                  type: 'object',
+                  properties: { path: { type: 'string' }, content: { type: 'string' } },
+                  required: ['path', 'content'],
+                },
+              },
+              overwrite: { type: 'boolean' },
+            },
+            required: ['id', 'content'],
           },
         },
         {
@@ -546,6 +654,68 @@ Internal note references use [[path|label]]. Only call listed tools. Preserve ra
             const tool = reply.tools.find((item) => item.id === toolCallId)
             if (tool) tool.fileChange = fileChange
           })
+        if (name === 'generate_video' || name === 'generate_audio') {
+          const kind = name === 'generate_video' ? 'video' : 'audio'
+          const key = kind === 'video' ? 'videoGeneration' : 'audioGeneration'
+          const mediaConfig = config[key]
+          if (!mediaConfig || !mediaGenerationReady(this.settings()[key]))
+            throw new Error('Media generation is disabled or not configured')
+          await requirePermission(
+            {
+              mode: this.settings().permissionMode || 'assist',
+              capability: 'vault',
+              operation: 'write',
+            },
+            this.hooks.approve,
+            kind === 'video' ? '生成视频 / Generate video' : '合成语音 / Generate speech',
+            `${textValue(args.prompt || args.text || args.task_id)}\n\nAttachments/Catea/`,
+            signal,
+          )
+          if (!mediaGenerationReady(this.settings()[key]))
+            throw new Error('Media generation is disabled')
+          const result =
+            kind === 'video'
+              ? await generateVideo(
+                  this.vault,
+                  mediaConfig,
+                  args,
+                  signal,
+                  async (taskId, status) => {
+                    const tool = reply.tools.find((item) => item.id === toolCallId)
+                    if (tool) {
+                      tool.mediaTask = { id: taskId, status }
+                      tool.result = JSON.stringify({ task_id: taskId, status })
+                    }
+                    this.hooks.change()
+                    await this.save()
+                  },
+                )
+              : await generateAudio(this.vault, mediaConfig, args, signal)
+          reply.generatedMedia = [...(reply.generatedMedia || []), { kind, path: result.path }]
+          this.hooks.change()
+          return JSON.stringify(result)
+        }
+        if (name === 'generate_image') {
+          if (!imageGenerationReady(this.settings().imageGeneration) || !config.imageGeneration)
+            throw new Error('Image generation is disabled or not configured')
+          await requirePermission(
+            {
+              mode: this.settings().permissionMode || 'assist',
+              capability: 'vault',
+              operation: 'write',
+            },
+            this.hooks.approve,
+            '生成图片 / Generate image',
+            `${textValue(args.prompt)}\n\nAttachments/Catea/`,
+            signal,
+          )
+          if (!imageGenerationReady(this.settings().imageGeneration))
+            throw new Error('Image generation is disabled')
+          const result = await generateImage(this.vault, config.imageGeneration, args, signal)
+          reply.generatedImages = [...(reply.generatedImages || []), result.path]
+          this.hooks.change()
+          return JSON.stringify(result)
+        }
         if (name === 'web_search' || name === 'web_fetch') {
           if (!this.settings().web) throw new Error('网络工具已关闭')
           const output = await runWeb(name, args, signal)
@@ -612,6 +782,41 @@ Internal note references use [[path|label]]. Only call listed tools. Preserve ra
             textValue(args.skill),
             textValue(args.path),
           )
+        if (name === 'skill_list')
+          return JSON.stringify(await describeSkills(this.vault, this.settings().skills), null, 2)
+        if (name === 'skill_create') {
+          const id = textValue(args.id)
+          const content = textValue(args.content)
+          const resources = (Array.isArray(args.resources) ? args.resources : []).map((item) => {
+            const value = (item ?? {}) as Record<string, unknown>
+            return { path: textValue(value.path), content: textValue(value.content) }
+          })
+          // Skill text is injected into every later system prompt, so the exact
+          // body is shown before the write is approved.
+          await requirePermission(
+            {
+              mode: this.settings().permissionMode || 'assist',
+              capability: 'vault',
+              operation: 'write',
+              resource: `.catea/skills/${id}/SKILL.md`,
+            },
+            this.hooks.approve,
+            `创建 Skill：${id}`,
+            JSON.stringify({ id, content, resources, overwrite: args.overwrite === true }, null, 2),
+            signal,
+          )
+          const result = await createSkill(this.vault, {
+            id,
+            content,
+            resources,
+            overwrite: args.overwrite === true,
+          })
+          return JSON.stringify({
+            ...result,
+            enabled: false,
+            note: '技能尚未启用：请让用户在设置的 Skills 区打开开关，或在输入框用 / 标签只带本轮。',
+          })
+        }
         if (name === 'history_lookup')
           return continuity.run(
             'session_history',
@@ -646,6 +851,7 @@ Internal note references use [[path|label]]. Only call listed tools. Preserve ra
         'session_history',
         'history_lookup',
         'skill_read',
+        'skill_list',
       ])
       const contextMessages = continuity.messages()
       // The current user turn was journaled from transcript by the constructor on first use.
@@ -851,22 +1057,35 @@ Internal note references use [[path|label]]. Only call listed tools. Preserve ra
       continuity.cancel()
       await compaction.check('threshold', continuity.messages())
       await save()
-      if (firstTurn && reply.status === 'complete' && reply.text.trim()) {
+      const firstUser = this.session.messages.find((message) => message.role === 'user')
+      const fallbackTitle = firstUser?.text.slice(0, 40)
+      if (
+        firstUser &&
+        !this.session.titleGenerated &&
+        this.session.title === fallbackTitle &&
+        (this.session.titleAttempts || 0) < 3 &&
+        reply.status === 'complete' &&
+        reply.text.trim() &&
+        !signal.aborted
+      ) {
+        this.session.titleAttempts = (this.session.titleAttempts || 0) + 1
         try {
           const title = await generateConversationTitle(
             this.modelClient,
             model,
-            text,
+            firstUser.text,
             reply.text,
             signal,
           )
-          if (title) {
+          if (title && !signal.aborted && this.session.title === fallbackTitle) {
             this.session.title = title
+            this.session.titleGenerated = true
             await save()
             this.hooks.change()
           }
         } catch {
-          // A title is optional metadata; the completed reply must remain successful.
+          // Retry optional metadata on a later completed turn; keep this reply successful.
+          console.warn('[Catea title] Generation failed; keeping the fallback title.')
         }
       }
       if (this.settings().memory)

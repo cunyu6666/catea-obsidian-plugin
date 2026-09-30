@@ -22,7 +22,7 @@ import {
   vendorPresets,
   type VendorPreset,
 } from '../../../packages/agent-core/src/vendor-presets'
-import { listSkills } from '../../../packages/integrations/src/skills'
+import { describeSkills } from '../../../packages/integrations/src/skills'
 import {
   createPresetServer,
   injectSecretEnv,
@@ -409,6 +409,128 @@ export class CateaSettings extends PluginSettingTab {
         )
       },
     })
+    const imageConfig = (c.imageGeneration ??= {
+      enabled: false,
+      protocol: 'dashscope',
+      baseUrl: 'https://token-plan.cn-beijing.maas.aliyuncs.com',
+      model: 'qwen-image-3.0-pro',
+      apiKey: '',
+    })
+    const imageGeneration: SettingsRow[] = [
+      {
+        name: tr('启用生图工具'),
+        desc: tr('使用独立模型生成图片，保存到 Attachments/Catea，并在对话中预览。'),
+        render: (s) => {
+          s.addToggle((toggle) =>
+            toggle.setValue(imageConfig.enabled).onChange(async (value) => {
+              imageConfig.enabled = value
+              await p.saveAgentSettings()
+            }),
+          )
+        },
+      },
+      {
+        name: tr('生图协议'),
+        render: (s) => {
+          s.addDropdown((dropdown) =>
+            dropdown
+              .addOption('dashscope', tr('阿里云 DashScope'))
+              .addOption('openai', tr('OpenAI 兼容'))
+              .setValue(imageConfig.protocol || 'openai')
+              .onChange(async (value) => {
+                imageConfig.protocol = value === 'dashscope' ? 'dashscope' : 'openai'
+                await p.saveAgentSettings()
+              }),
+          )
+        },
+      },
+      ...(['baseUrl', 'model', 'apiKey'] as const).map((key) => ({
+        name: tr({ baseUrl: '生图 API 地址', model: '生图模型名', apiKey: '生图 API Key' }[key]),
+        desc:
+          key === 'apiKey'
+            ? tr('密钥保存在 Obsidian 安全存储；不支持时仅在本次会话内使用。')
+            : undefined,
+        render: (s: Setting) => {
+          s.addText((input) => {
+            if (key === 'apiKey') input.inputEl.type = 'password'
+            input.setValue(imageConfig[key]).onChange(async (value) => {
+              imageConfig[key] = value.trim()
+              if (key === 'apiKey') p.saveSecret('image-generation', imageConfig.apiKey)
+              await p.saveAgentSettings()
+            })
+          })
+        },
+      })),
+    ]
+    const mediaSections: SettingsSection[] = []
+    for (const kind of ['video', 'audio'] as const) {
+      const configKey = kind === 'video' ? 'videoGeneration' : 'audioGeneration'
+      const media = (c[configKey] ??= {
+        enabled: false,
+        baseUrl: 'https://token-plan.cn-beijing.maas.aliyuncs.com',
+        model: kind === 'video' ? 'happyhorse-1.1-t2v' : 'qwen-audio-3.0-tts-plus',
+        apiKey: '',
+        ...(kind === 'audio' ? { voice: 'longanhuan_v3.6' } : {}),
+      })
+      const labels =
+        kind === 'video'
+          ? {
+              enabled: '启用视频生成',
+              baseUrl: '视频 API 地址',
+              model: '视频模型名',
+              apiKey: '视频 API Key',
+              voice: '语音音色',
+            }
+          : {
+              enabled: '启用语音合成',
+              baseUrl: '音频 API 地址',
+              model: '音频模型名',
+              apiKey: '音频 API Key',
+              voice: '语音音色',
+            }
+      const fields =
+        kind === 'video'
+          ? (['baseUrl', 'model', 'apiKey'] as const)
+          : (['baseUrl', 'model', 'apiKey', 'voice'] as const)
+      mediaSections.push({
+        heading: tr(kind === 'video' ? '视频生成' : '语音合成'),
+        rows: [
+          {
+            name: tr(labels.enabled),
+            desc: tr(
+              kind === 'video'
+                ? '使用 DashScope 异步视频接口，保存 MP4 并在对话中播放。停止等待不会取消云端任务。'
+                : '使用 DashScope 语音合成接口，保存 MP3 并在对话中播放。',
+            ),
+            render: (s) => {
+              s.addToggle((toggle) =>
+                toggle.setValue(media.enabled).onChange(async (value) => {
+                  media.enabled = value
+                  await p.saveAgentSettings()
+                }),
+              )
+            },
+          },
+          ...fields.map((key) => ({
+            name: tr(labels[key]),
+            desc:
+              key === 'apiKey'
+                ? tr('密钥保存在 Obsidian 安全存储；不支持时仅在本次会话内使用。')
+                : undefined,
+            render: (s: Setting) => {
+              s.addText((input) => {
+                if (key === 'apiKey') input.inputEl.type = 'password'
+                input.setValue(media[key] || '').onChange(async (value) => {
+                  media[key] = value.trim()
+                  if (key === 'apiKey') p.saveSecret(`${kind}-generation`, media.apiKey)
+                  await p.saveAgentSettings()
+                })
+              })
+            },
+          })),
+        ],
+      })
+    }
     const skills: SettingsRow[] = [
       {
         name: tr('Obsidian 操作 · 内置'),
@@ -419,21 +541,27 @@ export class CateaSettings extends PluginSettingTab {
       },
       {
         name: 'Skills',
-        desc: tr('将 Skill 文件夹放到 .catea/skills/<名称>/SKILL.md，再启用。'),
+        desc:
+          tr('将 Skill 文件夹放到 .catea/skills/<名称>/SKILL.md，再启用。') +
+          ' ' +
+          tr('随插件分发的 Skill 预设已列在这里；同名知识库目录优先于预设。'),
         render: (s) => {
           const box = s.settingEl.createDiv()
-          void listSkills(p.vaultPath)
-            .then((ids) => {
+          void describeSkills(p.vaultPath, c.skills)
+            .then((items) => {
               if (!box.isConnected) return
-              for (const id of ids)
-                new Setting(box).setName(id).addToggle((t) =>
-                  t.setValue(c.skills.includes(id)).onChange(async (value) => {
-                    c.skills = value
-                      ? [...new Set([...c.skills, id])]
-                      : c.skills.filter((item) => item !== id)
-                    await p.saveAgentSettings()
-                  }),
-                )
+              for (const item of items)
+                new Setting(box)
+                  .setName(item.source === 'preset' ? `${item.id}${tr(' · 内置预设')}` : item.id)
+                  .setDesc(item.description)
+                  .addToggle((t) =>
+                    t.setValue(c.skills.includes(item.id)).onChange(async (value) => {
+                      c.skills = value
+                        ? [...new Set([...c.skills, item.id])]
+                        : c.skills.filter((id) => id !== item.id)
+                      await p.saveAgentSettings()
+                    }),
+                  )
             })
             .catch(
               (error: unknown) =>
@@ -639,6 +767,8 @@ export class CateaSettings extends PluginSettingTab {
       { heading: tr('外观'), rows: appearance },
       { heading: 'Agent', rows: agent },
       { heading: tr('BYOK 模型'), rows: models },
+      { heading: tr('图像生成'), rows: imageGeneration },
+      ...mediaSections,
       { heading: 'Skills', rows: skills },
       { heading: 'MCP', rows: mcp },
     ]

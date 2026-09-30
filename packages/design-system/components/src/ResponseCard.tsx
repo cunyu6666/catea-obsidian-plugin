@@ -160,14 +160,17 @@ export function ResponseCard({
                 type="button"
                 aria-expanded={sourcesOpen}
                 aria-controls={sourcesId}
+                title={`${safeSources.length} ${labels.sources || 'Sources'}`}
                 onClick={() => setSourcesOpen((open) => !open)}
               >
-                <span className="anno-response-card__source-stack" aria-hidden="true">
-                  {safeSources.slice(0, 3).map((source) => (
-                    <span key={source.url}>{sourceDomain(source.url).charAt(0).toUpperCase()}</span>
-                  ))}
-                </span>
-                <span>
+                <span className="anno-response-card__source-summary">
+                  <span className="anno-response-card__source-stack" aria-hidden="true">
+                    {safeSources.slice(0, 3).map((source) => (
+                      <span key={source.url}>
+                        {sourceDomain(source.url).charAt(0).toUpperCase()}
+                      </span>
+                    ))}
+                  </span>
                   {safeSources.length} {labels.sources || 'Sources'}
                 </span>
                 <Icon

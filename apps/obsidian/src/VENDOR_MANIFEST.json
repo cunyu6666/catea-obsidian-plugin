@@ -1,0 +1,22 @@
+{
+  "comment": "Digests for vendored, generated assets that ship inside apps/obsidian/src. These are DIP-excluded and must never be hand-edited; tests/vendor-assets.test.ts fails if a tracked digest stops matching. A regenerated asset gets a new digest only after a human confirms the upstream source.",
+  "assets": {
+    "apps/obsidian/src/paper.cjs": {
+      "sha256": "ff17c50d86ff966034bbbdd3045a44bfe8c2c0396c9ab8d743a0013deecbd6bf",
+      "bytes": 1634965,
+      "role": "Paper base class plus embedded Tabler icon assets; Obsidian loads the plugin as a single module, so the icon set cannot be fetched at runtime.",
+      "generated": true,
+      "importedBy": ["apps/obsidian/src/main.tsx"],
+      "provenance": {
+        "upstream": "unknown — no Tabler version marker exists in the file and no generator script is checked into this repository",
+        "firstSeen": "ffb2b29 Import catea-source v0.3.1 (initial commit)",
+        "regeneration": "none available locally; the 1.6 MB icon blob on line 4 is not rebuildable from anything in this checkout"
+      },
+      "contents": {
+        "iconEntries": 5166,
+        "lucidToTablerAliases": 190,
+        "note": "Line 4 holds 98.7 percent of the file (1,613,729 bytes); every other line is hand-written logic."
+      }
+    }
+  }
+}

@@ -17,6 +17,11 @@ const dependencyRoot = (name) => {
   if (!directory) throw new Error(`Cannot locate package root for ${name}`)
   return directory
 }
+const skillLicenses = await Promise.all(
+  ['SKILL-CREATOR-LICENSE.txt', 'FIND-SKILL-LICENSE.txt'].map(
+    async (name) => `${name}\n${await readFile(resolve(root, name), 'utf8')}`,
+  ),
+)
 await mkdir(out, { recursive: true })
 await build({
   absWorkingDir: root,
@@ -25,6 +30,9 @@ await build({
   bundle: true,
   minify: true,
   legalComments: 'none',
+  banner: {
+    js: `/*! Bundled skill adaptations — license notices\n${skillLicenses.join('\n\n').replaceAll('*/', '* /')}\n*/`,
+  },
   nodePaths: [resolve(root, 'node_modules')],
   platform: 'node',
   format: 'cjs',
@@ -136,6 +144,8 @@ await copyFile(resolve(root, 'LICENSE'), resolve(out, 'LICENSE'))
 await copyFile(resolve(root, 'THIRD_PARTY_NOTICES.md'), resolve(out, 'THIRD_PARTY_NOTICES.md'))
 await copyFile(resolve(root, 'TABLER-LICENSE.txt'), resolve(out, 'TABLER-LICENSE.txt'))
 await copyFile(resolve(root, 'REMIX-LICENSE.txt'), resolve(out, 'REMIX-LICENSE.txt'))
+for (const name of ['SKILL-CREATOR-LICENSE.txt', 'FIND-SKILL-LICENSE.txt'])
+  await copyFile(resolve(root, name), resolve(out, name))
 
 for (const name of ['CRAFT-AGENTS-LICENSE', 'CRAFT-AGENTS-NOTICE', 'BEUI-LICENSE.txt'])
   await copyFile(resolve(root, 'packages/design-system', name), resolve(out, name))

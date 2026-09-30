@@ -1,11 +1,12 @@
 /**
- * [WHO]: Provides contractTest(), extractP3(), extractExports(), extractImports(), listRepoFiles(), inScopeDIPFiles(), consumersOf(), REPO_ROOT
- * [FROM]: Depends on node:fs, node:path, node:url, node:test, node:assert/strict for file access, path handling and test registration
- * [TO]: Consumed by every __tests__/*.test.ts contract test and by tests/dip-verify.test.ts
+ * [WHO]: Provides contractTest(), extractP3(), extractExports(), extractImports(), listRepoFiles(), gitTrackedFiles(), trackedButIgnoredFiles(), gitIgnoredPaths(), inScopeDIPFiles(), consumersOf(), REPO_ROOT, VENDORED_ASSETS, ASSET_MANIFESTS
+ * [FROM]: Depends on node:fs, node:child_process, node:path, node:url, node:test, node:assert/strict for file access, git index reads, path handling and test registration
+ * [TO]: Consumed by every __tests__/*.test.ts contract test, by tests/dip-verify.test.ts and by tests/vendor-assets.test.ts
  * [HERE]: tests/dip-contract.ts - shared DIP contract parser; turns a P3 header plus the actual source into verifiable assertions, so documentation drift fails the suite
  */
 
 import { readFileSync, readdirSync, existsSync, statSync } from 'node:fs'
+import { spawnSync } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
 import { dirname, resolve, join, relative, sep } from 'node:path'
 import { test } from 'node:test'
@@ -17,6 +18,17 @@ export const REPO_ROOT = resolve(HERE, '..')
 // Files intentionally excluded from DIP. scripts/build.mjs is deferred because a
 // concurrent process is editing it for the Obsidian marketplace submission.
 const DEFERRED = new Set(['scripts/build.mjs'])
+// Vendored, generated assets that ship inside a source directory. They are not
+// hand-written code, so a P3 header would be theatre; their integrity is guarded
+// by a digest instead. See apps/obsidian/src/VENDOR_MANIFEST.json.
+const ASSET_MANIFESTS = ['apps/obsidian/src/VENDOR_MANIFEST.json']
+export { ASSET_MANIFESTS }
+export const VENDORED_ASSETS: ReadonlySet<string> = new Set<string>(
+  ASSET_MANIFESTS.flatMap((manifestRel) => {
+    const manifest = JSON.parse(readSource(manifestRel))
+    return Object.keys(manifest.assets ?? {})
+  }),
+)
 const SKIP_DIRS = new Set(['node_modules', '.git', 'dist', '.catea', '.worktrees'])
 const SOURCE_EXT = ['.ts', '.tsx', '.mjs', '.js', '.cjs']
 
@@ -48,12 +60,52 @@ export function listRepoFiles(): string[] {
   return fileIndexCache
 }
 
+// listRepoFiles() walks the disk and honours SKIP_DIRS, so it cannot tell what is
+// committed. This reads the git index, which is what "tracked" actually means.
+let gitIndexCache: string[] | null = null
+
+export function gitTrackedFiles(): string[] {
+  if (gitIndexCache) return gitIndexCache
+  const run = spawnSync('git', ['ls-files', '-z'], { cwd: REPO_ROOT, encoding: 'utf8' })
+  assert.equal(run.status, 0, `git ls-files failed: ${run.stderr?.trim()}`)
+  gitIndexCache = run.stdout.split('\0').filter(Boolean).sort()
+  return gitIndexCache
+}
+
+// Tracked files that .gitignore also covers: force-added artifacts, or files that
+// were committed before someone added the ignore rule.
+export function trackedButIgnoredFiles(): string[] {
+  const run = spawnSync('git', ['ls-files', '-i', '-c', '--exclude-standard', '-z'], {
+    cwd: REPO_ROOT,
+    encoding: 'utf8',
+  })
+  assert.equal(run.status, 0, `git ls-files -i failed: ${run.stderr?.trim()}`)
+  return run.stdout.split('\0').filter(Boolean).sort()
+}
+
+// Which of the given paths git actually ignores. `git ls-files -i` only reports
+// tracked ones, so probing rules directly needs check-ignore.
+export function gitIgnoredPaths(candidates: string[]): Set<string> {
+  if (candidates.length === 0) return new Set()
+  const run = spawnSync('git', ['check-ignore', '-z', '--stdin', '--'], {
+    cwd: REPO_ROOT,
+    encoding: 'utf8',
+    input: candidates.join('\0') + '\0',
+  })
+  // check-ignore exits 1 when nothing matches, which is a valid answer, not a failure.
+  if (run.status !== 0 && run.status !== 1) {
+    assert.fail(`git check-ignore failed: ${run.stderr?.trim()}`)
+  }
+  return new Set(run.stdout.split('\0').filter(Boolean))
+}
+
 export function isDIPSource(rel: string): boolean {
   if (rel.includes('/upstream/')) return false
   // Test files are out of scope: a contract test for a contract test is circular.
   if (rel.includes('/__tests__/')) return false
   if (rel.endsWith('.d.ts')) return false
   if (DEFERRED.has(rel)) return false
+  if (VENDORED_ASSETS.has(rel)) return false
   return /^(?:apps\/[^/]+\/src|packages\/[^/]+\/src)\/.+\.(?:ts|tsx)$/.test(rel)
 }
 

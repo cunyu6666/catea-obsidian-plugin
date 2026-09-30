@@ -1,7 +1,7 @@
 /**
  * [WHO]: Provides serviceFetch
  * [FROM]: Depends on obsidian, node:https, node:http, electron, @electron/remote
- * [TO]: Consumed by packages/agent-core/src/providers.ts, packages/integrations/src/web.ts
+ * [TO]: Consumed by packages/integrations/src/media-generation.ts, packages/agent-core/src/providers.ts, packages/integrations/src/web.ts, packages/integrations/src/image-generation.ts
  * [HERE]: packages/agent-core/src/transport.ts - streams over Node http/https with a 120 s timeout and rejects redirects; falls back to Electron net only on X.509 chain errors, then to buffered requestUrl
  */
 import { requestUrl } from 'obsidian'
@@ -124,7 +124,7 @@ export async function serviceFetch(
         }),
       ])
       init.signal?.throwIfAborted()
-      return new Response(result.text, { status: result.status, headers: result.headers })
+      return new Response(result.arrayBuffer, { status: result.status, headers: result.headers })
     } finally {
       if (abort) init.signal?.removeEventListener('abort', abort)
       if (timer) window.clearTimeout(timer)

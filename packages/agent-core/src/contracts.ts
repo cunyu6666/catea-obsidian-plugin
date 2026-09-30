@@ -2,7 +2,7 @@
  * [WHO]: Provides ConversationStore, JournalEntry, MemoryJob, MemoryPort, Message, ModelClient, ModelEvent, ModelRequest, Session, SessionSummary
  * [FROM]: Depends on ./types, ./upstream-stream, ./providers
  * [TO]: Consumed by packages/agent-core/src/index.ts, packages/agent-core/src/context.ts,
- *   packages/agent-core/src/model-client.ts, packages/agent-core/src/upstream-stream.ts,
+ *   apps/obsidian/src/MessageQuotes.tsx, packages/agent-core/src/model-client.ts, packages/agent-core/src/upstream-stream.ts,
  *   packages/integrations/src/conversation-store.ts, packages/memory/src/index.ts, packages/memory/src/extraction.ts
  * [HERE]: packages/agent-core/src/contracts.ts - host-neutral conversation and memory ports with serializable session data
  */
@@ -11,6 +11,10 @@ import type { RuntimeMessage } from './upstream-stream'
 import type { ModelReply, ToolDefinition } from './providers'
 
 export interface Message {
+  generatedMedia?: Array<{ kind: 'video' | 'audio'; path: string }>
+  generatedImages?: string[]
+  skills?: string[]
+  quotes?: Array<{ id: string; path: string; text: string; comment?: string }>
   attachmentIds?: string[]
   id: string
   role: 'user' | 'assistant'
@@ -45,6 +49,8 @@ export interface Session {
   attachments?: ChatAttachment[]
   id: string
   title: string
+  titleGenerated?: boolean
+  titleAttempts?: number
   personaId: string
   messages: Message[]
   transcript: TranscriptItem[]

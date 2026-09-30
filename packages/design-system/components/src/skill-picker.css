@@ -11,3 +11,6 @@
 .catea-skill-tags { display:flex; flex-wrap:wrap; gap:6px; padding:10px 16px 0; }
 .catea-skill-tag { display:inline-flex; align-items:center; gap:2px; max-width:100%; padding:3px 4px 3px 10px; border:1px solid var(--border); border-radius:999px; background:var(--surface-muted); color:var(--foreground); font-size:12px; }
 .catea-skill-tag__name { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+
+.catea-message-skills { justify-content:flex-end; max-width:100%; padding:0; }
+.catea-message-skills .catea-skill-tag { padding:3px 10px; }

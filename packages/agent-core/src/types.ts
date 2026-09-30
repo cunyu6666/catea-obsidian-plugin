@@ -89,6 +89,7 @@ export interface TokenUsage {
 }
 
 export interface ToolEvent {
+  mediaTask?: { id: string; status: string }
   id: string
   name: string
   args: Record<string, unknown>

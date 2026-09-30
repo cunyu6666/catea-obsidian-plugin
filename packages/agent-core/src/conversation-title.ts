@@ -2,7 +2,7 @@
  * [WHO]: Provides generateConversationTitle
  * [FROM]: Depends on ./contracts, ./types
  * [TO]: Consumed by packages/agent-core/src/index.ts
- * [HERE]: packages/agent-core/src/conversation-title.ts - generates and validates a concise title after the first completed assistant reply
+ * [HERE]: packages/agent-core/src/conversation-title.ts - generates and validates a concise title after a completed assistant reply
  */
 import type { ModelClient } from './contracts'
 import type { ModelConfig } from './types'
@@ -16,7 +16,8 @@ function excerpt(value: string): string {
 
 function parseTitle(value: string): string | null {
   try {
-    const parsed = JSON.parse(value.trim()) as unknown
+    const json = value.trim().replace(/^```(?:json)?\s*\n([\s\S]*?)\n```$/i, '$1')
+    const parsed = JSON.parse(json) as unknown
     if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return null
     const title = (parsed as Record<string, unknown>).title
     if (typeof title !== 'string') return null
@@ -38,6 +39,9 @@ export async function generateConversationTitle(
   assistant: string,
   signal: AbortSignal,
 ): Promise<string | null> {
+  // Reasoning models consume output tokens before producing the short JSON title.
+  // Bound latency separately instead of starving the response with a 64-token cap.
+  const bounded = AbortSignal.any([signal, AbortSignal.timeout(20_000)])
   let output = ''
   for await (const event of client.stream(
     {
@@ -51,9 +55,9 @@ export async function generateConversationTitle(
       system: TITLE_SYSTEM,
       tools: [],
       attachments: new Map(),
-      maxTokens: 64,
+      maxTokens: 2048,
     },
-    signal,
+    bounded,
   )) {
     if (event.type === 'delta') output += event.text
     if (event.type === 'done') output = event.reply.text || output

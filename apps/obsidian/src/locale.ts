@@ -6,6 +6,40 @@
  */
 export type Language = 'zh' | 'en'
 const english: Record<string, string> = {
+  视频生成: 'Video generation',
+  语音合成: 'Speech synthesis',
+  启用视频生成: 'Enable video generation',
+  启用语音合成: 'Enable speech synthesis',
+  '视频 API 地址': 'Video API URL',
+  视频模型名: 'Video model name',
+  '视频 API Key': 'Video API key',
+  '音频 API 地址': 'Audio API URL',
+  音频模型名: 'Audio model name',
+  '音频 API Key': 'Audio API key',
+  语音音色: 'Speech voice',
+  生成视频: 'Generate video',
+  合成语音: 'Generate speech',
+  生成的视频: 'Generated video',
+  生成的音频: 'Generated audio',
+  '使用 DashScope 异步视频接口，保存 MP4 并在对话中播放。停止等待不会取消云端任务。':
+    'Use the asynchronous DashScope video API, save an MP4 and play it in chat. Stopping polling does not cancel the remote task.',
+  '使用 DashScope 语音合成接口，保存 MP3 并在对话中播放。':
+    'Use the DashScope speech API, save an MP3 and play it in chat.',
+
+  图像生成: 'Image generation',
+  生成图片: 'Generate image',
+  启用生图工具: 'Enable image generation',
+  '使用独立模型生成图片，保存到 Attachments/Catea，并在对话中预览。':
+    'Generate images with a separate model, save them in Attachments/Catea and preview them in chat.',
+  生图协议: 'Image API protocol',
+  '阿里云 DashScope': 'Alibaba Cloud DashScope',
+  '生图 API 地址': 'Image API URL',
+  生图模型名: 'Image model name',
+  '生图 API Key': 'Image API key',
+  '密钥保存在 Obsidian 安全存储；不支持时仅在本次会话内使用。':
+    'The key is held in Obsidian secure storage, or only in memory when secure storage is unavailable.',
+  生成的图片: 'Generated image',
+
   '无法保存文件夹图标，请重试。': 'Could not save the folder icon. Please try again.',
   '文件夹已不存在。': 'The folder no longer exists.',
   恢复默认: 'Reset to default',
@@ -208,6 +242,12 @@ const english: Record<string, string> = {
     'Available with Agent: current note, search, open inside Obsidian, read, edit, and manage properties. Writes and setting changes require confirmation.',
   '将 Skill 文件夹放到 .catea/skills/<名称>/SKILL.md，再启用。':
     'Place skills at .catea/skills/<name>/SKILL.md, then enable them here.',
+  '随插件分发的 Skill 预设已列在这里；同名知识库目录优先于预设。':
+    'Skill presets shipped with the plugin are listed here; a vault directory of the same id takes precedence.',
+  ' · 内置预设': ' · Built-in preset',
+  查看技能: 'List skills',
+  创建技能: 'Create skill',
+  读取技能资源: 'Read skill resource',
   连接方式: 'Transport',
   '本地 stdio': 'Local stdio',
   服务器地址: 'Server URL',

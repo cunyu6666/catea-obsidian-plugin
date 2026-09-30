@@ -45,6 +45,10 @@ const config = ts.readConfigFile(resolve(root, 'tsconfig.json'), ts.sys.readFile
 assert.equal(config.error, undefined)
 const parsed = ts.parseJsonConfigFileContent(config.config, ts.sys, root)
 assert.equal(parsed.errors.length, 0)
+// A scanner may supply its own automatic type roots. Declarations must also
+// enter through the source import graph, not only our tsconfig typeRoots.
+parsed.options.typeRoots = [resolve(root, 'node_modules/@types')]
+parsed.options.types = []
 const host = ts.createCompilerHost(parsed.options)
 for (const method of ['fileExists', 'readFile', 'directoryExists']) {
   const original = host[method].bind(host)

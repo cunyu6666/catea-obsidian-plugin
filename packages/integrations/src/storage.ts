@@ -1,7 +1,7 @@
 /**
  * [WHO]: Provides Serial, errnoCode, readJson, within, writeJson
  * [FROM]: Depends on node:fs/promises, node:path
- * [TO]: Consumed by apps/obsidian/src/main.tsx,
+ * [TO]: Consumed by packages/integrations/src/media-generation.ts, packages/integrations/src/image-generation.ts, apps/obsidian/src/main.tsx,
  *   packages/integrations/src/conversation-store.ts,
  *   packages/integrations/src/legacy-snapshots.ts,
  *   packages/integrations/src/index.ts, packages/integrations/src/skills.ts,
