@@ -662,7 +662,11 @@ body.gp-enabled .catea-editor-zoom-label { position: absolute; width: 1px; heigh
 .catea-plan-card__eyebrow {align-self:flex-start;padding:4px 9px;border-radius:999px;background:var(--background-secondary);color:var(--text-muted);font-size:12px;font-weight:600}
 .catea-plan-card.is-pro .catea-plan-card__eyebrow {background:var(--gp-accent-soft,rgba(84,115,99,.12));color:var(--interactive-accent)}
 .catea-plan-card h3 {margin:2px 0 0;font-size:24px;letter-spacing:-.03em}
-.catea-plan-card__price {font-size:19px;font-weight:700;color:var(--text-normal)}
+.catea-plan-card__price {display:flex;align-items:baseline;gap:8px;font-size:19px;font-weight:700;color:var(--text-normal)}
+.catea-plan-card__price del {color:var(--text-muted);font-size:14px;font-weight:500}
+.catea-plan-card__sale {font-size:24px;letter-spacing:-.03em;color:var(--interactive-accent)}
+.catea-plan-card__suffix {color:var(--text-muted);font-size:13px;font-weight:500}
+.catea-quick-price {margin:0 0 10px}
 .catea-plan-card p {margin:0;color:var(--text-muted);line-height:1.55}
 .catea-plan-card ul {display:grid;gap:8px;margin:4px 0 10px;padding:0;list-style:none}
 .catea-plan-card li {position:relative;padding-left:20px;color:var(--text-normal);line-height:1.45}

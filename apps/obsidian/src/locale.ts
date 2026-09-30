@@ -605,15 +605,14 @@ Object.assign(english, { 引用批注: 'Annotate' })
 Object.assign(english, {
   套餐: 'Plan',
   当前套餐: 'Current plan',
-  查看套餐: 'View plans',
-  '选择 Catea 套餐': 'Choose a Catea plan',
+  订阅套餐: 'Subscribe',
+  '一键订阅 Pro': 'Quick subscribe to Pro',
+  '订阅 Catea 套餐': 'Subscribe to a Catea plan',
   'Free 自备 API Key；Pro 订阅后无需 API Key，即可使用 Catea 托管 AI 额度。':
     'Free uses your own API key. Pro includes Catea-hosted AI usage with no API key required.',
+  '输入邮箱即可开通 Pro，立即使用 Catea 托管 AI 额度。':
+    'Enter your email to start Pro and use Catea-hosted AI usage right away.',
   订阅邮箱: 'Subscription email',
-  '用于绑定付款和同步套餐状态；Free 用户不需要注册或登录。':
-    'Used to bind payment and sync plan status. Free users do not need to sign up or sign in.',
-  '用于绑定付款和同步套餐状态；不会创建 Catea 账号。':
-    'Used to bind payment and sync plan status. This will not create a Catea account.',
   支付币种: 'Payment currency',
   '自备 API Key': 'Bring your own API key',
   '适合已有模型服务的用户。': 'For users who already have a model provider.',
@@ -632,8 +631,7 @@ Object.assign(english, {
     'Priority access to advanced features: connectors, custom personas, and media generation',
   '订阅 Pro': 'Subscribe to Pro',
   '同步套餐状态': 'Sync plan status',
-  '支付完成后回到这里刷新状态。订阅信息由 Asgard 管理。':
-    'After payment, return here and refresh. Subscription state is managed by Asgard.',
+  '支付完成后回到这里刷新状态。': 'After payment, return here and refresh.',
   刷新套餐状态: 'Refresh plan status',
   '已切换到 Pro 套餐': 'Switched to the Pro plan',
   '当前为 Free 套餐': 'You are on the Free plan',

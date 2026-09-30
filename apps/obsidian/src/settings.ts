@@ -50,6 +50,11 @@ interface SettingsSection {
 }
 type BillingPlan = 'monthly'
 type BillingCurrency = 'USD' | 'CNY'
+interface PlanPrice {
+  original: string
+  sale: string
+  suffix: string
+}
 interface BillingStatus {
   pro: boolean
   email?: string
@@ -70,6 +75,10 @@ interface BillingPreferences {
   billingLastChecked?: number
 }
 const BILLING_API = 'https://asgard-api-utj6.onrender.com/billing'
+const PRO_PRICES: Record<BillingCurrency, PlanPrice> = {
+  USD: { original: '$10', sale: '$3', suffix: '/ month' },
+  CNY: { original: '¥60', sale: '¥18', suffix: '/ 月' },
+}
 
 function isEmail(value: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)
@@ -174,6 +183,23 @@ function billingSummary(
       : ''
   const checked = checkedAt ? `${tr('上次检查')}：${new Date(checkedAt).toLocaleString()}` : ''
   return [tier, status.status, quota, checked].filter(Boolean).join(' · ')
+}
+
+function defaultCurrency(language?: string): BillingCurrency {
+  return language === 'en' ? 'USD' : 'CNY'
+}
+
+function renderPrice(parent: HTMLElement, currency: BillingCurrency) {
+  const price = PRO_PRICES[currency],
+    box = parent.createDiv({ cls: 'catea-plan-card__price' })
+  box.createEl('del', { text: price.original })
+  box.createSpan({ cls: 'catea-plan-card__sale', text: price.sale })
+  box.createSpan({ cls: 'catea-plan-card__suffix', text: price.suffix })
+}
+
+function priceText(currency: BillingCurrency) {
+  const price = PRO_PRICES[currency]
+  return `${price.sale}${price.suffix}`
 }
 
 export class CateaSettings extends PluginSettingTab {
@@ -673,8 +699,21 @@ export class CateaSettings extends PluginSettingTab {
         desc: billingSummary(tr, billingPrefs.billingStatus, billingPrefs.billingLastChecked),
         render: (s) => {
           s.addButton((button) =>
-            button.setButtonText(tr('查看套餐')).setCta().onClick(() =>
+            button.setButtonText(tr('订阅套餐')).setCta().onClick(() =>
               new SubscriptionModal(
+                p,
+                billingPrefs,
+                () => this.refresh(),
+                (status) => {
+                  billingPrefs.billingStatus = status
+                  billingPrefs.billingLastChecked = Date.now()
+                },
+              ).open(),
+            ),
+          )
+          s.addButton((button) =>
+            button.setButtonText(tr('一键订阅 Pro')).onClick(() =>
+              new QuickSubscribeModal(
                 p,
                 billingPrefs,
                 () => this.refresh(),
@@ -688,23 +727,8 @@ export class CateaSettings extends PluginSettingTab {
         },
       },
       {
-        name: tr('订阅邮箱'),
-        desc: tr('用于绑定付款和同步套餐状态；Free 用户不需要注册或登录。'),
-        render: (s) => {
-          s.addText((input) =>
-            input
-              .setPlaceholder('you@example.com')
-              .setValue(billingPrefs.billingEmail || '')
-              .onChange(async (value) => {
-                billingPrefs.billingEmail = value.trim()
-                await p.saveAgentSettings()
-              }),
-          )
-        },
-      },
-      {
         name: tr('同步套餐状态'),
-        desc: tr('支付完成后回到这里刷新状态。订阅信息由 Asgard 管理。'),
+        desc: tr('支付完成后回到这里刷新状态。'),
         render: (s) => {
           s.addButton((button) =>
             button.setButtonText(tr('刷新套餐状态')).onClick(async () => {
@@ -998,7 +1022,7 @@ async function storeModel(owner: Catea, model: ModelConfig, select = false) {
 }
 
 class SubscriptionModal extends Modal {
-  private currency: BillingCurrency = 'USD'
+  private currency: BillingCurrency
   constructor(
     private owner: Catea,
     private billing: BillingPreferences,
@@ -1006,11 +1030,12 @@ class SubscriptionModal extends Modal {
     private updateStatus: (status: BillingStatus) => void,
   ) {
     super(owner.app)
+    this.currency = defaultCurrency(owner.agentSettings.language)
   }
   onOpen() {
     const tr = this.owner.t,
       el = this.contentEl
-    this.titleEl.setText(tr('选择 Catea 套餐'))
+    this.titleEl.setText(tr('订阅 Catea 套餐'))
     el.addClass('catea-plan-modal')
     el.createEl('p', {
       cls: 'catea-plan-modal__lede',
@@ -1018,7 +1043,6 @@ class SubscriptionModal extends Modal {
     })
     new Setting(el)
       .setName(tr('订阅邮箱'))
-      .setDesc(tr('用于绑定付款和同步套餐状态；不会创建 Catea 账号。'))
       .addText((input) =>
         input
           .setPlaceholder('you@example.com')
@@ -1034,6 +1058,8 @@ class SubscriptionModal extends Modal {
         .setValue(this.currency)
         .onChange((value) => {
           this.currency = value === 'CNY' ? 'CNY' : 'USD'
+          this.contentEl.empty()
+          this.onOpen()
         }),
     )
     const grid = el.createDiv({ cls: 'catea-plan-grid' })
@@ -1053,7 +1079,7 @@ class SubscriptionModal extends Modal {
     this.card(grid, {
       title: 'Pro',
       eyebrow: tr('限时折扣'),
-      price: tr('月付订阅'),
+      price: this.currency,
       subtitle: tr('开箱即用，无需配置 API Key。'),
       features: [
         tr('包含 Catea 托管 AI 额度'),
@@ -1071,7 +1097,7 @@ class SubscriptionModal extends Modal {
     options: {
       title: string
       eyebrow: string
-      price: string
+      price: string | BillingCurrency
       subtitle: string
       features: string[]
       action: string
@@ -1085,7 +1111,8 @@ class SubscriptionModal extends Modal {
     if (options.cta) card.addClass('is-pro')
     card.createDiv({ cls: 'catea-plan-card__eyebrow', text: options.eyebrow })
     card.createEl('h3', { text: options.title })
-    card.createDiv({ cls: 'catea-plan-card__price', text: options.price })
+    if (options.price === 'USD' || options.price === 'CNY') renderPrice(card, options.price)
+    else card.createDiv({ cls: 'catea-plan-card__price', text: options.price })
     card.createEl('p', { text: options.subtitle })
     const list = card.createEl('ul')
     for (const feature of options.features) list.createEl('li', { text: feature })
@@ -1096,6 +1123,76 @@ class SubscriptionModal extends Modal {
       if (options.onClick) button.onClick(() => options.onClick?.(button))
       if (!options.cta && !options.disabled) button.onClick(() => new Notice(tr('当前默认套餐')))
     })
+  }
+  private async subscribe(button: import('obsidian').ButtonComponent) {
+    const tr = this.owner.t,
+      email = this.billing.billingEmail || ''
+    if (!isEmail(email)) {
+      new Notice(tr('请先填写有效邮箱'))
+      return
+    }
+    button.setDisabled(true)
+    try {
+      await this.owner.saveAgentSettings()
+      const url = await createCheckout(email, 'monthly', this.currency)
+      window.open(url, '_blank', 'noopener,noreferrer')
+      new Notice(tr('支付页已打开，完成后回到这里刷新套餐状态'))
+      try {
+        this.updateStatus(await fetchBillingStatus(email))
+        await this.owner.saveAgentSettings()
+        this.saved()
+      } catch {
+        // Checkout completion is asynchronous; status refresh can be retried from Settings.
+      }
+    } catch (error) {
+      new Notice(tr(error instanceof Error ? error.message : '支付链接创建失败，请稍后重试'))
+    } finally {
+      button.setDisabled(false)
+    }
+  }
+  onClose() {
+    this.contentEl.empty()
+  }
+}
+
+class QuickSubscribeModal extends Modal {
+  private currency: BillingCurrency
+  constructor(
+    private owner: Catea,
+    private billing: BillingPreferences,
+    private saved: () => void,
+    private updateStatus: (status: BillingStatus) => void,
+  ) {
+    super(owner.app)
+    this.currency = defaultCurrency(owner.agentSettings.language)
+  }
+  onOpen() {
+    const tr = this.owner.t,
+      el = this.contentEl
+    this.titleEl.setText(tr('一键订阅 Pro'))
+    el.addClass('catea-plan-modal')
+    el.createEl('p', {
+      cls: 'catea-plan-modal__lede',
+      text: tr('输入邮箱即可开通 Pro，立即使用 Catea 托管 AI 额度。'),
+    })
+    const price = el.createDiv({ cls: 'catea-quick-price' })
+    renderPrice(price, this.currency)
+    new Setting(el).setName(tr('订阅邮箱')).addText((input) =>
+      input
+        .setPlaceholder('you@example.com')
+        .setValue(this.billing.billingEmail || '')
+        .onChange((value) => {
+          this.billing.billingEmail = value.trim()
+        }),
+    )
+    new Setting(el)
+      .addButton((button) => button.setButtonText(tr('取消')).onClick(() => this.close()))
+      .addButton((button) =>
+        button
+          .setButtonText(`${tr('订阅 Pro')} · ${priceText(this.currency)}`)
+          .setCta()
+          .onClick(() => void this.subscribe(button)),
+      )
   }
   private async subscribe(button: import('obsidian').ButtonComponent) {
     const tr = this.owner.t,
