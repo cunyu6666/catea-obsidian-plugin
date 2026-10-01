@@ -191,7 +191,7 @@ async function hostedPing(model: ModelConfig | undefined) {
     headers: {
       Accept: 'application/json',
       'Content-Type': 'application/json',
-      Authorization: `Bearer ${model.apiKey}`,
+      'X-Catea-License': model.apiKey,
     },
     body: JSON.stringify({
       model: model.model,

@@ -511,11 +511,17 @@ export async function streamModel(
       : {}),
   }
   const completionUrl = endpoint(config.baseUrl, '/chat/completions')
+  const cateaHosted = new URL(completionUrl).host === 'api.pencil.chat'
   const fetchCompletion = (includeUsage: boolean) =>
     serviceFetch(completionUrl, {
       method: 'POST',
       signal,
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${config.apiKey}` },
+      headers: {
+        'Content-Type': 'application/json',
+        ...(cateaHosted
+          ? { 'X-Catea-License': config.apiKey }
+          : { Authorization: `Bearer ${config.apiKey}` }),
+      },
       body: JSON.stringify({
         ...request,
         ...(includeUsage && streaming ? { stream_options: { include_usage: true } } : {}),
