@@ -294,15 +294,19 @@ function anthropicMessages(
   return messages
 }
 
-async function responseError(response: Response): Promise<Error> {
+async function responseError(response: Response, fallbackUrl = ''): Promise<Error> {
   // Provider error bodies can echo request fields, including the model ID or prompt.
   // Classify the detail for retries, but never put the raw body in chat or storage.
   const body = (await response.text()).slice(0, 2_000)
   let host = ''
   try {
-    host = new URL(response.url).host
+    host = new URL(response.url || fallbackUrl).host
   } catch {
-    host = ''
+    try {
+      host = new URL(fallbackUrl).host
+    } catch {
+      host = ''
+    }
   }
   return new ModelServiceError(body, response.status, host)
 }
@@ -363,7 +367,7 @@ export async function streamModel(
           : {}),
       }),
     })
-    if (!response.ok) throw await responseError(response)
+    if (!response.ok) throw await responseError(response, url)
     options.onTransport?.(
       response.headers.get('content-type')?.includes('text/event-stream') ? 'sse' : 'buffered',
     )
@@ -506,8 +510,9 @@ export async function streamModel(
         }
       : {}),
   }
+  const completionUrl = endpoint(config.baseUrl, '/chat/completions')
   const fetchCompletion = (includeUsage: boolean) =>
-    serviceFetch(endpoint(config.baseUrl, '/chat/completions'), {
+    serviceFetch(completionUrl, {
       method: 'POST',
       signal,
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${config.apiKey}` },
@@ -518,7 +523,7 @@ export async function streamModel(
     })
   let response = await fetchCompletion(true)
   if (response.status === 400 || response.status === 422) response = await fetchCompletion(false)
-  if (!response.ok) throw await responseError(response)
+  if (!response.ok) throw await responseError(response, completionUrl)
   options.onTransport?.(
     response.headers.get('content-type')?.includes('text/event-stream') ? 'sse' : 'buffered',
   )
