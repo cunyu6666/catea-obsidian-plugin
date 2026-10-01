@@ -135,7 +135,6 @@ export class CateaSettings extends PluginSettingTab {
     for (const [key, label] of [
       ['enabled', '启用纸张界面'],
       ['toolbar', '格式工具栏'],
-      ['tablerIcons', 'Tabler 图标'],
       ['hideProperties', '隐藏正文属性'],
       ['hideRibbon', '隐藏导航栏'],
       ['hideStatus', '隐藏状态栏'],
@@ -192,9 +191,9 @@ export class CateaSettings extends PluginSettingTab {
         )
       },
     })
-    const uncovered = p.uncoveredIcons
+    const uncovered = p.uncoveredIcons ?? []
     appearance.push({
-      name: tr('Remix 图标'),
+      name: tr('开启 Remix'),
       desc: uncovered.length
         ? `${tr('用 Remix 线性图标替换 Obsidian 自带图标，与侧栏和文件夹图标同族。关闭后恢复原图标。')} ${tr('未覆盖，仍用 Obsidian 原图标：')}${uncovered.join('、')}`
         : tr('用 Remix 线性图标替换 Obsidian 自带图标，与侧栏和文件夹图标同族。关闭后恢复原图标。'),

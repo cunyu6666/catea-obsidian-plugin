@@ -9,6 +9,7 @@
   "archive-restore": "archive",
   "arrow-down-a-z": "sort-desc",
   "arrow-down-wide-narrow": "sort-alphabet-desc",
+  "arrow-left": "arrow-left",
   "arrow-up-a-z": "sort-asc",
   "arrow-up-down": "arrow-up-down",
   "arrow-up-wide-narrow": "sort-alphabet-asc",
@@ -81,7 +82,7 @@
   "heading-3": "h-3",
   "heading-glyph": "heading",
   "help-circle": "question",
-  "highlighter": "edit-box",
+  "highlighter": "mark-pen",
   "image": "image",
   "image-plus": "image-add",
   "images": "gallery",
@@ -133,6 +134,7 @@
   "pencil-line": "pencil",
   "pilcrow": "paragraph",
   "pin-off": "unpin",
+  "plus": "add",
   "presentation": "presentation",
   "puzzle": "puzzle",
   "redo": "arrow-go-forward",
@@ -183,7 +185,7 @@
   "unpin": "unpin",
   "user-round": "user",
   "users-round": "group",
-  "vault": "git-repository",
+  "vault": "expand-up-down",
   "wand-2": "magic",
   "wand-sparkles": "magic",
   "waypoints": "node-tree",
@@ -377,6 +379,8 @@
   "wand-sparkles": "curated",
   "waypoints": "curated",
   "workflow": "tabler-fallback",
-  "wrench": "identity"
+  "wrench": "identity",
+  "arrow-left": "curated",
+  "plus": "curated"
  }
 }

@@ -98,6 +98,7 @@ export default class Catea extends Base {
     shell: false,
     includeCurrentNote: true,
     gitHistory: false,
+    remixIcons: true,
     memoryPanel: false,
     enableReplyAnnotations: false,
     permissionMode: 'assist',
@@ -152,6 +153,21 @@ export default class Catea extends Base {
   }
 
   /** Drives the icon layer: the body class paper.css keys on, plus the skin itself. */
+  /**
+   * Paper's apply() recomputes the `gp-tabler-on` body class from its own
+   * `tablerIcons` flag, which loadData() pins to false so TablerSkin never
+   * starts. It runs again on layout-ready and from every Paper surface toggle, so
+   * it would strip the class this build depends on. paper.css keys the whole
+   * explorer icon layer on it — the default folder and document glyphs and the
+   * per-folder override that carries the picked colour — so re-asserting the class
+   * right after super.apply() is what keeps those icons on screen. Gated on
+   * Paper's master switch as well, because the rules require gp-enabled too.
+   */
+  apply(): void {
+    super.apply()
+    this.syncRemixIcons(this.settings.enabled && this.agentSettings.remixIcons !== false)
+  }
+
   syncRemixIcons(on: boolean): void {
     document.body.classList.toggle('gp-tabler-on', on)
     if (on) {

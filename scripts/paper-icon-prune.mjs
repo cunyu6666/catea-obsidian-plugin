@@ -24,6 +24,13 @@ const OPEN = 'const icons = {'
 const MARKER = '};\n// Obsidian uses Lucide IDs'
 const REPLACEMENT = 'const icons = {};'
 
+// Catea drives the icon layer through its own `开启 Remix` setting, so Paper's
+// `Tabler 图标` row would be a second control over the same behaviour and a dead
+// one: loadData() pins tablerIcons to false, so flipping it back changes nothing.
+// The row lives in GlassPaperSettings, which Catea never registers, but this is
+// the only place a reader of the vendored file would go looking for it.
+const RETIRED_OPTION = "['tablerIcons','Tabler 图标','随总开关替换界面图标，关闭后恢复。'],"
+
 export function paperIconPrunePlugin(root) {
   return {
     name: 'paper-icon-prune',
@@ -39,9 +46,16 @@ export function paperIconPrunePlugin(root) {
               'that still carries 1.6 MB of dead glyphs.',
           )
         const end = marker + 2
-        const contents = source.slice(0, start) + REPLACEMENT + source.slice(end)
+        let contents = source.slice(0, start) + REPLACEMENT + source.slice(end)
+        if (!contents.includes(RETIRED_OPTION))
+          throw new Error(
+            `paper-icon-prune: the Tabler settings row is no longer in ${args.path}. ` +
+              'The vendored asset changed shape; update this transform.',
+          )
+        contents = contents.replace(RETIRED_OPTION, '')
         console.log(
-          `paper-icon-prune: dropped ${(end - start).toLocaleString()} bytes of Tabler table`,
+          `paper-icon-prune: dropped ${(end - start).toLocaleString()} bytes of Tabler table ` +
+            'and the retired Tabler settings row',
         )
         return {
           contents,

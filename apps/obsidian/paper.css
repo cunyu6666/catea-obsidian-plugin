@@ -658,8 +658,9 @@ body.gp-enabled .catea-editor-zoom-label { position: absolute; width: 1px; heigh
 .catea-memory-panel__scopes { display: flex; gap: 4px; min-width: 0; }
 .catea-memory-panel__scope { padding: 4px 10px; border: 1px solid var(--background-modifier-border); border-radius: 8px; background: var(--background-primary); color: var(--text-muted); font-size: 11px; cursor: pointer; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 .catea-memory-panel__scope[aria-selected="true"] { border-color: #5b806d; background: color-mix(in srgb, #7f9988 14%, var(--background-primary)); color: var(--text-normal); }
-.catea-memory-panel__refresh { padding: 4px 10px; border: 1px solid var(--background-modifier-border); border-radius: 8px; background: var(--background-primary); color: var(--text-muted); font-size: 11px; cursor: pointer; }
+.catea-memory-panel__refresh { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; padding: 0; border: 1px solid var(--background-modifier-border); border-radius: 8px; background: var(--background-primary); color: var(--text-muted); font-size: 11px; cursor: pointer; }
 .catea-memory-panel__refresh:disabled { opacity: 0.5; cursor: default; }
+.catea-memory-panel__icon { width: 16px; height: 16px; flex: none; pointer-events: none; }
 .catea-memory-panel__error { margin: 0 2px 10px; padding: 8px 10px; border-radius: 8px; background: color-mix(in srgb, var(--text-error) 10%, transparent); color: var(--text-error); font-size: 11px; line-height: 1.6; overflow-wrap: anywhere; }
 .catea-memory-panel__list { flex: 1; min-height: 0; overflow: auto; padding: 0 2px 12px; }
 .catea-memory-panel__empty { padding: 24px 12px; text-align: center; color: var(--text-muted); }
@@ -673,7 +674,7 @@ body.gp-enabled .catea-editor-zoom-label { position: absolute; width: 1px; heigh
 .catea-memory-panel__footer { display: flex; align-items: center; gap: 6px; flex-shrink: 0; padding: 10px 4px 0; border-top: 1px solid var(--background-modifier-border); font-size: 11px; color: var(--text-muted); }
 .catea-memory-panel__footer > span:nth-child(even) { margin-right: auto; color: var(--text-normal); font-variant-numeric: tabular-nums; }
 .catea-memory-panel__footer > span:last-child { margin-right: 0; }
-.catea-memory-panel__back { flex-shrink: 0; padding: 4px 10px; border: 1px solid var(--background-modifier-border); border-radius: 8px; background: var(--background-primary); color: var(--text-muted); font-size: 11px; cursor: pointer; }
+.catea-memory-panel__back { flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; padding: 0; border: 1px solid var(--background-modifier-border); border-radius: 8px; background: var(--background-primary); color: var(--text-muted); font-size: 11px; cursor: pointer; }
 .catea-memory-panel__title { flex: 1; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: 13px; font-weight: 600; text-align: center; }
 .catea-memory-panel__row--archived { margin-top: 8px; border-top: 1px solid var(--background-modifier-border); border-radius: 0 0 8px 8px; padding-top: 12px; }
 .catea-memory-panel__card { display: flex; flex-direction: column; gap: 3px; width: 100%; margin-bottom: 6px; padding: 9px 10px; border: 1px solid var(--background-modifier-border); border-radius: 8px; background: var(--background-primary); color: var(--text-normal); text-align: left; cursor: pointer; }

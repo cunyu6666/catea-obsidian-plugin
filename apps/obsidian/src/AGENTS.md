@@ -11,8 +11,9 @@ assets.d.ts: Declares `*.md`, `*.css` and embedded `*.png` module types, plus op
 MessageQuotes.tsx: Shows persisted quote sources, original text and optional comments above user messages, including reopened sessions.
 ChatMarkdown.tsx: Renders assistant Markdown through react-markdown and remark-gfm, converting `[[wikilinks]]` into internal-link clicks; code fences delegate to MermaidDiagram.
 GitHistoryPanel.tsx: Opt-in sidebar with a themed React Git Log graph, bounded history loading, visible-only automatic updates and local commit details.
-MemoryPanel.tsx: Opt-in sidebar memory browser; switches between the global store and the active persona and lists all 19 memory types with live counts from `memory_stats`, reading only through `MemoryService.run` so the store files are never touched directly.
-memory-labels.ts: Display names for the 19 memory types keyed by schema slug, with a slug fallback; a plain `.ts` module so the coverage gate can import it without a JSX loader.
+MemoryPanel.tsx: Opt-in sidebar memory browser; switches between the global store and the active persona and lists all 19 memory types as a 2-column card grid with icon, name, one-line description and live count from `memory_stats`, reading only through `MemoryService.run` so the store files are never touched directly.
+memory-labels.ts: Display names and one-line descriptions for the 19 memory types keyed by schema slug, with slug fallbacks; a plain `.ts` module so the coverage gate can import it without a JSX loader.
+memory-icons.ts: One Remix Icon 4.9.1 line glyph per memory type, inlined as SVG strings following the `vendor-icons.ts` precedent so no build step or asset directory is involved; `memoryIconUrl()` returns a CSS-ready data URL for mask rendering.
 folder-icons.ts: Folder context-menu picker with ten Remix line icons and ten colors, persisted per path, tracking folder rename and deletion.
 git-history.ts: Shell-free Git inspection with timeout and output caps; history and commit stats are scoped to the vault.
 global-byok.ts: Stores BYOK model profiles in an encrypted machine-local file under Obsidian userData, with migration from vault-local profiles and deletion tombstones.

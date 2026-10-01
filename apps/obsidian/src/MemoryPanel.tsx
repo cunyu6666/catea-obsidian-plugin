@@ -1,13 +1,15 @@
 /**
  * [WHO]: Provides MemoryPanel
- * [FROM]: Depends on react, ../../../packages/memory/src/model, ../../../packages/personas/src, ./memory-labels, ./main
+ * [FROM]: Depends on react, ../../../packages/memory/src/model, ../../../packages/personas/src, ./memory-labels, ./memory-icons, ../remix-skin/generated, ./main
  * [TO]: Consumed by apps/obsidian/src/main.tsx
- * [HERE]: apps/obsidian/src/MemoryPanel.tsx - right-sidebar memory browser with three levels: scope and type folders with live counts, the records inside one folder, and a six-field editor for one record; every read and write goes through MemoryService.run so the store files are never touched directly
+ * [HERE]: apps/obsidian/src/MemoryPanel.tsx - right-sidebar memory browser with three levels: a card grid of scope and type folders showing icon, name, one-line description and live count, the records inside one folder, and a six-field editor for one record; every read and write goes through MemoryService.run so the store files are never touched directly
  */
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useState, type CSSProperties } from 'react'
 import { memoryTypes } from '../../../packages/memory/src/model'
 import { persona } from '../../../packages/personas/src'
-import { TYPE_LABELS, typeLabel } from './memory-labels'
+import { TYPE_LABELS, typeDescription, typeLabel } from './memory-labels'
+import { memoryIconUrl } from './memory-icons'
+import { REMIX_ICON_BODIES } from '../remix-skin/generated'
 import type Catea from './main'
 
 /** The subset of engine.review() the folder level renders. */
@@ -16,6 +18,23 @@ interface Overview {
   active: number
   archived: number
   byType: Record<string, number>
+}
+
+/**
+ * A header control glyph, inlined from the shared Remix table so the panel and the
+ * rest of the workspace stay one icon family. The markup comes from our generated
+ * table rather than user or model input, so injecting it as inner HTML is safe.
+ */
+function ActionIcon({ name }: { name: 'arrow-left' | 'add' | 'refresh' }) {
+  return (
+    <svg
+      className="catea-memory-panel__icon"
+      viewBox="0 0 24 24"
+      fill="currentColor"
+      aria-hidden="true"
+      dangerouslySetInnerHTML={{ __html: REMIX_ICON_BODIES[name] }}
+    />
+  )
 }
 
 /** engine.list() projection: bounded, no detail and no sources. */
@@ -277,6 +296,7 @@ export function MemoryPanel({ plugin }: { plugin: Catea }) {
           <button
             type="button"
             className="catea-memory-panel__back"
+            aria-label={t('返回')}
             onClick={() =>
               setView(
                 view.kind === 'records' || view.kind === 'new' || view.kind === 'archived'
@@ -285,7 +305,7 @@ export function MemoryPanel({ plugin }: { plugin: Catea }) {
               )
             }
           >
-            {t('返回')}
+            <ActionIcon name="arrow-left" />
           </button>
         )}
         <span className="catea-memory-panel__title">{title}</span>
@@ -293,18 +313,20 @@ export function MemoryPanel({ plugin }: { plugin: Catea }) {
           <button
             type="button"
             className="catea-memory-panel__refresh"
+            aria-label={t('新建')}
             onClick={() => openNew(view.type)}
           >
-            {t('新建')}
+            <ActionIcon name="add" />
           </button>
         ) : view.kind === 'types' ? (
           <button
             type="button"
             className="catea-memory-panel__refresh"
+            aria-label={busy ? t('加载中') : t('刷新')}
             onClick={() => void load()}
             disabled={busy}
           >
-            {busy ? t('加载中') : t('刷新')}
+            <ActionIcon name="refresh" />
           </button>
         ) : null}
       </div>
@@ -360,32 +382,49 @@ export function MemoryPanel({ plugin }: { plugin: Catea }) {
           )}
         </div>
       ) : view.kind === 'types' ? (
-        <div className="catea-memory-panel__list">
+        <div className="catea-memory-panel__grid">
           {memoryTypes.map((type) => {
             const count = overview?.byType?.[type] ?? 0
+            const description = typeDescription(type)
             return (
               <button
                 key={type}
                 type="button"
-                className="catea-memory-panel__row"
+                className="catea-memory-card"
                 data-empty={count === 0 ? 'true' : undefined}
                 disabled={count === 0}
                 onClick={() => setView({ kind: 'records', type })}
               >
-                <span className="catea-memory-panel__row-name">{t(typeLabel(type))}</span>
-                <span className="catea-memory-panel__row-count">{count}</span>
+                <span className="catea-memory-card__head">
+                  <span
+                    className="catea-memory-card__icon"
+                    style={{ '--catea-memory-icon': memoryIconUrl(type) } as CSSProperties}
+                  />
+                  <span className="catea-memory-card__name">{t(typeLabel(type))}</span>
+                  <span className="catea-memory-card__count">{count}</span>
+                </span>
+                {description ? (
+                  <span className="catea-memory-card__desc">{t(description)}</span>
+                ) : null}
               </button>
             )
           })}
           <button
             type="button"
-            className="catea-memory-panel__row catea-memory-panel__row--archived"
+            className="catea-memory-card catea-memory-card--archived"
             data-empty={(overview?.archived ?? 0) === 0 ? 'true' : undefined}
             disabled={(overview?.archived ?? 0) === 0}
             onClick={() => setView({ kind: 'archived' })}
           >
-            <span className="catea-memory-panel__row-name">{t('已归档')}</span>
-            <span className="catea-memory-panel__row-count">{overview?.archived ?? 0}</span>
+            <span className="catea-memory-card__head">
+              <span
+                className="catea-memory-card__icon"
+                style={{ '--catea-memory-icon': memoryIconUrl('material') } as CSSProperties}
+              />
+              <span className="catea-memory-card__name">{t('已归档')}</span>
+              <span className="catea-memory-card__count">{overview?.archived ?? 0}</span>
+            </span>
+            <span className="catea-memory-card__desc">{t('已归档的记忆，可在详情页恢复')}</span>
           </button>
         </div>
       ) : (
