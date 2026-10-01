@@ -198,20 +198,32 @@ async function createCheckout(
   )
 }
 
-function billingSummary(
-  tr: (text: string) => string,
-  status?: BillingStatus,
-  checkedAt?: number,
-) {
-  if (!status) return tr('Free · 自备 API Key 使用 BYOK。订阅 Pro 后可直接使用 Catea 托管额度。')
-  const tier = status.pro ? tr('Pro · 开箱即用') : tr('Free · 自备 API Key')
-  const monthly = status.quota?.monthly?.remaining_percent
-  const quota =
-    status.pro && typeof monthly === 'number'
-      ? `${tr('本月剩余额度')}：${Math.max(0, Math.round(monthly))}%`
-      : ''
-  const checked = checkedAt ? `${tr('上次检查')}：${new Date(checkedAt).toLocaleString()}` : ''
-  return [tier, status.status, quota, checked].filter(Boolean).join(' · ')
+function formatDate(value?: string | null) {
+  if (!value) return ''
+  const date = new Date(value)
+  return Number.isNaN(date.getTime()) ? '' : date.toLocaleDateString()
+}
+
+function billingSummary(tr: (text: string) => string, status?: BillingStatus) {
+  if (status?.pro) {
+    const expires = formatDate(status.current_period_end)
+    return [
+      tr('PRO · 开箱即用，无需配置 API Key。'),
+      expires ? `${tr('有效期至')}：${expires}` : '',
+    ]
+      .filter(Boolean)
+      .join(' · ')
+  }
+  return tr('Free · 需要配置自己的模型 API Key。')
+}
+
+function renderQuotaProgress(parent: HTMLElement, tr: (text: string) => string, status?: BillingStatus) {
+  const monthly = status?.quota?.monthly?.remaining_percent
+  if (!status?.pro || typeof monthly !== 'number') return
+  const remaining = Math.max(0, Math.min(100, Math.round(monthly)))
+  const box = parent.createDiv({ cls: 'catea-quota-progress' })
+  box.createEl('progress', { attr: { max: '100', value: String(remaining) } })
+  box.createDiv({ cls: 'catea-quota-progress__label', text: `${tr('本月剩余额度')}：${remaining}%` })
 }
 
 function defaultCurrency(language?: string): BillingCurrency {
@@ -785,7 +797,7 @@ export class CateaSettings extends PluginSettingTab {
     const billing: SettingsRow[] = [
       {
         name: tr('当前套餐'),
-        desc: billingSummary(tr, billingPrefs.billingStatus, billingPrefs.billingLastChecked),
+        desc: billingSummary(tr, billingPrefs.billingStatus),
         render: (s) => {
           s.addButton((button) =>
             button.setButtonText(tr('订阅套餐')).setCta().onClick(() =>
@@ -817,6 +829,14 @@ export class CateaSettings extends PluginSettingTab {
           )
         },
       },
+      ...(billingPrefs.billingStatus?.pro
+        ? [
+            {
+              name: tr('套餐额度'),
+              render: (s: Setting) => renderQuotaProgress(s.settingEl, tr, billingPrefs.billingStatus),
+            },
+          ]
+        : []),
       {
         name: tr('同步套餐状态'),
         desc: tr('支付完成后回到这里刷新状态。'),
@@ -1085,9 +1105,9 @@ export class CateaSettings extends PluginSettingTab {
     ]
     return [
       { heading: tr('更新'), rows: updates },
+      { heading: tr('套餐'), rows: billing },
       { heading: tr('外观'), rows: appearance },
       { heading: 'Agent', rows: agent },
-      { heading: tr('套餐'), rows: billing },
       { heading: tr('BYOK 模型'), rows: models },
       { heading: tr('图像生成'), rows: imageGeneration },
       ...mediaSections,
