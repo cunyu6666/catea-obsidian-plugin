@@ -398,6 +398,7 @@ export function humanizeError(raw: string, language: Language = 'zh') {
   const detail = raw.trim()
   const message = detail.replace(/^(?:上下文压缩失败|Context compaction failed)[:：]\s*/i, '')
   const pick = (zh: string, en: string) => (language === 'en' ? en : zh)
+  const source = message.match(/\[([a-z0-9.-]+(?::\d+)?)\]/i)?.[1]
   const compaction = message !== detail
   let friendly: string
   if (/^(?:aborted|AbortError|Request was aborted|已停止)$/i.test(message))
@@ -488,6 +489,7 @@ export function humanizeError(raw: string, language: Language = 'zh') {
       'The model did not return a complete response. Retry or switch models.',
     )
   else friendly = translate(language, message)
+  if (source) friendly = `${friendly} ${pick(`来源：${source}`, `Source: ${source}`)}`
   return compaction
     ? `${pick('上下文整理未完成：', 'Context compression did not finish: ')}${friendly}`
     : friendly
@@ -640,6 +642,7 @@ Object.assign(english, {
   '支付完成后回到这里刷新状态。': 'After payment, return here and refresh.',
   刷新套餐状态: 'Refresh plan status',
   '已切换到 Pro 套餐': 'Switched to the Pro plan',
+  '已切换到 Pro 套餐，并选择 Catea 模型': 'Switched to the Pro plan and selected the Catea model',
   '当前为 Free 套餐': 'You are on the Free plan',
   'Free · 自备 API Key 使用 BYOK。订阅 Pro 后可直接使用 Catea 托管额度。':
     'Free · Use BYOK with your own API key. Subscribe to Pro to use Catea-hosted usage directly.',
