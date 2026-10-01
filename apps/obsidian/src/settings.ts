@@ -79,6 +79,7 @@ const BILLING_APIS = [
   'https://asgard-api-utj6.onrender.com/billing',
 ] as const
 const BILLING_API = BILLING_APIS[0]
+const HOSTED_BILLING_API = BILLING_APIS[1]
 const HOSTED_MODEL_ID = 'catea-pro-hosted'
 const PRO_PRICES: Record<BillingCurrency, PlanPrice> = {
   USD: { original: '$10', sale: '$3', suffix: '/ month' },
@@ -259,7 +260,7 @@ async function syncHostedBillingModel(owner: Catea, status?: BillingStatus) {
     c.models = c.models.filter(
       (model) =>
         model.id === HOSTED_MODEL_ID ||
-        (model.baseUrl.replace(/\/$/, '') !== `${BILLING_API}/hosted/v1` &&
+        (!BILLING_APIS.some((base) => model.baseUrl.replace(/\/$/, '') === `${base}/hosted/v1`) &&
           model.model !== 'catea/pro'),
     )
     await storeModel(
@@ -268,7 +269,7 @@ async function syncHostedBillingModel(owner: Catea, status?: BillingStatus) {
         id: HOSTED_MODEL_ID,
         name: 'Catea',
         protocol: 'openai',
-        baseUrl: `${BILLING_API}/hosted/v1`,
+        baseUrl: `${HOSTED_BILLING_API}/hosted/v1`,
         apiKey: license,
         model: 'catea/pro',
         contextWindow: 1000000,
@@ -1143,7 +1144,7 @@ async function storeModel(owner: Catea, model: ModelConfig, select = false) {
 function hostedModel(model: ModelConfig) {
   return (
     model.id === HOSTED_MODEL_ID ||
-    model.baseUrl.replace(/\/$/, '') === `${BILLING_API}/hosted/v1` ||
+    BILLING_APIS.some((base) => model.baseUrl.replace(/\/$/, '') === `${base}/hosted/v1`) ||
     model.model === 'catea/pro'
   )
 }

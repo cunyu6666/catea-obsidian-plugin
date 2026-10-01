@@ -511,7 +511,7 @@ export async function streamModel(
       : {}),
   }
   const completionUrl = endpoint(config.baseUrl, '/chat/completions')
-  const cateaHosted = new URL(completionUrl).host === 'api.pencil.chat'
+  const cateaHosted = new URL(completionUrl).pathname.includes('/billing/hosted/v1/')
   const fetchCompletion = (includeUsage: boolean) =>
     serviceFetch(completionUrl, {
       method: 'POST',
