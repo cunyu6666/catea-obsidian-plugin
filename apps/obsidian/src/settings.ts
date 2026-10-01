@@ -190,7 +190,7 @@ async function createCheckout(
   currency: BillingCurrency,
 ): Promise<string> {
   return checkoutUrl(
-    await billingJson('/creem/checkout', {
+    await billingJson('/checkout', {
       method: 'POST',
       body: JSON.stringify({ email, plan, currency }),
       error: '支付链接创建失败，请稍后重试',
