@@ -1157,7 +1157,8 @@ class SubscriptionModal extends Modal {
   }
   onOpen() {
     const tr = this.owner.t,
-      el = this.contentEl
+      el = this.contentEl,
+      pro = this.billing.billingStatus?.pro === true
     this.titleEl.setText(tr('订阅 Catea 套餐'))
     el.addClass('catea-plan-modal')
     el.createEl('p', {
@@ -1202,8 +1203,9 @@ class SubscriptionModal extends Modal {
         tr('模型和密钥仍保存在本机'),
         tr('基础 Agent 和笔记工作流'),
       ],
-      action: tr('当前默认套餐'),
+      action: pro ? 'Free' : tr('当前套餐'),
       disabled: true,
+      current: !pro,
     })
     this.card(grid, {
       title: 'Pro',
@@ -1216,9 +1218,11 @@ class SubscriptionModal extends Modal {
         tr('额度自动恢复，月度周期重置'),
         tr('高级功能优先开放：连接器、自定义 Persona、媒体生成'),
       ],
-      action: tr('订阅 Pro'),
+      action: pro ? tr('当前套餐') : tr('订阅 Pro'),
       cta: true,
-      onClick: (button) => void this.subscribe(button),
+      disabled: pro,
+      current: pro,
+      onClick: pro ? undefined : (button) => void this.subscribe(button),
     })
   }
   private card(
@@ -1232,12 +1236,14 @@ class SubscriptionModal extends Modal {
       action: string
       cta?: boolean
       disabled?: boolean
+      current?: boolean
       onClick?: (button: import('obsidian').ButtonComponent) => void
     },
   ) {
     const tr = this.owner.t,
       card = parent.createDiv({ cls: 'catea-plan-card' })
     if (options.cta) card.addClass('is-pro')
+    if (options.current) card.addClass('is-current')
     card.createDiv({ cls: 'catea-plan-card__eyebrow', text: options.eyebrow })
     card.createEl('h3', { text: options.title })
     if (options.price === 'USD' || options.price === 'CNY') renderPrice(card, options.price)
