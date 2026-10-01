@@ -1,6 +1,6 @@
 /**
  * [WHO]: Provides CateaSettings
- * [FROM]: Depends on obsidian, ./main, ../../../packages/agent-core/src/types, ../../../packages/agent-core/src/byok, ../../../packages/agent-core/src/vendor-presets, ../../../packages/integrations/src/skills, ../../../packages/integrations/src/mcp-presets, ../../../packages/personas/src, ./vendor-icons
+ * [FROM]: Depends on obsidian, ./main, ../../../packages/agent-core/src/types, ../../../packages/agent-core/src/byok, ../../../packages/agent-core/src/vendor-presets, ../../../packages/integrations/src/data-dir, ../../../packages/integrations/src/skills, ../../../packages/integrations/src/mcp-presets, ../../../packages/personas/src, ./vendor-icons
  * [TO]: Consumed by apps/obsidian/src/main.tsx
  * [HERE]: apps/obsidian/src/settings.ts - plugin settings tab for language, paper toggles, Agent persona and capabilities, BYOK models with a vendor-preset grid, one-click MCP presets and MCP servers; ModelModal validates through normalizeModel
  */
@@ -22,6 +22,7 @@ import {
   vendorPresets,
   type VendorPreset,
 } from '../../../packages/agent-core/src/vendor-presets'
+import { withDataDir } from '../../../packages/integrations/src/data-dir'
 import { describeSkills } from '../../../packages/integrations/src/skills'
 import {
   createPresetServer,
@@ -178,6 +179,35 @@ export class CateaSettings extends PluginSettingTab {
         )
       },
     })
+    appearance.push({
+      name: tr('记忆面板'),
+      desc: tr('在右侧栏按类型浏览和编辑记忆。默认关闭；只读当前人格与全局两个范围。'),
+      render: (s) => {
+        s.addToggle((t) =>
+          t.setValue(c.memoryPanel === true).onChange(async (value) => {
+            c.memoryPanel = value
+            await p.saveAgentSettings()
+            await p.syncMemoryPanel(value)
+          }),
+        )
+      },
+    })
+    const uncovered = p.uncoveredIcons
+    appearance.push({
+      name: tr('Remix 图标'),
+      desc: uncovered.length
+        ? `${tr('用 Remix 线性图标替换 Obsidian 自带图标，与侧栏和文件夹图标同族。关闭后恢复原图标。')} ${tr('未覆盖，仍用 Obsidian 原图标：')}${uncovered.join('、')}`
+        : tr('用 Remix 线性图标替换 Obsidian 自带图标，与侧栏和文件夹图标同族。关闭后恢复原图标。'),
+      render: (s) => {
+        s.addToggle((t) =>
+          t.setValue(c.remixIcons !== false).onChange(async (value) => {
+            c.remixIcons = value
+            await p.saveAgentSettings()
+            p.syncRemixIcons(value)
+          }),
+        )
+      },
+    })
     const agent: SettingsRow[] = [
       {
         name: tr('启用 Agent'),
@@ -235,7 +265,7 @@ export class CateaSettings extends PluginSettingTab {
       },
       {
         name: tr('长期记忆'),
-        desc: tr('自动提取、召回和巩固；保存在当前知识库 .catea/memory。'),
+        desc: withDataDir(tr('自动提取、召回和巩固；保存在当前知识库 {dir}/memory。')),
         render: (s) => {
           s.addToggle((t) =>
             t.setValue(c.memory).onChange(async (value) => {
@@ -542,7 +572,7 @@ export class CateaSettings extends PluginSettingTab {
       {
         name: 'Skills',
         desc:
-          tr('将 Skill 文件夹放到 .catea/skills/<名称>/SKILL.md，再启用。') +
+          withDataDir(tr('将 Skill 文件夹放到 {dir}/skills/<名称>/SKILL.md，再启用。')) +
           ' ' +
           tr('随插件分发的 Skill 预设已列在这里；同名知识库目录优先于预设。'),
         render: (s) => {
@@ -954,10 +984,12 @@ class ModelModal extends Modal {
     new Setting(el)
       .setName('API key')
       .setDesc(
-        tr(
-          this.owner.globalByok
-            ? '加密保存在本机，跨知识库共享；不写入 .catea。'
-            : '优先保存到 Obsidian 安全存储；不可用时仅本次运行有效，不写入 .catea。',
+        withDataDir(
+          tr(
+            this.owner.globalByok
+              ? '加密保存在本机，跨知识库共享；不写入 {dir}。'
+              : '优先保存到 Obsidian 安全存储；不可用时仅本次运行有效，不写入 {dir}。',
+          ),
         ),
       )
       .addText((t) => {
@@ -1103,10 +1135,12 @@ class VendorGridModal extends Modal {
     new Setting(el)
       .setName('API key')
       .setDesc(
-        tr(
-          this.owner.globalByok
-            ? '加密保存在本机，跨知识库共享；不写入 .catea。'
-            : '优先保存到 Obsidian 安全存储；不可用时仅本次运行有效，不写入 .catea。',
+        withDataDir(
+          tr(
+            this.owner.globalByok
+              ? '加密保存在本机，跨知识库共享；不写入 {dir}。'
+              : '优先保存到 Obsidian 安全存储；不可用时仅本次运行有效，不写入 {dir}。',
+          ),
         ),
       )
       .addText((input) => {

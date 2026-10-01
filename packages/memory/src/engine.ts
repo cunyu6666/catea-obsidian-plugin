@@ -11,6 +11,7 @@ import {
   type MemoryInput,
   type MemorySource,
   type MemoryRecord,
+  type MemorySummary,
   type MemoryDocument,
 } from './model'
 import { MemoryStore } from './store'
@@ -209,6 +210,43 @@ export class MemoryEngine {
       .sort((a, b) => b.score - a.score)
       .slice(0, 30)
       .map(({ entry }) => entry)
+  }
+  /**
+   * Bounded listing for browser UIs.
+   *
+   * search() cannot serve this, for two reasons that have nothing to do with cost:
+   * it caps at 30 hits, so a fuller folder silently loses records, and it orders by
+   * relevance score, while a browser wants most-recently-updated first. Its local
+   * hash embedding is also wasted work when there is no query to match against.
+   */
+  async list(
+    options: { type?: string; state?: 'active' | 'archived'; limit?: number } = {},
+  ): Promise<MemorySummary[]> {
+    const data = await this.store.read()
+    const archived = options.state === 'archived'
+    // A non-positive limit is a caller mistake, not a request for one record;
+    // fall back to the default rather than silently returning a single row.
+    const limit = Math.min(options.limit && options.limit > 0 ? options.limit : 500, 2000)
+    return data.records
+      .filter(
+        (entry) =>
+          (archived ? !!entry.archivedAt : !entry.archivedAt && !expired(entry)) &&
+          (!options.type || entry.type === options.type),
+      )
+      .sort((a, b) => (a.updatedAt < b.updatedAt ? 1 : a.updatedAt > b.updatedAt ? -1 : 0))
+      .slice(0, limit)
+      .map((entry) => ({
+        id: entry.id,
+        type: entry.type,
+        name: entry.name,
+        // Truncated so a whole folder stays a bounded payload; recall() returns the rest.
+        summary: entry.summary.length > 160 ? `${entry.summary.slice(0, 160)}…` : entry.summary,
+        ...(entry.project === undefined ? {} : { project: entry.project }),
+        tags: entry.tags,
+        importance: entry.importance,
+        updatedAt: entry.updatedAt,
+        ...(entry.archivedAt === undefined ? {} : { archivedAt: entry.archivedAt }),
+      }))
   }
   async injection(query: string): Promise<string> {
     const data = await this.store.read()

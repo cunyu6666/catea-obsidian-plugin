@@ -123,6 +123,9 @@ tests/                       # DIP harness: contract parser, verify gate, govern
 
 npm ci             # reproducible workspace install, including the vendored design system
 npm run build      # esbuild bundle -> dist/catea-paper/
+npm run dev:build  # same bundle re-identified as catea-paper-dev -> dist/catea-paper-dev/
+npm run dev:install # dev:build, then install it into a vault beside the released plugin
+npm run dev:watch  # dev:install, then rebuild and re-copy on every source change
 npm test           # node --test; run after npm ci because behavior tests bundle fixtures
 npm run typecheck  # scoped tsc over owned code only
 npm run lint       # official Obsidian rules for host and adapter source
@@ -137,18 +140,55 @@ directory: `main.js`, `styles.css`, `manifest.json`, `LICENSE`,
 files. It does not install the plugin; copying it into
 `<vault>/.obsidian/plugins/catea-paper/` is a separate, manual step.
 
-**Verification status — measured on 2026-09-29 after rebasing onto 0.3.11.**
+### Testing a local build beside the released plugin
+
+`npm run dev:install -- --vault /path/to/vault` builds and installs a second
+plugin identity into a vault that already has the released Catea. The dev bundle
+carries id `catea-paper-dev`, shows as **Catea (Dev)** in the plugin list and in
+the ribbon tooltip, and reads and writes `.catea-dev/` instead of `.catea/`, so it
+cannot touch the released plugin's sessions, memory or config. `scripts/dev-target.mjs`
+owns that identity and `packages/integrations/src/data-dir.ts` owns the directory,
+which `scripts/build.mjs` injects as the compile-time constant `CATEA_DATA_DIR`.
+
+Two constraints are deliberate:
+
+- The script **refuses** to install into a vault where the released plugin is
+  currently enabled, because both builds register the view type `catea-agent` and
+  Obsidian would resolve the same sidebar leaf from two plugins. Pass `--swap` to
+  disable the released plugin and enable the dev one in a single edit.
+- View types stay identical on purpose. `workspace.json` keys leaves by view type,
+  so switching which build is enabled leaves the sidebar where it was.
+
+BYOK models and API keys live in the machine-global encrypted store, so they carry
+over to the dev build automatically; model selection, MCP servers and skill toggles
+are vault config and must be set once in the dev instance.
+
+`npm run dev:watch -- --vault /path/to/vault` keeps running after that install and
+rebuilds on any change under `apps/`, `packages/` or `scripts/`, copying the result
+straight into the vault. A full build measures under half a second, so this re-runs
+the real `build.mjs` rather than restructuring it into an incremental esbuild
+context — `build.mjs` is on the release path and not worth the risk for 0.3 s.
+
+The install also writes an empty `.hot-reload` marker into the vault copy, which is
+what the community plugin **Hot Reload** (`obsidian-hot-reload`) looks for to reload
+a changed plugin without a manual restart. The marker is written into the vault
+directory only, never into `dist/`, so it cannot reach a release bundle. Without
+that plugin installed the files are still copied and `Cmd+R` picks them up.
+
+**Verification status — measured on 2026-10-01 with the dev-build isolation work applied.**
 `npm ci` had completed before these checks; every command below ran from this
 repository with the vendored design system.
 
 | Command | Result |
 |---------|--------|
-| `npm run build` | **exit 0** — main.js 4,579,290 bytes, below the 5 MB limit enforced by the build script |
-| `npm test` | **exit 0** — 304 contract, governance and regression checks |
-| `npm run test:behavior` | **exit 0** — 33 model, context, settings and host-adapter regressions |
+| `npm run build` | **exit 0** — main.js 3,068,153 bytes, below the 5 MB limit enforced by the build script; `scripts/paper-icon-prune.mjs` drops the 1,613,729-byte Tabler table |
+| `npm run dev:build` | **exit 0** — main.js 3,068,177 bytes; manifest id `catea-paper-dev`, no `.catea/` path left in the bundle |
+| `npm test` | **exit 0** — 466 contract, governance and regression checks |
+| `npm run test:behavior` | **exit 0** — 66 model, context, settings and host-adapter regressions |
+| `npm run check:marketplace` | **exit 0** — 154 source files, 0 unsafe-type findings without installed Node types |
 | `npm run lint` | **exit 0** — official Obsidian recommended rules over hand-written host and adapter source |
 | `npm run format:check` | **exit 0** — all owned TypeScript and JavaScript matches the repository Prettier style |
-| `npm run typecheck` | **exit 0** — 0 diagnostics in owned source, 84 in the vendored snapshot, 0 external |
+| `npm run typecheck` | **exit 0** — 0 diagnostics in owned source, 0 in the vendored snapshot, 0 external |
 
 The lint gate includes the vendored design system but excludes byte-verified
 upstream. This exclusion does not alter the marketplace scanner's scope. See
@@ -237,6 +277,11 @@ Vault-specific runtime data is written inside the user's vault, never into the p
 | `.catea/memory/pending-turns.json` | Durable queue of turns awaiting memory extraction |
 | `.catea/memory/global/memories.json` | Canonical shared writing and knowledge memory |
 | `.catea/memory/aria/`, `.catea/memory/vex/`, `.catea/memory/pencil/`, `.catea/memory/dazai/` | Per-persona isolation; each contains one canonical `memories.json` |
+
+A `--dev` build writes the identical tree under `.catea-dev/` in the same vault,
+which is what lets it be installed beside the released plugin without either one
+reading the other's state. Every path above is built through `dataPath()` in
+`packages/integrations/src/data-dir.ts`; nothing hardcodes the directory name.
 
 BYOK models and API keys are held in encrypted `<Obsidian userData>/catea/byok.enc`
 when OS-backed Electron safeStorage is available (Linux `basic_text` is rejected).

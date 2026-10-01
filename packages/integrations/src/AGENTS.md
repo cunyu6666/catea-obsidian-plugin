@@ -9,6 +9,7 @@ package builds on.
 ## Member List
 
 conversation-store.ts: Vault-backed conversation persistence with serialized writes, a 500-session index, eviction cleanup and delete rollback.
+data-dir.ts: Single compile-time root for all vault-local plugin state; `scripts/build.mjs` injects `CATEA_DATA_DIR` so a development bundle reads and writes `.catea-dev` instead of the released plugin's `.catea`, and falls back to `.catea` when unbundled.
 find-skill.md: Preset skill prompt that ships inside the bundle; discovers skills through the skills.sh HTTP search API and gates any third-party text behind user confirmation before `skill_create`.
 image-generation.ts: Configurable OpenAI Images or DashScope generation, bounded responses, key-free image downloads and exclusive vault-local writes under Attachments/Catea.
 index.ts: Barrel re-exporting the integration surface (VaultTools, McpPool, skill loaders, storage helpers); nothing imports it, consumers import the submodules directly.
@@ -24,6 +25,7 @@ web.ts: `web_search` and `web_fetch` via Exa MCP, Jina, DuckDuckGo or direct fet
 
 ## Notes
 
+- Member descriptions above name `.catea/...` because that is the released default. Every path is built through `dataPath()` from `data-dir.ts`, so a development bundle relocates the whole tree to `.catea-dev/` and cannot read or write the released plugin's state. New state paths must go through `dataPath()` rather than hardcoding the directory.
 - `web.ts` is adapted from CatUI link-world (GPL-3.0) and carries an attribution line above its P3 header; unlike the `upstream/` trees it is hand-maintained.
 - The `tool()` schema helper and several write-guard rules are duplicated between `tools.ts` and `apps/obsidian/src/obsidian-tools.ts`; the read caps differ (1 MB vs 2 MB). Consolidating them is a known, deliberate open item.
 - `skill-creator.md` and `find-skill.md` are bundled prompt text, not vault data: presets are never written to `.catea/skills/`, so an upgrade cannot rewrite a skill, and `createSkill` refuses their ids. A vault directory of the same id shadows the preset content instead. They are imported as text by the esbuild `.md` loader.

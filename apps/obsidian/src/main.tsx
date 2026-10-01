@@ -1,6 +1,6 @@
 /**
  * [WHO]: Provides Catea, default
- * [FROM]: Depends on ./sidebar-views, ../../../typings/runtime, ./folder-icons, ./GitHistoryPanel, ./global-byok, ./updates, ./theme, ./note-thumbnails, ./note-previews, ./locale, ./selection, ./session-drafts, ./support-prompt, ../../../packages/agent-core/src/types, obsidian, react-dom/client, ./paper.cjs, ../../../packages/agent-core/src, ../../../packages/integrations/src/storage, ../../../packages/integrations/src/skills, ../../../packages/integrations/src/legacy-snapshots, ../../../packages/integrations/src/mcp-presets, ./panel, ./obsidian-tools, ./skills/obsidian.md, catea-components, ./settings, ./composition, node:fs/promises
+ * [FROM]: Depends on ./sidebar-views, ../../../typings/runtime, ./folder-icons, ./remix-skin, ./GitHistoryPanel, ./MemoryPanel, ./global-byok, ./updates, ./theme, ./note-thumbnails, ./note-previews, ./locale, ./selection, ./session-drafts, ./support-prompt, ../../../packages/agent-core/src/types, obsidian, react-dom/client, ./paper.cjs, ../../../packages/agent-core/src, ../../../packages/integrations/src/data-dir, ../../../packages/integrations/src/storage, ../../../packages/integrations/src/skills, ../../../packages/integrations/src/legacy-snapshots, ../../../packages/integrations/src/mcp-presets, ./panel, ./obsidian-tools, ./skills/obsidian.md, catea-components, ./settings, ./composition, node:fs/promises
  * [TO]: Consumed by apps/obsidian/src/folder-icons.ts, apps/obsidian/src/note-previews.ts, apps/obsidian/src/note-thumbnails.ts,
  *   apps/obsidian/src/obsidian-tools.ts, apps/obsidian/src/panel.tsx,
  *   apps/obsidian/src/selection.ts, apps/obsidian/src/settings.ts, apps/obsidian/src/GitHistoryPanel.tsx
@@ -8,8 +8,10 @@
  */
 import type {} from '../../../typings/runtime'
 import { installFolderIcons, type FolderAppearance } from './folder-icons'
+import { RemixSkin } from './remix-skin'
 import { SidebarViews } from './sidebar-views'
 import { GitHistoryPanel } from './GitHistoryPanel'
+import { MemoryPanel } from './MemoryPanel'
 import { UpdateChecker, type UpdatePreferences } from './updates'
 import { GlobalByokStore, mergeByokProfiles } from './global-byok'
 import { ThemeController, type ThemeMode } from './theme'
@@ -38,6 +40,7 @@ import {
 import { createRoot, type Root } from 'react-dom/client'
 import Paper from './paper.cjs'
 import type { Agent, Settings } from '../../../packages/agent-core/src'
+import { DATA_DIR, dataPath, withDataDir } from '../../../packages/integrations/src/data-dir'
 import { readJson, writeJson, within, Serial } from '../../../packages/integrations/src/storage'
 import { presetSkillIds } from '../../../packages/integrations/src/skills'
 import { cleanupLegacySnapshots } from '../../../packages/integrations/src/legacy-snapshots'
@@ -51,6 +54,7 @@ import { createAgentFactory } from './composition'
 import { mkdir } from 'node:fs/promises'
 const VIEW = 'catea-agent'
 const GIT_VIEW = 'catea-git-history'
+const MEMORY_VIEW = 'catea-memory'
 const GITHUB_REPOSITORY = 'https://github.com/cunyu6666/catea-obsidian-plugin'
 const DOCK_ICON_MATCHES: [RegExp, string][] = [
   [/catea/i, 'gemini'],
@@ -94,6 +98,7 @@ export default class Catea extends Base {
     shell: false,
     includeCurrentNote: true,
     gitHistory: false,
+    memoryPanel: false,
     enableReplyAnnotations: false,
     permissionMode: 'assist',
   }
@@ -132,9 +137,50 @@ export default class Catea extends Base {
   private listeners = new Set<() => void>()
   private dialogs = new Set<Modal>()
   private sidebarViews = new SidebarViews(this.app.workspace)
+  private remixSkin: RemixSkin | null = null
+  /**
+   * Tabler is retired. Paper's own settings tab is never registered —
+   * GlassPaperSettings is defined but never instantiated — so no reachable UI
+   * depends on `tablerIcons`; it is pinned false so Paper does not start
+   * TablerSkin inside its own onload. paper.css keys the whole icon layer on the
+   * `gp-tabler-on` body class that Paper's apply() derives from that same flag, so
+   * syncRemixIcons re-applies the class under our own setting instead.
+   */
+  async loadData(): Promise<Record<string, boolean>> {
+    const saved = (await super.loadData()) as Record<string, unknown>
+    return { ...saved, tablerIcons: false }
+  }
+
+  /** Drives the icon layer: the body class paper.css keys on, plus the skin itself. */
+  syncRemixIcons(on: boolean): void {
+    document.body.classList.toggle('gp-tabler-on', on)
+    if (on) {
+      this.remixSkin ??= new RemixSkin(document)
+      this.remixSkin.start()
+    } else {
+      this.remixSkin?.stop()
+      this.remixSkin = null
+    }
+  }
+
+  /**
+   * Lucide names Obsidian has rendered that the curated mapping does not cover.
+   * They keep their native glyph, and listing them here is how the next mapping
+   * pass gets its input without reading the skin's source.
+   */
+  get uncoveredIcons(): string[] {
+    return [...(this.remixSkin?.missing ?? [])].sort()
+  }
+
   async onload() {
     this.register(() => this.sidebarViews.dispose())
     await super.onload()
+    this.syncRemixIcons(this.agentSettings.remixIcons !== false)
+    this.register(() => {
+      this.remixSkin?.stop()
+      this.remixSkin = null
+      document.body.classList.remove('gp-tabler-on')
+    })
     this.register(() => {
       for (const state of this.editorZoom.values()) state.restore()
       this.editorZoom.clear()
@@ -144,19 +190,19 @@ export default class Catea extends Base {
       return
     }
     this.vaultPath = this.app.vault.adapter.getBasePath()
-    const directory = await within(this.vaultPath, '.catea')
+    const directory = await within(this.vaultPath, DATA_DIR)
     await mkdir(directory, { recursive: true })
     try {
       if (await cleanupLegacySnapshots(this.vaultPath))
         new Notice(this.t('已清理旧版 Catea 全量快照，释放知识库空间'))
     } catch {
-      new Notice(this.t('旧版 Catea 快照清理失败，可手动删除 .catea/snapshots'))
+      new Notice(withDataDir(this.t('旧版 Catea 快照清理失败，可手动删除 {dir}/snapshots')))
     }
     for (const part of ['skills', 'memory', 'sessions'])
-      await mkdir(await within(this.vaultPath, `.catea/${part}`), { recursive: true })
+      await mkdir(await within(this.vaultPath, dataPath(part)), { recursive: true })
     this.agentSettings = {
       ...this.agentSettings,
-      ...(await readJson(await within(this.vaultPath, '.catea/config.json'), {})),
+      ...(await readJson(await within(this.vaultPath, dataPath('config.json')), {})),
     }
     this.updates = new UpdateChecker(
       this.agentSettings,
@@ -262,8 +308,10 @@ export default class Catea extends Base {
     this.tabs = [this.agent]
     this.agent.memory.setEnabled(this.agentSettings.enabled && this.agentSettings.memory)
     this.registerView(GIT_VIEW, (leaf) => new GitHistoryView(leaf, this))
+    this.registerView(MEMORY_VIEW, (leaf) => new MemoryView(leaf, this))
     this.app.workspace.onLayoutReady(() => {
       void this.syncGitHistory()
+      void this.syncMemoryPanel()
     })
     this.addCommand({
       id: 'open-git-history',
@@ -274,11 +322,20 @@ export default class Catea extends Base {
         return true
       },
     })
+    this.addCommand({
+      id: 'open-memory-panel',
+      name: this.t('打开记忆面板'),
+      checkCallback: (checking) => {
+        if (!this.agentSettings.memoryPanel) return false
+        if (!checking) void this.syncMemoryPanel(true)
+        return true
+      },
+    })
     this.registerView(VIEW, (leaf) => new AgentView(leaf, this))
     this.addSettingTab(new CateaSettings(this.app, this))
     const agentRibbon = this.addRibbonIcon(
       'messages-square',
-      'Catea agent',
+      `${this.manifest.name} agent`,
       () => void this.openAgent(),
     )
     agentRibbon.addClass('catea-dock-agent')
@@ -603,7 +660,7 @@ export default class Catea extends Base {
       delete m.env
     }
     await this.configWrites.run(async () =>
-      writeJson(await within(this.vaultPath, '.catea/config.json'), clone),
+      writeJson(await within(this.vaultPath, dataPath('config.json')), clone),
     )
     this.emit()
   }
@@ -653,6 +710,9 @@ export default class Catea extends Base {
   }
   async syncGitHistory(reveal = false) {
     await this.sidebarViews.sync(GIT_VIEW, () => this.agentSettings.gitHistory === true, reveal)
+  }
+  async syncMemoryPanel(reveal = false) {
+    await this.sidebarViews.sync(MEMORY_VIEW, () => this.agentSettings.memoryPanel === true, reveal)
   }
   async openAgent() {
     await this.sidebarViews.sync(VIEW, () => true, true)
@@ -901,6 +961,35 @@ class GitHistoryView extends ItemView {
     this.contentEl.addClass('catea-git-view')
     this.root = createRoot(this.contentEl)
     this.root.render(<GitHistoryPanel plugin={this.plugin} />)
+  }
+  async onClose() {
+    this.root?.unmount()
+  }
+}
+
+class MemoryView extends ItemView {
+  private root?: Root
+  constructor(
+    leaf: WorkspaceLeaf,
+    private plugin: Catea,
+  ) {
+    super(leaf)
+  }
+  getViewType() {
+    return MEMORY_VIEW
+  }
+  getDisplayText() {
+    return this.plugin.t('记忆')
+  }
+  // Built-in icon, matching the neighbouring Git tab's `git-branch`. Mixing in a
+  // Remix glyph here would put two icon families in one sidebar tab strip.
+  getIcon() {
+    return 'brain'
+  }
+  async onOpen() {
+    this.contentEl.addClass('catea-memory-view')
+    this.root = createRoot(this.contentEl)
+    this.root.render(<MemoryPanel plugin={this.plugin} />)
   }
   async onClose() {
     this.root?.unmount()

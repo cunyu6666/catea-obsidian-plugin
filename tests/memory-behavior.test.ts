@@ -775,3 +775,108 @@ test('transport errors and cancellation do not trigger an extraction repair requ
     assert.equal(calls, 1)
   }
 })
+
+// ---- MemoryEngine.list(): the sidebar browser's listing primitive -------------
+//
+// search() cannot back a type folder: it caps at 30 hits, so a fuller folder
+// silently loses records, and it ranks by relevance where a browser wants
+// most-recently-updated first.
+
+function listed(name: string, extra: Record<string, unknown> = {}) {
+  return {
+    type: 'preference',
+    name,
+    summary: `summary of ${name}`,
+    detail: `detail of ${name}`,
+    ...extra,
+  }
+}
+
+// remember() stamps updatedAt from the clock, so a deterministic order needs a gap.
+const tick = () => new Promise((resolve) => setTimeout(resolve, 6))
+
+test('memory list | returns active records newest first', async (t) => {
+  const { engine } = await fixture(t)
+  await engine.remember(listed('older'))
+  await tick()
+  await engine.remember(listed('newer'))
+  assert.deepEqual(
+    (await engine.list()).map((row) => row.name),
+    ['newer', 'older'],
+  )
+})
+
+test('memory list | filters by type', async (t) => {
+  const { engine } = await fixture(t)
+  await engine.remember(listed('a preference'))
+  await engine.remember(listed('a concept', { type: 'concept' }))
+  assert.deepEqual(
+    (await engine.list({ type: 'preference' })).map((row) => row.name),
+    ['a preference'],
+  )
+  assert.equal((await engine.list({ type: 'concept' })).length, 1)
+})
+
+test('memory list | archived records leave the folder and appear in the archive', async (t) => {
+  const { engine } = await fixture(t)
+  const kept = await engine.remember(listed('kept'))
+  const dropped = await engine.remember(listed('dropped'))
+  await engine.forget(dropped.id)
+  assert.deepEqual(
+    (await engine.list()).map((row) => row.id),
+    [kept.id],
+    'a forgotten memory must not keep showing up in its type folder',
+  )
+  const archived = await engine.list({ state: 'archived' })
+  assert.deepEqual(
+    archived.map((row) => row.id),
+    [dropped.id],
+  )
+  assert.ok(archived[0].archivedAt, 'the archive view needs the timestamp to explain itself')
+})
+
+test('memory list | restore puts a record back', async (t) => {
+  const { engine } = await fixture(t)
+  const record = await engine.remember(listed('restorable'))
+  await engine.forget(record.id)
+  await engine.restore(record.id)
+  assert.deepEqual(
+    (await engine.list()).map((row) => row.id),
+    [record.id],
+  )
+  assert.equal((await engine.list({ state: 'archived' })).length, 0)
+})
+
+test('memory list | truncates long summaries so a folder stays a bounded payload', async (t) => {
+  const { engine } = await fixture(t)
+  await engine.remember(listed('verbose', { summary: 'x'.repeat(2000) }))
+  const [row] = await engine.list()
+  assert.ok(row.summary.length <= 161, `summary was ${row.summary.length} chars`)
+  assert.match(row.summary, /…$/)
+})
+
+test('memory list | honours the limit and never empties on a zero limit', async (t) => {
+  const { engine } = await fixture(t)
+  for (const name of ['one', 'two', 'three']) await engine.remember(listed(name))
+  assert.equal((await engine.list({ limit: 2 })).length, 2)
+  assert.equal((await engine.list({ limit: 0 })).length, 3)
+  assert.equal((await engine.list({ limit: 999999 })).length, 3)
+})
+
+test('memory list | projection omits the heavy record fields', async (t) => {
+  const { engine } = await fixture(t)
+  await engine.remember(listed('projected', { project: 'novel', tags: ['style'] }))
+  const [row] = await engine.list()
+  assert.deepEqual(Object.keys(row).sort(), [
+    'id',
+    'importance',
+    'name',
+    'project',
+    'summary',
+    'tags',
+    'type',
+    'updatedAt',
+  ])
+  assert.equal(row.project, 'novel')
+  assert.deepEqual(row.tags, ['style'])
+})

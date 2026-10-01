@@ -3,9 +3,9 @@
 - ANNO (user-owned local source): streaming providers, transcript/attachment types and helpers, Persona definitions. Source: apps/extension/src. These are adapted for the Obsidian host.
 - CatUI mem-core: packages/memory/upstream is a source snapshot; source revision and modification are recorded in packages/memory/UPSTREAM.md. GPL-3.0 license retained at packages/memory/LICENSE and in release output LICENSE. No CatUI process is required.
 - ANNO / Craft Agents UI: Composer, AttachmentCards, ResponseCard and AgentActivities adapted in the design system, vendored here under packages/design-system. Craft Agents upstream attribution is retained in packages/design-system/CRAFT-AGENTS-NOTICE.
-- Tabler Outline 3.48.0: MIT, TABLER-LICENSE.txt.
+- Tabler Outline 3.48.0: MIT, TABLER-LICENSE.txt. The 5,166-glyph table embedded in the vendored Paper base is emptied at build time by scripts/paper-icon-prune.mjs and is not part of the shipped plugin.
 - beUI Loader dither variant: adapted in packages/design-system/components/src/DitherLoader.tsx. MIT, packages/design-system/BEUI-LICENSE.txt.
-- Remix Icon 4.8.0: selected line/fill icons in apps/obsidian/remix-dock for the navigation dock, and ten line icons in apps/obsidian/remix-folders for folder customization. Apache-2.0, REMIX-LICENSE.txt.
+- Remix Icon 4.8.0: selected line/fill icons in apps/obsidian/remix-dock for the navigation dock, ten line icons in apps/obsidian/remix-folders for folder customization, the folder and file line icons in apps/obsidian/remix-explorer for the file explorer, and 141 line icons in apps/obsidian/remix-skin/icons used by apps/obsidian/src/remix-skin.ts to replace Obsidian's native Lucide glyphs. Apache-2.0, REMIX-LICENSE.txt.
 - cc-switch (src/icons/extracted): the vendor icon SVG strings in apps/obsidian/src/vendor-icons.ts are adapted from this project. MIT, Copyright (c) 2025 Jason Young. Source: https://github.com/farion1231/cc-switch. Brand marks remain the property of their respective owners and are used nominatively to identify each vendor's own service; the Groq tile is an original Catea monogram.
 - Runtime dependencies retain their respective licenses: React, react-markdown, remark-gfm, and the official MCP TypeScript SDK.
 

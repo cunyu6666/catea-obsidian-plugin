@@ -24,7 +24,56 @@ enforce, so a change can be checked before it is proposed.
 | `npm run format:check` | Prettier check over owned TypeScript and JavaScript | yes |
 | `npm run test:behavior` | runtime streaming, context and settings regressions | yes |
 | `npm run build` | bundle to `dist/catea-paper/` | **yes** |
+| `npm run dev:build` | bundle re-identified as `catea-paper-dev` to `dist/catea-paper-dev/` | **yes** |
+| `npm run dev:install -- --vault <path>` | `dev:build`, then install into that vault beside the released plugin | **yes** |
+| `npm run dev:watch -- --vault <path>` | `dev:install`, then rebuild and re-copy on every source change | **yes** |
 | `npm run check` | the complete local CI sequence, including the build | yes |
+
+### Testing against a real vault
+
+The released plugin and a local build can be installed in the same vault, because
+the dev build takes a second identity: id `catea-paper-dev`, display name
+**Catea (Dev)**, and state under `.catea-dev/` rather than `.catea/`. It therefore
+cannot read or write the released plugin's sessions, memory or config.
+
+```bash
+npm run dev:install -- --vault /absolute/path/to/vault
+# or persist the choice for the session:
+export CATEA_DEV_VAULT=/absolute/path/to/vault && npm run dev:install
+```
+
+Then reload Obsidian for that vault. Two things to know before the first run:
+
+- The script aborts if the released plugin is currently **enabled** there, because
+  both builds register the view type `catea-agent`. Turn Catea off in
+  Settings → Community plugins first, or pass `--swap` to disable it and enable
+  the dev build in one step.
+- `.catea-dev/` starts empty, so pick a model and re-enable skills once. BYOK
+  models and keys are machine-global and carry over by themselves.
+
+### The edit-reload loop
+
+`dev:watch` does the same install and then stays running, rebuilding and re-copying
+whenever anything under `apps/`, `packages/` or `scripts/` changes:
+
+```bash
+npm run dev:watch -- --vault /absolute/path/to/vault --swap
+```
+
+A full build is under half a second, so save-to-copied is effectively instant.
+Obsidian itself has no hot reload, so the install writes an empty `.hot-reload`
+marker into the vault plugin directory. Install the community plugin **Hot Reload**
+(`obsidian-hot-reload`) in that vault and it will pick the marker up and reload
+Catea (Dev) automatically on every copy — no `Cmd+R`. Without it, the files are
+still copied and `Cmd+R` in Obsidian is enough.
+
+The marker is written into the vault copy only, never into `dist/`, so it cannot
+reach a release bundle.
+
+If the target vault is a git repository, the script warns when `.catea-dev/` is not
+ignored. That directory fills up with sessions and writing memory derived from
+private notes, so add it to the vault's own `.gitignore`. The script warns but never
+edits a vault's `.gitignore` uninvited.
 
 ## Documentation is enforced, not suggested
 

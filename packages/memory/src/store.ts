@@ -1,9 +1,10 @@
 /**
  * [WHO]: Provides MemoryStore
- * [FROM]: Depends on ../../integrations/src/storage, ./model, ./migration
+ * [FROM]: Depends on ../../integrations/src/data-dir, ../../integrations/src/storage, ./model, ./migration
  * [TO]: Consumed by packages/memory/src/engine.ts, packages/memory/src/index.ts
  * [HERE]: packages/memory/src/store.ts - confined atomic single-document storage with serialized transactions and one-time import
  */
+import { dataPath } from '../../integrations/src/data-dir'
 import { Serial, readJson, writeJson, within } from '../../integrations/src/storage'
 import { validateMemoryDocument, type MemoryDocument } from './model'
 import { migrateMemory } from './migration'
@@ -18,7 +19,7 @@ export class MemoryStore {
       throw new Error('Unknown memory scope')
   }
   private async load(): Promise<{ path: string; data: MemoryDocument }> {
-    const directory = `.catea/memory/${this.scope}`
+    const directory = dataPath('memory', this.scope)
     const path = await within(this.vault, `${directory}/memories.json`)
     const existing: unknown = await readJson(path, undefined)
     // A malformed existing canonical store must never trigger re-import of stale data.

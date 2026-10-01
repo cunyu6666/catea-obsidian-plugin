@@ -16,6 +16,9 @@
   ],
   "scripts": {
     "build": "node scripts/build.mjs",
+    "dev:build": "node scripts/build.mjs --dev",
+    "dev:install": "node scripts/dev-install.mjs",
+    "dev:watch": "node scripts/dev-install.mjs --watch",
     "test": "node --test",
     "typecheck": "node scripts/typecheck.mjs",
     "lint": "eslint \"apps/*/src/**/*.{ts,tsx}\" \"packages/*/src/**/*.{ts,tsx}\" \"packages/design-system/components/src/**/*.{ts,tsx}\" --max-warnings=0",

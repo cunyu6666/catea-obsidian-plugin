@@ -1,5 +1,5 @@
 /**
- * [WHO]: Provides memoryTypes, MemoryType, MemorySource, MemoryRecord, MemoryDocument, MemoryInput, memoryInputSchema, validateMemoryInput, validateMemoryPatch, validateMemoryDocument
+ * [WHO]: Provides memoryTypes, MemoryType, MemorySource, MemoryRecord, MemorySummary, MemoryDocument, MemoryInput, memoryInputSchema, validateMemoryInput, validateMemoryPatch, validateMemoryDocument
  * [FROM]: Depends on @sinclair/typebox, @sinclair/typebox/value
  * [TO]: Consumed by packages/memory/src/index.ts, packages/memory/src/store.ts, packages/memory/src/migration.ts, packages/memory/src/engine.ts, packages/memory/src/extraction.ts, packages/memory/src/tools.ts
  * [HERE]: packages/memory/src/model.ts - single writing and knowledge memory schema, shared by extraction, tools and persistence
@@ -112,6 +112,22 @@ export interface MemoryRecord extends MemoryInput {
   accessCount: number
   archivedAt?: string
   archiveReason?: string
+}
+/**
+ * Bounded projection for list views. A full MemoryRecord carries a detail of up to
+ * 16000 characters plus sources and links, so a folder of records must never be
+ * serialized whole; the detail view recalls one record by id instead.
+ */
+export interface MemorySummary {
+  id: string
+  type: MemoryType
+  name: string
+  summary: string
+  project?: string
+  tags: string[]
+  importance: number
+  updatedAt: string
+  archivedAt?: string
 }
 export interface MemoryDocument {
   schemaVersion: 1
