@@ -64,8 +64,20 @@ interface BillingStatus {
   current_period_end?: string | null
   display_name?: string
   quota?: {
-    monthly?: { used_percent?: number; remaining_percent?: number; reset_at?: string | null }
-    window?: { used_percent?: number; remaining_percent?: number; reset_at?: string | null }
+    monthly?: {
+      used_percent?: number
+      remaining_percent?: number
+      reset_at?: string | null
+      included_credits?: number
+      used_credits?: number
+    }
+    window?: {
+      used_percent?: number
+      remaining_percent?: number
+      reset_at?: string | null
+      included_credits?: number
+      used_credits?: number
+    }
   }
   features?: { hosted_model?: boolean; byok?: boolean }
 }
@@ -110,12 +122,18 @@ function quotaStatus(value: unknown) {
       remaining_percent:
         typeof monthly.remaining_percent === 'number' ? monthly.remaining_percent : undefined,
       reset_at: monthlyReset,
+      included_credits:
+        typeof monthly.included_credits === 'number' ? monthly.included_credits : undefined,
+      used_credits: typeof monthly.used_credits === 'number' ? monthly.used_credits : undefined,
     },
     window: {
       used_percent: typeof window.used_percent === 'number' ? window.used_percent : undefined,
       remaining_percent:
         typeof window.remaining_percent === 'number' ? window.remaining_percent : undefined,
       reset_at: windowReset,
+      included_credits:
+        typeof window.included_credits === 'number' ? window.included_credits : undefined,
+      used_credits: typeof window.used_credits === 'number' ? window.used_credits : undefined,
     },
   }
 }
@@ -204,6 +222,25 @@ function formatDate(value?: string | null) {
   return Number.isNaN(date.getTime()) ? '' : date.toLocaleDateString()
 }
 
+function formatDurationUntil(value?: string | null) {
+  if (!value) return ''
+  const reset = new Date(value).getTime()
+  if (Number.isNaN(reset)) return ''
+  const ms = reset - Date.now()
+  if (ms <= 0) return 'now'
+  const minutes = Math.ceil(ms / 60000),
+    days = Math.floor(minutes / 1440),
+    hours = Math.floor((minutes % 1440) / 60),
+    mins = minutes % 60
+  if (days > 0) return hours > 0 ? `${days}d ${hours}h` : `${days}d`
+  if (hours > 0) return mins > 0 ? `${hours}h ${mins}m` : `${hours}h`
+  return `${mins}m`
+}
+
+function formatCredits(value: number) {
+  return new Intl.NumberFormat().format(Math.max(0, Math.round(value)))
+}
+
 function billingSummary(tr: (text: string) => string, status?: BillingStatus) {
   if (status?.pro) {
     const expires = formatDate(status.current_period_end)
@@ -218,12 +255,34 @@ function billingSummary(tr: (text: string) => string, status?: BillingStatus) {
 }
 
 function renderQuotaProgress(parent: HTMLElement, tr: (text: string) => string, status?: BillingStatus) {
-  const monthly = status?.quota?.monthly?.remaining_percent
-  if (!status?.pro || typeof monthly !== 'number') return
-  const remaining = Math.max(0, Math.min(100, Math.round(monthly)))
+  const monthly = status?.quota?.monthly,
+    percent = monthly?.remaining_percent
+  if (!status?.pro || typeof percent !== 'number') return
+  const remaining = Math.max(0, Math.min(100, Math.round(percent))),
+    usedCredits = typeof monthly?.used_credits === 'number' ? monthly.used_credits : undefined,
+    includedCredits =
+      typeof monthly?.included_credits === 'number' ? monthly.included_credits : undefined,
+    remainingCredits =
+      typeof includedCredits === 'number' && typeof usedCredits === 'number'
+        ? Math.max(0, includedCredits - usedCredits)
+        : undefined,
+    resetsIn = formatDurationUntil(monthly?.reset_at)
   const box = parent.createDiv({ cls: 'catea-quota-progress' })
+  box.createDiv({ cls: 'catea-quota-progress__title', text: tr('月度额度') })
+  const meta = box.createDiv({ cls: 'catea-quota-progress__meta' })
+  meta.createSpan({
+    text: resetsIn ? `${tr('距离重置')} ${resetsIn}` : tr('重置时间待同步'),
+  })
+  meta.createSpan({ text: `${remaining}% ${tr('剩余')}` })
   box.createEl('progress', { attr: { max: '100', value: String(remaining) } })
-  box.createDiv({ cls: 'catea-quota-progress__label', text: `${tr('本月剩余额度')}：${remaining}%` })
+  const footer = box.createDiv({ cls: 'catea-quota-progress__footer' })
+  footer.createSpan()
+  footer.createSpan({
+    text:
+      typeof remainingCredits === 'number'
+        ? `${formatCredits(remainingCredits)} ${tr('额度剩余')}`
+        : `${remaining}% ${tr('额度剩余')}`,
+  })
 }
 
 function defaultCurrency(language?: string): BillingCurrency {

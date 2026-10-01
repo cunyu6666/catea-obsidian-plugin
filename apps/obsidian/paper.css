@@ -681,12 +681,13 @@ body.gp-enabled .catea-editor-zoom-label { position: absolute; width: 1px; heigh
 .catea-plan-card .setting-item-info {display:none}
 .catea-plan-card .setting-item-control {width:100%;justify-content:stretch}
 .catea-plan-card button {width:100%;justify-content:center}
-.catea-quota-progress {display:grid;gap:6px;width:100%;max-width:360px}
+.catea-quota-progress {display:grid;gap:6px;width:100%;max-width:420px}
+.catea-quota-progress__title {color:var(--text-normal);font-size:var(--font-ui-small);font-weight:600;line-height:1.3}
+.catea-quota-progress__meta,.catea-quota-progress__footer {display:flex;align-items:center;justify-content:space-between;gap:12px;color:var(--text-muted);font-size:var(--font-ui-smaller);line-height:1.3}
 .catea-quota-progress progress {width:100%;height:8px;overflow:hidden;border:0;border-radius:999px;background:var(--background-modifier-border)}
 .catea-quota-progress progress::-webkit-progress-bar {border-radius:999px;background:var(--background-modifier-border)}
 .catea-quota-progress progress::-webkit-progress-value {border-radius:999px;background:var(--interactive-accent)}
 .catea-quota-progress progress::-moz-progress-bar {border-radius:999px;background:var(--interactive-accent)}
-.catea-quota-progress__label {color:var(--text-muted);font-size:var(--font-ui-small);line-height:1.4}
 @media(max-width:720px){.catea-plan-grid{grid-template-columns:1fr}.catea-plan-card{min-height:auto}}
 .catea-support-modal.modal {width:min(440px,calc(100vw - 32px));}
 .catea-support-modal .modal-content>p {line-height:1.7;margin:0 0 12px;}
