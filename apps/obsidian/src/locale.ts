@@ -641,8 +641,7 @@ Object.assign(english, {
   '同步套餐状态': 'Sync plan status',
   '支付完成后回到这里刷新状态。': 'After payment, return here and refresh.',
   刷新套餐状态: 'Refresh plan status',
-  '已切换到 Pro 套餐': 'Switched to the Pro plan',
-  '已切换到 Pro 套餐，并选择 Catea 模型': 'Switched to the Pro plan and selected the Catea model',
+  '已切换到 PRO 套餐': 'Switched to the Pro plan',
   '当前为 Free 套餐': 'You are on the Free plan',
   'Free · 自备 API Key 使用 BYOK。订阅 Pro 后可直接使用 Catea 托管额度。':
     'Free · Use BYOK with your own API key. Subscribe to Pro to use Catea-hosted usage directly.',

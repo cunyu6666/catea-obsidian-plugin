@@ -830,7 +830,7 @@ export class CateaSettings extends PluginSettingTab {
                 await p.saveAgentSettings()
                 new Notice(
                   billingPrefs.billingStatus.pro
-                    ? tr('已切换到 Pro 套餐，并选择 Catea 模型')
+                    ? tr('已切换到 PRO 套餐')
                     : tr('当前为 Free 套餐'),
                 )
                 this.refresh()
