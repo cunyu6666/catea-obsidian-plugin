@@ -184,27 +184,6 @@ async function fetchBillingStatus(email: string): Promise<BillingStatus> {
   )
 }
 
-async function hostedPing(model: ModelConfig | undefined) {
-  if (!model?.baseUrl || !model.apiKey) return 'skipped'
-  const response = await requestUrl({
-    url: `${model.baseUrl.replace(/\/$/, '')}/chat/completions`,
-    method: 'POST',
-    headers: {
-      Accept: 'application/json',
-      'Content-Type': 'application/json',
-      'X-Catea-License': model.apiKey,
-    },
-    body: JSON.stringify({
-      model: model.model,
-      stream: false,
-      messages: [{ role: 'user', content: 'ping' }],
-    }),
-    throw: false,
-  })
-  const text = response.text.replace(/\s+/g, ' ').slice(0, 120)
-  return `${response.status}${text ? ` · ${text}` : ''}`
-}
-
 async function createCheckout(
   email: string,
   plan: BillingPlan,
@@ -870,11 +849,6 @@ export class CateaSettings extends PluginSettingTab {
               }
             }),
           )
-          s.addButton((button) =>
-            button.setButtonText(tr('诊断授权')).onClick(() =>
-              new BillingDiagnosticModal(p, billingPrefs).open(),
-            ),
-          )
         },
       },
     ]
@@ -1147,94 +1121,6 @@ function hostedModel(model: ModelConfig) {
     BILLING_APIS.some((base) => model.baseUrl.replace(/\/$/, '') === `${base}/hosted/v1`) ||
     model.model === 'catea/pro'
   )
-}
-
-function safeKey(value: string | undefined) {
-  if (!value) return '(empty)'
-  return `${value.slice(0, 10)}… len=${value.length}`
-}
-
-function safeHost(value: string | undefined) {
-  if (!value) return '(empty)'
-  try {
-    return new URL(value).host
-  } catch {
-    return '(invalid)'
-  }
-}
-
-class BillingDiagnosticModal extends Modal {
-  constructor(
-    private owner: Catea,
-    private billing: BillingPreferences,
-  ) {
-    super(owner.app)
-  }
-  onOpen() {
-    const tr = this.owner.t,
-      el = this.contentEl
-    this.titleEl.setText(tr('套餐授权诊断'))
-    el.createEl('p', { text: tr('正在同步套餐状态并检查本地授权…') })
-    void this.run()
-  }
-  private async run() {
-    const tr = this.owner.t,
-      el = this.contentEl,
-      email = this.billing.billingEmail || this.billing.billingStatus?.email || ''
-    el.empty()
-    this.titleEl.setText(tr('套餐授权诊断'))
-    if (!isEmail(email)) {
-      el.createEl('p', { text: tr('请先填写有效邮箱') })
-      return
-    }
-    try {
-      const status = await fetchBillingStatus(email)
-      this.billing.billingStatus = status
-      this.billing.billingLastChecked = Date.now()
-      await syncHostedBillingModel(this.owner, status)
-      await this.owner.saveAgentSettings()
-      const current = selectedModel(this.owner.agentSettings.models, this.owner.agentSettings.modelId),
-        hosted = this.owner.agentSettings.models.filter(hostedModel),
-        serverKey = status.license_key || '',
-        currentKey = current?.apiKey || '',
-        ping = current && hostedModel(current) ? await hostedPing(current) : 'skipped',
-        rows: Array<[string, string]> = [
-          [tr('订阅邮箱'), status.email || email],
-          [tr('服务端套餐'), `${status.pro ? 'PRO' : 'Free'} · ${status.status || 'unknown'}`],
-          [tr('服务端授权'), safeKey(serverKey)],
-          [tr('当前模型'), current ? `${current.name} · ${current.id}` : '(none)'],
-          [tr('当前模型来源'), safeHost(current?.baseUrl)],
-          [tr('当前模型授权'), safeKey(currentKey)],
-          [
-            tr('授权是否一致'),
-            serverKey && currentKey === serverKey ? tr('一致') : tr('不一致'),
-          ],
-          [tr('托管 ping 测试'), ping],
-          [tr('本地 Catea 模型数'), String(hosted.length)],
-        ]
-      const table = el.createEl('table', { cls: 'catea-diagnostic-table' })
-      for (const [name, value] of rows) {
-        const row = table.createEl('tr')
-        row.createEl('th', { text: name })
-        row.createEl('td', { text: value })
-      }
-      if (hosted.length) {
-        el.createEl('h3', { text: tr('本地 Catea 模型') })
-        const list = el.createEl('ul')
-        for (const model of hosted)
-          list.createEl('li', {
-            text: `${model.name} · ${model.id} · ${safeHost(model.baseUrl)} · ${safeKey(model.apiKey)}`,
-          })
-      }
-      el.createEl('p', {
-        text: tr('诊断不会显示完整授权密钥。请把上面的结果发给我继续排查。'),
-      })
-    } catch (error) {
-      el.createEl('p', {
-        text: tr(error instanceof Error ? error.message : '无法读取 Pro 状态，请稍后重试'),
-      })
-    }
-  }
 }
 
 class SubscriptionModal extends Modal {

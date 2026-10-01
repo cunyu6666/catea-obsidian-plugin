@@ -641,23 +641,11 @@ Object.assign(english, {
   '同步套餐状态': 'Sync plan status',
   '支付完成后回到这里刷新状态。': 'After payment, return here and refresh.',
   刷新套餐状态: 'Refresh plan status',
-  诊断授权: 'Diagnose authorization',
-  套餐授权诊断: 'Plan authorization diagnostics',
-  '正在同步套餐状态并检查本地授权…':
-    'Syncing plan status and checking local authorization…',
   服务端套餐: 'Server plan',
-  服务端授权: 'Server authorization',
   当前模型: 'Current model',
   当前模型来源: 'Current model source',
-  当前模型授权: 'Current model authorization',
-  授权是否一致: 'Authorization match',
   一致: 'Match',
   不一致: 'Mismatch',
-  '托管 ping 测试': 'Hosted ping test',
-  '本地 Catea 模型数': 'Local Catea model count',
-  '本地 Catea 模型': 'Local Catea models',
-  '诊断不会显示完整授权密钥。请把上面的结果发给我继续排查。':
-    'Diagnostics never show the full authorization key. Send me the result above to continue debugging.',
   '已切换到 PRO 套餐': 'Switched to the Pro plan',
   '当前为 Free 套餐': 'You are on the Free plan',
   'Free · 自备 API Key 使用 BYOK。订阅 Pro 后可直接使用 Catea 托管额度。':
