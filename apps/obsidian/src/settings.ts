@@ -183,6 +183,27 @@ async function fetchBillingStatus(email: string): Promise<BillingStatus> {
   )
 }
 
+async function hostedPing(model: ModelConfig | undefined) {
+  if (!model?.baseUrl || !model.apiKey) return 'skipped'
+  const response = await requestUrl({
+    url: `${model.baseUrl.replace(/\/$/, '')}/chat/completions`,
+    method: 'POST',
+    headers: {
+      Accept: 'application/json',
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${model.apiKey}`,
+    },
+    body: JSON.stringify({
+      model: model.model,
+      stream: false,
+      messages: [{ role: 'user', content: 'ping' }],
+    }),
+    throw: false,
+  })
+  const text = response.text.replace(/\s+/g, ' ').slice(0, 120)
+  return `${response.status}${text ? ` · ${text}` : ''}`
+}
+
 async function createCheckout(
   email: string,
   plan: BillingPlan,
@@ -1175,6 +1196,7 @@ class BillingDiagnosticModal extends Modal {
         hosted = this.owner.agentSettings.models.filter(hostedModel),
         serverKey = status.license_key || '',
         currentKey = current?.apiKey || '',
+        ping = current && hostedModel(current) ? await hostedPing(current) : 'skipped',
         rows: Array<[string, string]> = [
           [tr('订阅邮箱'), status.email || email],
           [tr('服务端套餐'), `${status.pro ? 'PRO' : 'Free'} · ${status.status || 'unknown'}`],
@@ -1186,6 +1208,7 @@ class BillingDiagnosticModal extends Modal {
             tr('授权是否一致'),
             serverKey && currentKey === serverKey ? tr('一致') : tr('不一致'),
           ],
+          [tr('托管 ping 测试'), ping],
           [tr('本地 Catea 模型数'), String(hosted.length)],
         ]
       const table = el.createEl('table', { cls: 'catea-diagnostic-table' })

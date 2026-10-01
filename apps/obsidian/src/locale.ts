@@ -653,6 +653,7 @@ Object.assign(english, {
   授权是否一致: 'Authorization match',
   一致: 'Match',
   不一致: 'Mismatch',
+  '托管 ping 测试': 'Hosted ping test',
   '本地 Catea 模型数': 'Local Catea model count',
   '本地 Catea 模型': 'Local Catea models',
   '诊断不会显示完整授权密钥。请把上面的结果发给我继续排查。':
