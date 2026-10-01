@@ -235,6 +235,12 @@ async function syncHostedBillingModel(owner: Catea, status?: BillingStatus) {
   const c = owner.agentSettings,
     license = status?.license_key?.trim()
   if (status?.pro && license) {
+    c.models = c.models.filter(
+      (model) =>
+        model.id === HOSTED_MODEL_ID ||
+        (model.baseUrl.replace(/\/$/, '') !== `${BILLING_API}/hosted/v1` &&
+          model.model !== 'catea/pro'),
+    )
     await storeModel(
       owner,
       {
