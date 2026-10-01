@@ -65,6 +65,7 @@ const DOCK_ICON_MATCHES: [RegExp, string][] = [
   [/template|模板/i, 'file-copy'],
   [/command palette|命令面板/i, 'command'],
   [/database|数据库/i, 'database-2'],
+  [/another vault|另一个仓库|管理仓库/i, 'expand-up-down'],
 ]
 interface PaperSurface {
   settings: Record<string, boolean>

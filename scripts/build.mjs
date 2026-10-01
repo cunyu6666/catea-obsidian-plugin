@@ -83,6 +83,7 @@ const dockIcons = [
   'command',
   'database-2',
   'file-copy',
+  'expand-up-down',
   'gemini',
   'git-fork',
   'search-2',

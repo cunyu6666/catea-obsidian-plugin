@@ -671,19 +671,38 @@ body.gp-enabled .catea-editor-zoom-label { position: absolute; width: 1px; heigh
 .catea-memory-panel__row[data-empty="true"] .catea-memory-panel__row-name,.catea-memory-panel__row[data-empty="true"] .catea-memory-panel__row-count { color: var(--text-faint); }
 .catea-memory-panel__row-name { min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 .catea-memory-panel__row-count { flex-shrink: 0; font-size: 11px; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+.catea-memory-panel__grid { flex: 1; min-height: 0; overflow: auto; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; align-content: start; padding: 0 2px 12px; }
+.catea-memory-card { display: flex; flex-direction: column; align-items: stretch; gap: 4px; padding: 10px 11px 11px; border: 1px solid var(--background-modifier-border); border-radius: 10px; background: var(--background-primary); color: var(--text-normal); text-align: left; cursor: pointer; }
+.catea-memory-card:hover:not(:disabled) { border-color: #5b806d; background: color-mix(in srgb, #7f9988 8%, var(--background-primary)); }
+.catea-memory-card:focus-visible { outline: 2px solid #5b806d; outline-offset: -2px; }
+.catea-memory-card:disabled { cursor: default; }
+.catea-memory-card[data-empty="true"] { border-style: dashed; background: transparent; }
+.catea-memory-card__head { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.catea-memory-card__icon { width: 18px; height: 18px; flex-shrink: 0; color: #5b806d; background: currentColor; -webkit-mask: var(--catea-memory-icon) center / contain no-repeat; mask: var(--catea-memory-icon) center / contain no-repeat; }
+.catea-memory-card[data-empty="true"] .catea-memory-card__icon { color: var(--text-faint); }
+.catea-memory-card__name { flex: 1; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: 13px; font-weight: 500; line-height: 18px; color: var(--text-normal); }
+.catea-memory-card[data-empty="true"] .catea-memory-card__name { color: var(--text-faint); font-weight: 400; }
+.catea-memory-card__count { flex-shrink: 0; font-size: 11px; color: var(--text-muted); font-variant-numeric: tabular-nums; padding: 1px 7px; border-radius: 999px; background: color-mix(in srgb, var(--text-muted) 14%, transparent); }
+.catea-memory-card[data-empty="true"] .catea-memory-card__count { color: var(--text-faint); background: transparent; padding: 1px 0; }
+.catea-memory-card__desc { font-size: 11px; line-height: 15px; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.catea-memory-card[data-empty="true"] .catea-memory-card__desc { color: var(--text-faint); }
+.catea-memory-card--archived { grid-column: 1 / -1; margin-top: 4px; background: var(--background-secondary); }
+.catea-memory-card--archived .catea-memory-card__icon { width: 16px; height: 16px; color: var(--text-muted); }
+.catea-memory-card--archived .catea-memory-card__name { font-weight: 400; color: var(--text-muted); }
+.catea-memory-card--archived .catea-memory-card__desc { color: var(--text-faint); }
 .catea-memory-panel__footer { display: flex; align-items: center; gap: 6px; flex-shrink: 0; padding: 10px 4px 0; border-top: 1px solid var(--background-modifier-border); font-size: 11px; color: var(--text-muted); }
 .catea-memory-panel__footer > span:nth-child(even) { margin-right: auto; color: var(--text-normal); font-variant-numeric: tabular-nums; }
 .catea-memory-panel__footer > span:last-child { margin-right: 0; }
 .catea-memory-panel__back { flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; padding: 0; border: 1px solid var(--background-modifier-border); border-radius: 8px; background: var(--background-primary); color: var(--text-muted); font-size: 11px; cursor: pointer; }
 .catea-memory-panel__title { flex: 1; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: 13px; font-weight: 600; text-align: center; }
 .catea-memory-panel__row--archived { margin-top: 8px; border-top: 1px solid var(--background-modifier-border); border-radius: 0 0 8px 8px; padding-top: 12px; }
-.catea-memory-panel__card { display: flex; flex-direction: column; gap: 3px; width: 100%; margin-bottom: 6px; padding: 9px 10px; border: 1px solid var(--background-modifier-border); border-radius: 8px; background: var(--background-primary); color: var(--text-normal); text-align: left; cursor: pointer; }
+.catea-memory-panel__card { display: flex; flex-direction: column; gap: 4px; width: 100%; margin-bottom: 8px; padding: 10px 12px 11px; border: 1px solid var(--background-modifier-border); border-radius: 10px; background: var(--background-primary); color: var(--text-normal); text-align: left; cursor: pointer; min-width: 0; align-items: stretch; }
 .catea-memory-panel__card:hover { border-color: #5b806d; background: color-mix(in srgb, #7f9988 6%, var(--background-primary)); }
 .catea-memory-panel__card:focus-visible { outline: 2px solid #5b806d; outline-offset: -2px; }
-.catea-memory-panel__card-name { font-size: 12px; font-weight: 600; line-height: 16px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
-.catea-memory-panel__card-summary { font-size: 11px; line-height: 16px; color: var(--text-muted); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-.catea-memory-panel__card-meta { display: flex; align-items: center; gap: 6px; font-size: 10px; color: var(--text-faint); }
-.catea-memory-panel__card-meta > em { font-style: normal; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.catea-memory-panel__card-name { display: block; width: 100%; min-height: 22px; font-size: 14px; font-weight: 600; line-height: 20px; color: var(--text-normal); overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.catea-memory-panel__card-summary { display: -webkit-box; width: 100%; min-height: 36px; font-size: 12px; line-height: 17px; color: var(--text-muted); -webkit-line-clamp: 2; -webkit-box-orient: vertical; word-break: break-word; overflow: hidden; }
+.catea-memory-panel__card-meta { display: flex; align-items: center; gap: 6px; width: 100%; min-width: 0; margin-top: 2px; font-size: 10px; line-height: 14px; color: var(--text-faint); }
+.catea-memory-panel__card-meta > em { font-style: normal; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 .catea-memory-panel__card-meta > time { margin-left: auto; flex-shrink: 0; }
 .catea-memory-panel__form { flex: 1; min-height: 0; overflow: auto; padding: 0 2px 12px; }
 .catea-memory-field { display: block; margin-bottom: 12px; }
