@@ -91,7 +91,7 @@ const BILLING_APIS = [
   'https://asgard-api-utj6.onrender.com/billing',
 ] as const
 const BILLING_API = BILLING_APIS[0]
-const HOSTED_BILLING_API = BILLING_APIS[1]
+const HOSTED_BILLING_API = BILLING_API
 const HOSTED_MODEL_ID = 'catea-pro-hosted'
 const PRO_PRICES: Record<BillingCurrency, PlanPrice> = {
   USD: { original: '$10', sale: '$3', suffix: '/ month' },
