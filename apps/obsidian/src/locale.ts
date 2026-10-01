@@ -622,6 +622,8 @@ Object.assign(english, {
   订阅邮箱: 'Subscription email',
   支付币种: 'Payment currency',
   人民币支付暂不可用: 'CNY payments are not available yet',
+  即将上线: 'Coming soon',
+  人民币支付即将上线: 'CNY payments are coming soon',
   '自备 API Key': 'Bring your own API key',
   '适合已有模型服务的用户。': 'For users who already have a model provider.',
   '使用你自己的 API Key': 'Use your own API key',

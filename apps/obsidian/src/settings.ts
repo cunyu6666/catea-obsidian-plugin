@@ -284,6 +284,29 @@ function priceText(currency: BillingCurrency) {
   return `${price.sale}${price.suffix}`
 }
 
+function addCurrencyDropdown(
+  setting: Setting,
+  tr: (text: string) => string,
+  currency: BillingCurrency,
+  onChange: (currency: BillingCurrency) => void,
+) {
+  setting.addDropdown((dropdown) => {
+    dropdown
+      .addOption('USD', 'USD')
+      .addOption('CNY', `CNY（${tr('即将上线')}）`)
+      .setValue(currency)
+      .onChange((value) => {
+        onChange(value === 'CNY' ? 'USD' : (value as BillingCurrency))
+      })
+    const cnyOption = dropdown.selectEl.querySelector<HTMLOptionElement>('option[value="CNY"]')
+    if (cnyOption) {
+      cnyOption.disabled = true
+      cnyOption.title = tr('人民币支付即将上线')
+    }
+    dropdown.selectEl.title = tr('人民币支付即将上线')
+  })
+}
+
 async function syncHostedBillingModel(owner: Catea, status?: BillingStatus) {
   const c = owner.agentSettings,
     license = status?.license_key?.trim()
@@ -1215,16 +1238,10 @@ class SubscriptionModal extends Modal {
             this.billing.billingEmail = value.trim()
           }),
       )
-    new Setting(el).setName(tr('支付币种')).addDropdown((dropdown) => {
-      dropdown
-        .addOption('USD', 'USD')
-        .addOption('CNY', 'CNY')
-        .setValue(this.currency)
-        .onChange((value) => {
-          this.currency = value === 'CNY' ? 'CNY' : 'USD'
-          this.contentEl.empty()
-          this.onOpen()
-        })
+    addCurrencyDropdown(new Setting(el).setName(tr('支付币种')), tr, this.currency, (currency) => {
+      this.currency = currency
+      this.contentEl.empty()
+      this.onOpen()
     })
     const grid = el.createDiv({ cls: 'catea-plan-grid' })
     this.card(grid, {
@@ -1346,16 +1363,10 @@ class QuickSubscribeModal extends Modal {
     })
     const price = el.createDiv({ cls: 'catea-quick-price' })
     renderPrice(price, this.currency)
-    new Setting(el).setName(tr('支付币种')).addDropdown((dropdown) => {
-      dropdown
-        .addOption('USD', 'USD')
-        .addOption('CNY', 'CNY')
-        .setValue(this.currency)
-        .onChange((value) => {
-          this.currency = value === 'CNY' ? 'CNY' : 'USD'
-          this.contentEl.empty()
-          this.onOpen()
-        })
+    addCurrencyDropdown(new Setting(el).setName(tr('支付币种')), tr, this.currency, (currency) => {
+      this.currency = currency
+      this.contentEl.empty()
+      this.onOpen()
     })
     new Setting(el).setName(tr('订阅邮箱')).addText((input) =>
       input
