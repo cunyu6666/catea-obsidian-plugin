@@ -237,10 +237,6 @@ function formatDurationUntil(value?: string | null) {
   return `${mins}m`
 }
 
-function formatCredits(value: number) {
-  return new Intl.NumberFormat().format(Math.max(0, Math.round(value)))
-}
-
 function billingSummary(tr: (text: string) => string, status?: BillingStatus) {
   if (status?.pro) {
     const expires = formatDate(status.current_period_end)
@@ -259,30 +255,14 @@ function renderQuotaProgress(parent: HTMLElement, tr: (text: string) => string, 
     percent = monthly?.remaining_percent
   if (!status?.pro || typeof percent !== 'number') return
   const remaining = Math.max(0, Math.min(100, Math.round(percent))),
-    usedCredits = typeof monthly?.used_credits === 'number' ? monthly.used_credits : undefined,
-    includedCredits =
-      typeof monthly?.included_credits === 'number' ? monthly.included_credits : undefined,
-    remainingCredits =
-      typeof includedCredits === 'number' && typeof usedCredits === 'number'
-        ? Math.max(0, includedCredits - usedCredits)
-        : undefined,
     resetsIn = formatDurationUntil(monthly?.reset_at)
   const box = parent.createDiv({ cls: 'catea-quota-progress' })
-  box.createDiv({ cls: 'catea-quota-progress__title', text: tr('月度额度') })
   const meta = box.createDiv({ cls: 'catea-quota-progress__meta' })
   meta.createSpan({
     text: resetsIn ? `${tr('距离重置')} ${resetsIn}` : tr('重置时间待同步'),
   })
-  meta.createSpan({ text: `${remaining}% ${tr('剩余')}` })
+  meta.createSpan({ text: `${tr('剩余')} ${remaining}%` })
   box.createEl('progress', { attr: { max: '100', value: String(remaining) } })
-  const footer = box.createDiv({ cls: 'catea-quota-progress__footer' })
-  footer.createSpan()
-  footer.createSpan({
-    text:
-      typeof remainingCredits === 'number'
-        ? `${formatCredits(remainingCredits)} ${tr('额度剩余')}`
-        : `${remaining}% ${tr('额度剩余')}`,
-  })
 }
 
 function defaultCurrency(language?: string): BillingCurrency {
