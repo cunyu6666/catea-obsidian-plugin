@@ -231,9 +231,10 @@ export default class Catea extends Base {
     }
     this.refreshPaperLanguage()
     try {
-      await syncSavedBillingStatus(this)
+      await syncSavedBillingStatus(this, { refresh: false })
     } catch {
-      new Notice(this.t('无法读取 Pro 状态，请稍后重试'))
+      // Billing state should never block plugin startup. Users can refresh the
+      // plan explicitly from Settings → Plan, and hosted sends re-check before use.
     }
     await this.addMiniMaxModels()
     this.installRibbonHover()

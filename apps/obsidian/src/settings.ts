@@ -291,10 +291,11 @@ async function syncHostedBillingModel(owner: Catea, status?: BillingStatus) {
   }
 }
 
-export async function syncSavedBillingStatus(owner: Catea) {
+export async function syncSavedBillingStatus(owner: Catea, options: { refresh?: boolean } = {}) {
   const prefs = owner.agentSettings as typeof owner.agentSettings & BillingPreferences,
     email = prefs.billingEmail || prefs.billingStatus?.email || ''
   if (prefs.billingStatus?.pro) await syncHostedBillingModel(owner, prefs.billingStatus)
+  if (options.refresh === false) return
   if (!isEmail(email)) return
   const status = await fetchBillingStatus(email)
   prefs.billingStatus = status
