@@ -1217,20 +1217,14 @@ class SubscriptionModal extends Modal {
     new Setting(el).setName(tr('支付币种')).addDropdown((dropdown) => {
       dropdown
         .addOption('USD', 'USD')
-        .addOption('CNY', `${tr('人民币支付暂不可用')} · CNY`)
+        .addOption('CNY', 'CNY')
         .setValue(this.currency)
         .onChange((value) => {
-          this.currency = 'USD'
+          this.currency = value === 'CNY' ? 'CNY' : 'USD'
           this.contentEl.empty()
           this.onOpen()
         })
-      const cnyOption = dropdown.selectEl.querySelector<HTMLOptionElement>('option[value="CNY"]')
-      if (cnyOption) cnyOption.disabled = true
     })
-    const cnyNote = el.createDiv({ cls: 'catea-currency-note' })
-    cnyNote.createSpan({ text: tr('人民币支付暂不可用') })
-    cnyNote.createSpan({ text: ' · ' })
-    renderPrice(cnyNote, 'CNY')
     const grid = el.createDiv({ cls: 'catea-plan-grid' })
     this.card(grid, {
       title: 'Free',
@@ -1351,6 +1345,17 @@ class QuickSubscribeModal extends Modal {
     })
     const price = el.createDiv({ cls: 'catea-quick-price' })
     renderPrice(price, this.currency)
+    new Setting(el).setName(tr('支付币种')).addDropdown((dropdown) => {
+      dropdown
+        .addOption('USD', 'USD')
+        .addOption('CNY', 'CNY')
+        .setValue(this.currency)
+        .onChange((value) => {
+          this.currency = value === 'CNY' ? 'CNY' : 'USD'
+          this.contentEl.empty()
+          this.onOpen()
+        })
+    })
     new Setting(el).setName(tr('订阅邮箱')).addText((input) =>
       input
         .setPlaceholder('you@example.com')
