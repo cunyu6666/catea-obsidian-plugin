@@ -1,6 +1,6 @@
 /**
  * [WHO]: Provides Panel
- * [FROM]: Depends on ../../../packages/agent-core/src/attachments, ../../../packages/agent-core/src/types, ./StreamingChatResponse, ./MessageQuotes, react, ./ChatMarkdown, catea-components, obsidian, ../../../packages/agent-core/src, ../../../packages/agent-core/src/byok, ../../../packages/agent-core/src/model-capabilities, ./session-drafts, ./locale, ./tool-presenters, ./turn-review, ../cat-welcome.png, ./main
+ * [FROM]: Depends on ../../../packages/agent-core/src/attachments, ../../../packages/agent-core/src/types, ./StreamingChatResponse, ./MessageQuotes, react, ./ChatMarkdown, catea-components, obsidian, ../../../packages/agent-core/src, ../../../packages/agent-core/src/byok, ../../../packages/agent-core/src/model-capabilities, ./session-drafts, ./locale, ./tool-presenters, ./turn-review, ../cat-welcome.png, ./main, ./settings
  * [TO]: Consumed by apps/obsidian/src/main.tsx
  * [HERE]: apps/obsidian/src/panel.tsx - React sidebar root composing a header session dropdown, history, message list and composer; maps model picker, approvals, quotes and attachments
  */
@@ -46,9 +46,14 @@ import { createToolPresenters } from './tool-presenters'
 import { collectFileChanges, showStandaloneFileReview } from './turn-review'
 import catWelcome from '../cat-welcome.png'
 import type Catea from './main'
+import { syncSavedBillingStatus } from './settings'
 
 const toolPresenters = createToolPresenters()
 const catReplyActions = ['正在踩奶…', '正在舔爪…', '正在甩尾巴…', '正在扒拉键盘…'] as const
+
+function isHostedBillingModel(model: { baseUrl: string } | undefined) {
+  return model?.baseUrl.replace(/\/$/, '').endsWith('/billing/hosted/v1') === true
+}
 
 function MessageCopyButton({
   text,
@@ -571,13 +576,14 @@ export function Panel({ plugin }: { plugin: Catea }) {
         selectedQuotes: quotes.map(({ path, text, comment }) => ({ path, text, comment })),
       })
     }
-    void (
-      agent.running
+    void (async () => {
+      if (isHostedBillingModel(model)) await syncSavedBillingStatus(plugin)
+      return agent.running
         ? context().then((attached) =>
             agent.steer(value, attached, sendingFiles, sendingSkills, quotes),
           )
         : agent.send(value, context, sendingFiles, sendingSkills, quotes)
-    )
+    })()
       .catch((e: unknown) => {
         if (plugin.agent === agent) setError(e instanceof Error ? e.message : String(e))
         plugin.drafts.restore(target, {
