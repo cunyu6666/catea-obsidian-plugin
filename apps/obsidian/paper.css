@@ -681,6 +681,9 @@ body.gp-enabled .catea-editor-zoom-label { position: absolute; width: 1px; heigh
 .catea-plan-card .setting-item-info {display:none}
 .catea-plan-card .setting-item-control {width:100%;justify-content:stretch}
 .catea-plan-card button {width:100%;justify-content:center}
+.catea-quota-setting {display:block}
+.catea-quota-setting > .setting-item-info {margin-bottom:8px}
+.catea-quota-setting > .setting-item-control:empty {display:none}
 .catea-quota-progress {display:grid;gap:6px;width:100%;max-width:none}
 .catea-quota-progress__meta {display:flex;align-items:center;justify-content:space-between;gap:12px;color:var(--text-muted);font-size:var(--font-ui-smaller);line-height:1.3}
 .catea-quota-progress progress {width:100%;height:8px;overflow:hidden;border:0;border-radius:999px;background:var(--background-modifier-border)}

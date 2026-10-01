@@ -254,6 +254,7 @@ function renderQuotaProgress(parent: HTMLElement, tr: (text: string) => string, 
   const monthly = status?.quota?.monthly,
     percent = monthly?.remaining_percent
   if (!status?.pro || typeof percent !== 'number') return
+  parent.addClass('catea-quota-setting')
   const remaining = Math.max(0, Math.min(100, Math.round(percent))),
     resetsIn = formatDurationUntil(monthly?.reset_at)
   const box = parent.createDiv({ cls: 'catea-quota-progress' })
