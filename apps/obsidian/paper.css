@@ -732,6 +732,7 @@ body.gp-enabled .catea-editor-zoom-label { position: absolute; width: 1px; heigh
 .catea-plan-card__sale {font-size:24px;letter-spacing:-.03em;color:var(--interactive-accent)}
 .catea-plan-card__suffix {color:var(--text-muted);font-size:13px;font-weight:500}
 .catea-quick-price {margin:0 0 10px}
+.catea-currency-help {margin:2px 0 10px;padding:10px 12px;border:1px solid var(--background-modifier-border);border-radius:12px;background:var(--background-secondary);color:var(--text-muted);font-size:12px;line-height:1.55}
 .catea-currency-note {display:flex;align-items:baseline;gap:8px;margin:0 0 8px;color:var(--text-muted);font-size:12px;opacity:.72}
 .catea-currency-note .catea-plan-card__price {font-size:13px;font-weight:500}
 .catea-currency-note .catea-plan-card__price del {font-size:12px}

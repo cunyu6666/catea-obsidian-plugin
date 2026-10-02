@@ -49,7 +49,7 @@ interface SettingsSection {
   heading?: string
   rows: SettingsRow[]
 }
-type BillingPlan = 'monthly'
+type BillingPlan = 'monthly' | 'pro_30d'
 type BillingCurrency = 'USD' | 'CNY'
 interface PlanPrice {
   original: string
@@ -98,7 +98,7 @@ const HOSTED_MODEL_ID = 'catea-pro-hosted'
 const BILLING_UI_ENABLED = false
 const PRO_PRICES: Record<BillingCurrency, PlanPrice> = {
   USD: { original: '$10', sale: '$3', suffix: '/ month' },
-  CNY: { original: '¥60', sale: '¥18', suffix: '/ 月' },
+  CNY: { original: '¥60', sale: '¥18', suffix: '/ 30 days' },
 }
 
 function isEmail(value: string) {
@@ -300,17 +300,25 @@ function addCurrencyDropdown(
   setting.addDropdown((dropdown) => {
     dropdown
       .addOption('USD', 'USD')
-      .addOption('CNY', `CNY（${tr('即将上线')}）`)
+      .addOption('CNY', 'CNY')
       .setValue(currency)
       .onChange((value) => {
-        onChange(value === 'CNY' ? 'USD' : (value as BillingCurrency))
+        onChange(value as BillingCurrency)
       })
-    const cnyOption = dropdown.selectEl.querySelector<HTMLOptionElement>('option[value="CNY"]')
-    if (cnyOption) {
-      cnyOption.disabled = true
-      cnyOption.title = tr('人民币支付即将上线')
-    }
-    dropdown.selectEl.title = tr('人民币支付即将上线')
+  })
+}
+
+function checkoutPlan(currency: BillingCurrency): BillingPlan {
+  return currency === 'CNY' ? 'pro_30d' : 'monthly'
+}
+
+function renderCurrencyHelp(parent: HTMLElement, tr: (text: string) => string, currency: BillingCurrency) {
+  parent.createDiv({
+    cls: 'catea-currency-help',
+    text:
+      currency === 'CNY'
+        ? tr('人民币支付为一次性购买 30 天 Pro，不会自动续费；到期后可再次购买续期。')
+        : tr('美元支付为月度订阅，成功后会按月自动续费，可在支付服务中管理。'),
   })
 }
 
@@ -1280,6 +1288,7 @@ class SubscriptionModal extends Modal {
       this.contentEl.empty()
       this.onOpen()
     })
+    renderCurrencyHelp(el, tr, this.currency)
     const grid = el.createDiv({ cls: 'catea-plan-grid' })
     this.card(grid, {
       title: 'Free',
@@ -1357,7 +1366,7 @@ class SubscriptionModal extends Modal {
     button.setDisabled(true)
     try {
       await this.owner.saveAgentSettings()
-      const url = await createCheckout(email, 'monthly', this.currency)
+      const url = await createCheckout(email, checkoutPlan(this.currency), this.currency)
       window.open(url, '_blank', 'noopener,noreferrer')
       new Notice(tr('支付页已打开，完成后回到这里刷新套餐状态'))
       try {
@@ -1405,6 +1414,7 @@ class QuickSubscribeModal extends Modal {
       this.contentEl.empty()
       this.onOpen()
     })
+    renderCurrencyHelp(el, tr, this.currency)
     new Setting(el).setName(tr('订阅邮箱')).addText((input) =>
       input
         .setPlaceholder('you@example.com')
@@ -1432,7 +1442,7 @@ class QuickSubscribeModal extends Modal {
     button.setDisabled(true)
     try {
       await this.owner.saveAgentSettings()
-      const url = await createCheckout(email, 'monthly', this.currency)
+      const url = await createCheckout(email, checkoutPlan(this.currency), this.currency)
       window.open(url, '_blank', 'noopener,noreferrer')
       new Notice(tr('支付页已打开，完成后回到这里刷新套餐状态'))
       try {

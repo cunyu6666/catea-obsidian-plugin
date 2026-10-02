@@ -628,6 +628,10 @@ Object.assign(english, {
   人民币支付暂不可用: 'CNY payments are not available yet',
   即将上线: 'Coming soon',
   人民币支付即将上线: 'CNY payments are coming soon',
+  '人民币支付为一次性购买 30 天 Pro，不会自动续费；到期后可再次购买续期。':
+    'CNY payment is a one-time 30-day Pro purchase. It does not renew automatically; buy again to extend access.',
+  '美元支付为月度订阅，成功后会按月自动续费，可在支付服务中管理。':
+    'USD payment is a monthly subscription. It renews automatically and can be managed through the payment service.',
   '自备 API Key': 'Bring your own API key',
   '适合已有模型服务的用户。': 'For users who already have a model provider.',
   '使用你自己的 API Key': 'Use your own API key',
