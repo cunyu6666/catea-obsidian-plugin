@@ -29,7 +29,7 @@ export const VENDORED_ASSETS: ReadonlySet<string> = new Set<string>(
     return Object.keys(manifest.assets ?? {})
   }),
 )
-const SKIP_DIRS = new Set(['node_modules', '.git', 'dist', '.catea', '.worktrees'])
+const SKIP_DIRS = new Set(['node_modules', '.git', 'dist', '.catea', '.catea-dev', '.worktrees'])
 const SOURCE_EXT = ['.ts', '.tsx', '.mjs', '.js', '.cjs']
 
 export function toRepoPath(abs: string): string {

@@ -42,7 +42,7 @@ Catea can check for new releases and show an update banner. Automatic checks and
 
 ## Your vault. Your choice.
 
-No Catea account, telemetry, or Catea-operated backend. The agent runs inside Obsidian; conversations, memory, and vault settings stay in your vault. On desktops with OS-backed encryption, BYOK models and API keys are encrypted in Obsidian's machine-local data directory and shared across vaults. Existing vault models are imported when opened. If secure encryption is unavailable, models remain vault-local and keys use Obsidian's secret storage when available, otherwise they stay in memory for the current session.
+BYOK requires no Catea account and connects directly to your provider. Optional Pro uses email-based subscription billing and a Catea-hosted model endpoint; there is no telemetry. The agent runs inside Obsidian; conversations, memory, and vault settings stay in your vault. On desktops with OS-backed encryption, BYOK models and API keys are encrypted in Obsidian's machine-local data directory and shared across vaults. Existing vault models are imported when opened. If secure encryption is unavailable, models remain vault-local and keys use Obsidian's secret storage when available, otherwise they stay in memory for the current session.
 
 Model requests send relevant prompts, notes, and tool results to your chosen provider. Web search and page reading use Exa, Jina, or DuckDuckGo; enabled MCP servers receive the inputs needed for their tools. GitHub update checks run at most once daily automatically and send no notes or keys. Web search and automatic update checks have separate off switches.
 
@@ -96,7 +96,7 @@ Catea 可检查新版本，并在顶部横幅提醒更新。设置中可以关�
 
 ### 你的知识库，你做主
 
-无需 Catea 账号，没有遥测，也没有 Catea 运营的后端。Agent 在 Obsidian 内运行，对话、记忆和知识库设置保存在当前知识库。若本机支持系统级安全加密，BYOK 模型和 API Key 会加密保存在 Obsidian 的本机数据目录，并在知识库间共享；打开旧知识库时会导入已有模型。若安全加密不可用，模型仍按知识库保存，密钥优先使用 Obsidian 安全存储，否则仅保留在当前会话的内存里。
+BYOK 无需 Catea 账号，直接连接你配置的模型服务。可选的 Pro 使用邮箱订阅与 Catea 托管模型服务；没有遥测。Agent 在 Obsidian 内运行，对话、记忆和知识库设置保存在当前知识库。若本机支持系统级安全加密，BYOK 模型和 API Key 会加密保存在 Obsidian 的本机数据目录，并在知识库间共享；打开旧知识库时会导入已有模型。若安全加密不可用，模型仍按知识库保存，密钥优先使用 Obsidian 安全存储，否则仅保留在当前会话的内存里。
 
 模型请求会把相关提示词、笔记和工具结果发送给你选择的服务商。网络搜索与网页读取使用 Exa、Jina 或 DuckDuckGo；你启用的 MCP 服务会收到执行工具所需的输入。GitHub 自动更新检查每天最多一次，不发送笔记或密钥。网络搜索与自动检查更新各有独立开关。
 

@@ -16,6 +16,12 @@
         "iconEntries": 5166,
         "lucidToTablerAliases": 190,
         "note": "Line 4 holds 98.7 percent of the file (1,613,729 bytes); every other line is hand-written logic."
+      },
+      "buildTransform": {
+        "script": "scripts/paper-icon-prune.mjs",
+        "effect": "Replaces the `const icons = {` literal with `const icons = {}` in memory during esbuild, dropping 1,613,729 bytes from the shipped bundle. The file on disk is never modified, so the sha256 above stays authoritative.",
+        "reason": "Catea retired the Tabler skin: main.tsx forces Paper's `tablerIcons` setting to false and apps/obsidian/src/remix-skin.ts substitutes the vendored Remix line set. TablerSkin.replace() returns early on an unknown name, so a stray start() degrades to leaving native Lucide glyphs rather than throwing.",
+        "verifiedBy": "tests/vendor-assets.test.ts asserts the on-disk digest; the transform aborts the build if the literal or its trailing marker is missing."
       }
     }
   }

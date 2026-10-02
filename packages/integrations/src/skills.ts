@@ -1,12 +1,13 @@
 /**
  * [WHO]: Provides Skill, SkillResource, SkillInfo, CreateSkillResult, presetSkillIds, loadSkill, loadSkills, listSkills, describeSkills, createSkill, readSkillResource
- * [FROM]: Depends on node:fs/promises, node:path, ./storage, ./skill-creator.md, ./find-skill.md
+ * [FROM]: Depends on node:fs/promises, node:path, ./data-dir, ./storage, ./skill-creator.md, ./find-skill.md
  * [TO]: Consumed by apps/obsidian/src/settings.ts, packages/agent-core/src/index.ts,
  *   packages/integrations/src/index.ts
- * [HERE]: packages/integrations/src/skills.ts - resolves enabled skills from .catea/skills/<id>/SKILL.md or the read-only bundled presets; validates, lists and writes skill packages; content capped at 48000 chars, traversal rejected
+ * [HERE]: packages/integrations/src/skills.ts - resolves enabled skills from <dataDir>/skills/<id>/SKILL.md or the read-only bundled presets; validates, lists and writes skill packages; content capped at 48000 chars, traversal rejected
  */
 import { mkdir, readFile, readdir, rename, rm, stat, writeFile } from 'node:fs/promises'
 import { dirname } from 'node:path'
+import { dataPath } from './data-dir'
 import { errnoCode, within } from './storage'
 import skillCreator from './skill-creator.md'
 import findSkill from './find-skill.md'
@@ -65,7 +66,7 @@ function safeSegments(path: string): string[] {
 
 async function installedDirs(vault: string): Promise<string[]> {
   try {
-    return (await readdir(await within(vault, '.catea/skills'), { withFileTypes: true }))
+    return (await readdir(await within(vault, dataPath('skills')), { withFileTypes: true }))
       .filter((d) => d.isDirectory())
       .map((d) => d.name)
   } catch (e: unknown) {
@@ -78,7 +79,10 @@ async function installedDirs(vault: string): Promise<string[]> {
 export async function loadSkill(vault: string, id: string): Promise<Skill> {
   if (SKILL_ID.test(id)) {
     try {
-      const content = await readFile(await within(vault, `.catea/skills/${id}/SKILL.md`), 'utf8')
+      const content = await readFile(
+        await within(vault, dataPath('skills', id, 'SKILL.md')),
+        'utf8',
+      )
       if (content.length > MAX_CONTENT) throw new Error(`Skill 过长：${id}`)
       return { id, description: descriptionOf(content, id), content }
     } catch (e: unknown) {
@@ -91,7 +95,7 @@ export async function loadSkill(vault: string, id: string): Promise<Skill> {
 }
 
 export async function loadSkills(vault: string, enabled: string[]): Promise<Skill[]> {
-  await within(vault, '.catea/skills')
+  await within(vault, dataPath('skills'))
   const result: Skill[] = []
   for (const id of enabled) {
     // A malformed id is skipped, as before; an unknown but well-formed id still
@@ -129,7 +133,7 @@ export async function describeSkills(vault: string, enabled: string[]): Promise<
   return items
 }
 
-/** Writes .catea/skills/<id>/SKILL.md plus optional resources; approval is the caller's job. */
+/** Writes <dataDir>/skills/<id>/SKILL.md plus optional resources; approval is the caller's job. */
 async function writeSkill(
   vault: string,
   args: { id: string; content: string; resources?: SkillResource[]; overwrite?: boolean },
@@ -178,10 +182,10 @@ async function writeSkill(
     seen.add(canonical)
   }
 
-  const dir = await within(vault, `.catea/skills/${id}`)
-  const entry = await within(vault, `.catea/skills/${id}/SKILL.md`)
+  const dir = await within(vault, dataPath('skills', id))
+  const entry = await within(vault, dataPath('skills', id, 'SKILL.md'))
   for (const resource of resources)
-    await within(vault, `.catea/skills/${id}/${safeSegments(resource.path).join('/')}`)
+    await within(vault, dataPath('skills', id, safeSegments(resource.path).join('/')))
   let replaced = false
   try {
     await stat(entry)
@@ -191,8 +195,8 @@ async function writeSkill(
     if (errnoCode(e) !== 'ENOENT') throw e
   }
 
-  const staging = await within(vault, `.catea/skills/.stage-${id}-${crypto.randomUUID()}`)
-  const backup = await within(vault, `.catea/skills/.backup-${id}-${crypto.randomUUID()}`)
+  const staging = await within(vault, dataPath('skills', `.stage-${id}-${crypto.randomUUID()}`))
+  const backup = await within(vault, dataPath('skills', `.backup-${id}-${crypto.randomUUID()}`))
   let moved = false
   try {
     await mkdir(staging, { recursive: true })
@@ -225,7 +229,7 @@ async function writeSkill(
   }
   return {
     id,
-    path: `.catea/skills/${id}/SKILL.md`,
+    path: dataPath('skills', id, 'SKILL.md'),
     resources: resources.map((resource) => safeSegments(resource.path).join('/')),
     replaced,
   }
@@ -255,7 +259,7 @@ export async function readSkillResource(
 ) {
   if (!enabled.includes(id) || !SKILL_ID.test(id)) throw new Error('Skill 未启用')
   safeSegments(path)
-  const content = await readFile(await within(vault, `.catea/skills/${id}/${path}`), 'utf8')
+  const content = await readFile(await within(vault, dataPath('skills', id, path)), 'utf8')
   if (content.length > MAX_CONTENT) throw new Error('Skill 资源超过 48 KB')
   return content
 }

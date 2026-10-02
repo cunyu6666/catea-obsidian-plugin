@@ -1,9 +1,10 @@
 /**
  * [WHO]: Provides MemoryService
- * [FROM]: Depends on ../../integrations/src/storage, ../../agent-core/src/contracts, ../../agent-core/src/types, ./engine, ./store, ./extraction, ./model
+ * [FROM]: Depends on ../../integrations/src/data-dir, ../../integrations/src/storage, ../../agent-core/src/contracts, ../../agent-core/src/types, ./engine, ./store, ./extraction, ./model
  * [TO]: Consumed by apps/obsidian/src/composition.ts
  * [HERE]: packages/memory/src/index.ts - shared memory service with bounded recall and a durable, idempotent extraction queue
  */
+import { dataPath } from '../../integrations/src/data-dir'
 import { Serial, readJson, writeJson, within } from '../../integrations/src/storage'
 import type { MemoryJob, ModelClient } from '../../agent-core/src/contracts'
 import type { ModelConfig } from '../../agent-core/src/types'
@@ -45,7 +46,7 @@ export class MemoryService {
     return engine
   }
   private jobsPath() {
-    return within(this.vault, '.catea/memory/pending-turns.json')
+    return within(this.vault, dataPath('memory', 'pending-turns.json'))
   }
   async injection(persona: string, query: string, _modelId: string): Promise<string> {
     if (this.closed || this.paused) return ''
@@ -162,6 +163,16 @@ export class MemoryService {
           project: text('project'),
           note: text('note'),
           includeArchived: args.includeArchived === true,
+        })
+        break
+      // Not in memoryTools: this is the sidebar browser's listing primitive. The
+      // agent already has memory_search, and adding a second read tool would only
+      // grow the prompt. Reachable through run() the same way memory_insights is.
+      case 'memory_list':
+        result = await engine.list({
+          type: text('type'),
+          state: args.state === 'archived' ? 'archived' : 'active',
+          limit: typeof args.limit === 'number' ? args.limit : undefined,
         })
         break
       case 'memory_recall':

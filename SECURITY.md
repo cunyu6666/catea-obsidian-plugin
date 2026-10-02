@@ -53,14 +53,20 @@ time; only the variable name (for example `FIGMA_API_KEY`) appears in
 that store under `catea-<id>`. Neither is written to `.catea/config.json`.
 When secret storage is unavailable, keys remain in memory for the current session.
 
+Pro license keys use the same credential storage as model API keys. Cached billing
+status in vault config never includes the license key. Legacy plaintext copies are
+scrubbed on startup; existing backups are not rewritten. Pro models are added to
+the selector without changing the selected model.
+
 ### Network
 
-The plugin has no backend, no telemetry and no Catea account. It reaches the
-network only in these ways:
+BYOK connects directly to the configured provider. Optional Pro adds subscription
+billing and hosted inference; there is no telemetry. Network destinations are:
 
 | Destination | When |
 |---|---|
 | The model endpoint you configure (any OpenAI- or Anthropic-compatible URL) | every conversation |
+| `api.pencil.chat/billing`, with `asgard-api-utj6.onrender.com/billing` as the billing fallback | email-based subscription status and checkout on user action; status refresh before hosted sends; hosted inference uses `api.pencil.chat` and sends the selected conversation context |
 | `api.github.com`, `github.com` and release asset delivery hosts | public stable-release metadata, at most once daily automatically or on manual check; independently disabled in settings; no vault content or keys |
 | `mcp.exa.ai` | web search, as the primary provider |
 | `r.jina.ai`, `s.jina.ai` | web search fallback and page reading |

@@ -69,8 +69,8 @@ const english: Record<string, string> = {
   自定义文件夹图标: 'Customize folder icon',
   '已清理旧版 Catea 全量快照，释放知识库空间':
     'Removed obsolete full-vault Catea snapshots to reclaim vault space',
-  '旧版 Catea 快照清理失败，可手动删除 .catea/snapshots':
-    'Could not remove obsolete Catea snapshots. You can delete .catea/snapshots manually',
+  '旧版 Catea 快照清理失败，可手动删除 {dir}/snapshots':
+    'Could not remove obsolete Catea snapshots. You can delete {dir}/snapshots manually',
   '如果 Catea 对你有一点帮助': 'If Catea has been a little helpful',
   'Catea 仍在持续打磨。如果它恰好对你的写作或整理有所帮助，愿意的话，可以去 GitHub 点一颗 Star。':
     'Catea is still being carefully improved. If it has helped with your writing or organization, you are welcome to leave a Star on GitHub.',
@@ -84,6 +84,11 @@ const english: Record<string, string> = {
   刷新: 'Refresh',
   关闭: 'Close',
   'Git 历史': 'Git history',
+  'Remix 图标': 'Remix icons',
+  '开启 Remix': 'Enable Remix',
+  '用 Remix 线性图标替换 Obsidian 自带图标，与侧栏和文件夹图标同族。关闭后恢复原图标。':
+    'Replace Obsidian’s built-in glyphs with the Remix line set, the same family as the dock and folder icons. Turning this off restores the original icons.',
+  '未覆盖，仍用 Obsidian 原图标：': 'Not covered, still using the original icon:',
   '打开 Git 历史': 'Open Git history',
   知识库历史: 'Vault history',
   '本地 Git 时间线': 'Local Git timeline',
@@ -213,7 +218,6 @@ const english: Record<string, string> = {
     'Choose light, dark, or follow the operating system appearance.',
   启用纸张界面: 'Enable paper appearance',
   格式工具栏: 'Formatting toolbar',
-  'Tabler 图标': 'Tabler icons',
   隐藏正文属性: 'Hide note properties',
   隐藏导航栏: 'Hide ribbon',
   隐藏状态栏: 'Hide status bar',
@@ -222,8 +226,8 @@ const english: Record<string, string> = {
   '网页搜索使用 Exa / Jina / DuckDuckGo；可诊断并经确认调用已安装的 Agent Reach。搜索词和目标 URL 会发送到联网服务。':
     'Web search uses Exa / Jina / DuckDuckGo. An installed Agent Reach can be diagnosed and called with confirmation. Queries and URLs are sent to network services.',
   长期记忆: 'Long-term memory',
-  '自动提取、召回和巩固；保存在当前知识库 .catea/memory。':
-    "Automatically extract, recall, and consolidate memories in this vault's .catea/memory directory.",
+  '自动提取、召回和巩固；保存在当前知识库 {dir}/memory。':
+    "Automatically extract, recall, and consolidate memories in this vault's {dir}/memory directory.",
   终端工具: 'Terminal tools',
   '默认关闭；开启后每条命令仍需确认。':
     'Off by default. Each command requires confirmation when enabled.',
@@ -240,8 +244,8 @@ const english: Record<string, string> = {
   'Obsidian 操作 · 内置': 'Obsidian tools · Built in',
   '随 Agent 启用：当前笔记、搜索、内部打开、阅读、编辑与属性管理；写入和设置变更需确认。':
     'Available with Agent: current note, search, open inside Obsidian, read, edit, and manage properties. Writes and setting changes require confirmation.',
-  '将 Skill 文件夹放到 .catea/skills/<名称>/SKILL.md，再启用。':
-    'Place skills at .catea/skills/<name>/SKILL.md, then enable them here.',
+  '将 Skill 文件夹放到 {dir}/skills/<名称>/SKILL.md，再启用。':
+    'Place skills at {dir}/skills/<name>/SKILL.md, then enable them here.',
   '随插件分发的 Skill 预设已列在这里；同名知识库目录优先于预设。':
     'Skill presets shipped with the plugin are listed here; a vault directory of the same id takes precedence.',
   ' · 内置预设': ' · Built-in preset',
@@ -264,8 +268,8 @@ const english: Record<string, string> = {
   '上下文窗口（tokens）': 'Context window (tokens)',
   '按模型实际上限填写；用于自动提示交接，默认 128000。':
     "Enter the model's actual limit for context handoff. Default: 128000.",
-  '优先保存到 Obsidian 安全存储；不可用时仅本次运行有效，不写入 .catea。':
-    'Saved in Obsidian secure storage when available; otherwise kept for this session only. Never written to .catea.',
+  '优先保存到 Obsidian 安全存储；不可用时仅本次运行有效，不写入 {dir}。':
+    'Saved in Obsidian secure storage when available; otherwise kept for this session only. Never written to {dir}.',
   取消: 'Cancel',
   保存模型: 'Save model',
   请检查配置: 'Check your configuration',
@@ -328,8 +332,8 @@ Object.assign(english, {
     'Could not read shared BYOK data. Using this vault configuration.',
   '在 OpenRouter 创建 Key；加密保存在本机，跨知识库共享。':
     'Create a key at OpenRouter. It is encrypted on this device and shared across vaults.',
-  '加密保存在本机，跨知识库共享；不写入 .catea。':
-    'Encrypted on this device and shared across vaults. Never written to .catea.',
+  '加密保存在本机，跨知识库共享；不写入 {dir}。':
+    'Encrypted on this device and shared across vaults. Never written to {dir}.',
   '另一知识库更新了本机 BYOK，请重新打开当前知识库后重试':
     'Another vault changed shared BYOK data. Reopen this vault and try again.',
 })
@@ -627,20 +631,19 @@ Object.assign(english, {
   '自备 API Key': 'Bring your own API key',
   '适合已有模型服务的用户。': 'For users who already have a model provider.',
   '使用你自己的 API Key': 'Use your own API key',
-  '模型和密钥仍保存在本机': 'Models and keys stay on this device',
+  模型和密钥仍保存在本机: 'Models and keys stay on this device',
   '基础 Agent 和笔记工作流': 'Basic agent and note workflows',
   当前默认套餐: 'Current default plan',
   限时折扣: 'Limited-time offer',
   月付订阅: 'Monthly subscription',
   '开箱即用，无需配置 API Key。': 'Ready out of the box. No API key setup required.',
   '包含 Catea 托管 AI 额度': 'Includes Catea-hosted AI usage',
-  '更多用量，适合长文档和 Agent 工作流':
-    'More usage for long documents and agent workflows',
+  '更多用量，适合长文档和 Agent 工作流': 'More usage for long documents and agent workflows',
   '额度自动恢复，月度周期重置': 'Allowance restores automatically and resets monthly',
   '高级功能优先开放：连接器、自定义 Persona、媒体生成':
     'Priority access to advanced features: connectors, custom personas, and media generation',
   '订阅 Pro': 'Subscribe to Pro',
-  '同步套餐状态': 'Sync plan status',
+  同步套餐状态: 'Sync plan status',
   '支付完成后回到这里刷新状态。': 'After payment, return here and refresh.',
   刷新套餐状态: 'Refresh plan status',
   '已切换到 PRO 套餐': 'Switched to the Pro plan',
@@ -750,6 +753,83 @@ const replyAcknowledgements = [
   ['好的，让我把要点理清后再回复你。', 'Okay, let me sort through the key points before replying.'],
 ] as const
 Object.assign(english, Object.fromEntries(replyAcknowledgements))
+
+// Memory panel: view title, command, settings copy and the 19 memory type labels.
+// The type labels are keyed by the Chinese display name from memory-labels.ts, which
+// is what translate() receives at runtime.
+Object.assign(english, {
+  记忆: 'Memory',
+  打开记忆面板: 'Open memory panel',
+  记忆面板: 'Memory panel',
+  '在右侧栏按类型浏览和编辑记忆。默认关闭；只读当前人格与全局两个范围。':
+    'Browse and edit memories by type in the right sidebar. Off by default; reads only the active persona and global scopes.',
+  记忆面板已在设置中关闭: 'The memory panel is turned off in settings',
+  '长期记忆已关闭，开启后才能浏览记忆': 'Long-term memory is off. Turn it on to browse memories.',
+  全局: 'Global',
+  加载中: 'Loading',
+  暂无数据: 'Nothing here yet',
+  活跃: 'Active',
+  已归档: 'Archived',
+  事实: 'Facts',
+  偏好: 'Preferences',
+  教训: 'Lessons',
+  决策: 'Decisions',
+  模式: 'Patterns',
+  困境: 'Struggles',
+  事件: 'Events',
+  实体: 'Entities',
+  作品: 'Works',
+  片段: 'Episodes',
+  侧面: 'Facets',
+  流程: 'Procedures',
+  状态: 'States',
+  写作偏好: 'Writing preferences',
+  写作项目: 'Writing projects',
+  概念: 'Concepts',
+  素材: 'Materials',
+  知识方法: 'Knowledge methods',
+  编辑决策: 'Editorial decisions',
+  // One-line description per type, mirroring memory-labels.ts; these lines sit
+  // beneath the icon and name in the sidebar card grid.
+  '关于你、项目或世界的客观信息': 'Objective information about you, your projects, or the world',
+  习惯的写作风格与表达偏好: 'Writing style and expression preferences you keep returning to',
+  踩过的坑与总结出的经验: 'Pitfalls you have hit and the lessons drawn from them',
+  做过的选择与背后的理由: 'Choices you have made and the reasoning behind them',
+  反复出现的行为或偏好规律: 'Behaviors or preferences that keep coming up',
+  卡住的难题与解决思路: 'Problems you are stuck on and the threads you are pursuing',
+  发生过的事件与时间点: 'Things that happened, with timestamps',
+  '人物、项目、概念等具体对象': 'Specific people, projects, or concepts',
+  '写过、改过、产出过的作品': 'Pieces you have written, edited, or shipped',
+  一次对话或一段时间的摘录: 'Excerpts from a single conversation or time window',
+  同一对象的多个维度或视角: 'Multiple angles or facets of the same thing',
+  做某事的标准步骤与流程: 'Standard steps and procedures for getting something done',
+  '当前进行中、需持续跟踪的事项': 'In-progress items that need ongoing tracking',
+  '文风、语气、措辞偏好': 'Tone, voice, and wording preferences',
+  '在写的稿件、章节、目标': 'Drafts, chapters, and goals you are working on',
+  '抽象术语、定义、命名约定': 'Abstract terms, definitions, and naming conventions',
+  '引用、参考、待用材料': 'Quotes, references, and material waiting to be used',
+  学习方法与研究套路: 'Study methods and research playbooks',
+  '改稿、定稿时的取舍': 'Trade-offs made while revising or finalizing',
+  '已归档的记忆，可在详情页恢复': 'Archived memories; restore them from the detail page',
+  // Record list and the six-field editor. 保存 already exists elsewhere in the table.
+  返回: 'Back',
+  新建: 'New',
+  新建记忆: 'New memory',
+  编辑记忆: 'Edit memory',
+  类型: 'Type',
+  名称: 'Name',
+  摘要: 'Summary',
+  详细内容: 'Details',
+  所属项目: 'Project',
+  '标签（逗号分隔）': 'Tags (comma separated)',
+  恢复: 'Restore',
+  归档: 'Archive',
+  这里还没有记忆: 'No memories here yet',
+  今天: 'Today',
+  昨天: 'Yesterday',
+  天前: 'days ago',
+  'Agent 尚未就绪': 'The agent is not ready yet',
+})
 
 // The random message UUID seeds a stable choice across renders, tabs and remounts.
 export function pendingReplyText(messageId: string, language: Language = 'zh'): string {

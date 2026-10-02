@@ -1,13 +1,35 @@
 import { build } from 'esbuild'
 import postcss from 'postcss'
 import { agentLoopPatchPlugin } from './agent-loop-patch.mjs'
+import { paperIconPrunePlugin } from './paper-icon-prune.mjs'
 import { buildStyles } from '../packages/design-system/scripts/build.mjs'
+import { devDataDir, devManifest, relocatePromptPaths } from './dev-target.mjs'
 import { readFile, writeFile, mkdir, copyFile, stat } from 'node:fs/promises'
 import { existsSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { resolve, dirname } from 'node:path'
-const root = resolve(dirname(fileURLToPath(import.meta.url)), '..'),
-  out = resolve(root, 'dist/catea-paper')
+const devMode = process.argv.includes('--dev')
+const root = resolve(dirname(fileURLToPath(import.meta.url)), '..')
+const manifest = JSON.parse(await readFile(resolve(root, 'manifest.json'), 'utf8'))
+// --dev re-identifies the bundle so it can be installed beside the released plugin
+// in one vault. The id decides both the output directory and the vault state
+// directory, so a dev bundle can never read or write the released plugin's .catea.
+const builtManifest = devMode ? devManifest(manifest) : manifest
+const out = resolve(root, `dist/${builtManifest.id}`)
+const dataDir = devDataDir(builtManifest.id)
+// Prompt markdown is bundled as text and injected into the system prompt verbatim,
+// so its data paths have to move with the data directory or a dev build would send
+// the model to the released plugin's real .catea. Mounted only in dev mode: the
+// released bundle stays exactly what it was before this existed.
+const promptPathPlugin = {
+  name: 'catea-dev-prompt-paths',
+  setup(pluginBuild) {
+    pluginBuild.onLoad({ filter: /\.md$/ }, async (args) => ({
+      contents: relocatePromptPaths(await readFile(args.path, 'utf8'), dataDir),
+      loader: 'text',
+    }))
+  },
+}
 const dependencyRoot = (name) => {
   const candidates = [
     resolve(root, 'apps/obsidian/node_modules', name),
@@ -40,7 +62,7 @@ await build({
   jsx: 'automatic',
   loader: { '.md': 'text', '.png': 'dataurl', '.css': 'empty' },
   external: ['obsidian', 'electron', '@electron/remote'],
-  define: { 'process.env.NODE_ENV': '"production"' },
+  define: { 'process.env.NODE_ENV': '"production"', CATEA_DATA_DIR: JSON.stringify(dataDir) },
   alias: {
     '@catui/ai/stream': resolve(root, 'packages/agent-core/src/upstream-stream.ts'),
     '@catui/ai': resolve(root, 'packages/agent-core/upstream/ai'),
@@ -48,7 +70,11 @@ await build({
     'react-dom': resolve(root, 'node_modules/react-dom'),
     'catea-components': resolve(root, 'packages/design-system/components/src/index.ts'),
   },
-  plugins: [agentLoopPatchPlugin(root)],
+  plugins: [
+    ...(devMode ? [promptPathPlugin] : []),
+    agentLoopPatchPlugin(root),
+    paperIconPrunePlugin(root),
+  ],
 })
 const dockIcons = [
   'apps-2',
@@ -57,6 +83,7 @@ const dockIcons = [
   'command',
   'database-2',
   'file-copy',
+  'expand-up-down',
   'gemini',
   'git-fork',
   'search-2',
@@ -100,6 +127,11 @@ const folderCss = (
     }),
   )
 ).join('\n')
+const explorerCss = `body.gp-enabled{--gp-folder-icon:url("data:image/svg+xml,${encodeURIComponent(
+  await readFile(resolve(root, 'apps/obsidian/remix-explorer/folder-line.svg'), 'utf8'),
+)}");--gp-document-icon:url("data:image/svg+xml,${encodeURIComponent(
+  await readFile(resolve(root, 'apps/obsidian/remix-explorer/file-line.svg'), 'utf8'),
+)}");}`
 const gitStyles = postcss.parse(
   await readFile(resolve(dependencyRoot('@tomplum/react-git-log'), 'dist/index.css'), 'utf8'),
 )
@@ -136,10 +168,11 @@ await writeFile(
     '\n' +
     folderCss +
     '\n' +
+    explorerCss +
+    '\n' +
     (await buildStyles()),
 )
-const manifest = JSON.parse(await readFile(resolve(root, 'manifest.json'), 'utf8'))
-await writeFile(resolve(out, 'manifest.json'), JSON.stringify(manifest, null, 2))
+await writeFile(resolve(out, 'manifest.json'), JSON.stringify(builtManifest, null, 2))
 await copyFile(resolve(root, 'LICENSE'), resolve(out, 'LICENSE'))
 await copyFile(resolve(root, 'THIRD_PARTY_NOTICES.md'), resolve(out, 'THIRD_PARTY_NOTICES.md'))
 await copyFile(resolve(root, 'TABLER-LICENSE.txt'), resolve(out, 'TABLER-LICENSE.txt'))

@@ -1,11 +1,12 @@
 /**
  * [WHO]: Provides VaultConversationStore
- * [FROM]: Depends on ../../agent-core/src/contracts, ./storage, node:fs/promises
+ * [FROM]: Depends on ../../agent-core/src/contracts, ./data-dir, ./storage, node:fs/promises
  * [TO]: Consumed by apps/obsidian/src/composition.ts
  * [HERE]: packages/integrations/src/conversation-store.ts - vault-backed session persistence with serialized writes, bounded retention and index rollback
  */
 import { readdir, unlink } from 'node:fs/promises'
 import type { ConversationStore, Session, SessionSummary } from '../../agent-core/src/contracts'
+import { dataPath } from './data-dir'
 import { Serial, errnoCode, readJson, writeJson, within } from './storage'
 
 export class VaultConversationStore implements ConversationStore {
@@ -16,10 +17,10 @@ export class VaultConversationStore implements ConversationStore {
     return value
   }
   private sessionPath(id: string) {
-    return within(this.vault, `.catea/sessions/${this.id(id)}.json`)
+    return within(this.vault, dataPath('sessions', `${this.id(id)}.json`))
   }
   private indexPath() {
-    return within(this.vault, '.catea/sessions/index.json')
+    return within(this.vault, dataPath('sessions', 'index.json'))
   }
   async list(): Promise<SessionSummary[]> {
     return readJson(await this.indexPath(), [])
@@ -39,7 +40,7 @@ export class VaultConversationStore implements ConversationStore {
       ].slice(0, 500)
       await writeJson(path, retained)
       const retainedIds = new Set(retained.map((row) => row.id))
-      const directory = await within(this.vault, '.catea/sessions')
+      const directory = await within(this.vault, dataPath('sessions'))
       for (const name of await readdir(directory)) {
         if (name === 'index.json' || !/^[\w-]+\.json$/.test(name)) continue
         const id = name.slice(0, -5)

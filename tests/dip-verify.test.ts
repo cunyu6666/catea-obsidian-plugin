@@ -191,14 +191,16 @@ test('DIP | vendored upstream is excluded and documented', () => {
 })
 
 test('DIP | no generated or runtime artifacts are tracked', () => {
-  // Read the git index, not the disk: dist/, node_modules/ and .catea/ are skipped
-  // by the disk walk, so filtering that list by prefix can never report anything.
+  // Read the git index, not the disk: dist/, node_modules/ and the .catea data
+  // directories are skipped by the disk walk, so filtering that list by prefix can
+  // never report anything.
   const tracked = gitTrackedFiles()
   const forbidden = tracked.filter(
     (rel) =>
       rel.startsWith('node_modules/') ||
       rel.startsWith('dist/') ||
       rel.startsWith('.catea/') ||
+      rel.startsWith('.catea-dev/') ||
       rel.startsWith('.obsidian/') ||
       rel.startsWith('.catui/') ||
       rel === 'preview-ui/app.js' ||

@@ -1,6 +1,6 @@
 /**
  * [WHO]: Provides Agent, Hooks, Message, Session, Settings
- * [FROM]: Depends on ../../integrations/src/media-generation, ../../integrations/src/image-generation, ./i18n, ../upstream/loop/agent-loop, ./context, ./compaction, ./compaction-summary, ./contracts, ./upstream-stream, ./ask-user-question, ./types, ../../integrations/src/web, ./byok, ./model-capabilities, ./permission-policy, ./providers, ../../personas/src, ../../integrations/src/skills, ../../integrations/src/tools, ../../integrations/src/mcp, ../../memory/src/tools, ./protocol-repair, ./conversation-title
+ * [FROM]: Depends on ../../integrations/src/media-generation, ../../integrations/src/image-generation, ./i18n, ../upstream/loop/agent-loop, ./context, ./compaction, ./compaction-summary, ./contracts, ./upstream-stream, ./ask-user-question, ./types, ../../integrations/src/web, ./byok, ./model-capabilities, ./permission-policy, ./providers, ../../personas/src, ../../integrations/src/data-dir, ../../integrations/src/skills, ../../integrations/src/tools, ../../integrations/src/mcp, ../../memory/src/tools, ./protocol-repair, ./conversation-title
  * [TO]: Consumed by apps/obsidian/src/composition.ts, apps/obsidian/src/main.tsx,
  *   apps/obsidian/src/panel.tsx
  * [HERE]: packages/agent-core/src/index.ts - class Agent owns one session: persists it, repairs interrupted tool calls, assembles tools, drives agentLoop and enqueues memory; index capped at 500
@@ -50,6 +50,7 @@ import {
   type ImageGenerationConfig,
 } from '../../integrations/src/image-generation'
 import { persona } from '../../personas/src'
+import { DATA_DIR, dataPath } from '../../integrations/src/data-dir'
 import {
   createSkill,
   describeSkills,
@@ -67,7 +68,10 @@ export interface Settings {
   audioGeneration?: MediaGenerationConfig
   imageGeneration?: ImageGenerationConfig
   gitHistory?: boolean
+  memoryPanel?: boolean
   noteThumbnails?: boolean
+  /** Defaults to on; set false to keep Obsidian's native Lucide glyphs. */
+  remixIcons?: boolean
   showTokenUsage?: boolean
   enableReplyAnnotations?: boolean
   permissionMode?: 'assist' | 'full'
@@ -570,8 +574,7 @@ export class Agent {
         },
         {
           name: 'skill_create',
-          description:
-            'Write a Skill package to .catea/skills/<id>/SKILL.md after the user approves the full content',
+          description: `Write a Skill package to ${DATA_DIR}/skills/<id>/SKILL.md after the user approves the full content`,
           parameters: {
             type: 'object',
             properties: {
@@ -803,7 +806,7 @@ Internal note references use [[path|label]]. Only call listed tools. Preserve ra
               mode: this.settings().permissionMode || 'assist',
               capability: 'vault',
               operation: 'write',
-              resource: `.catea/skills/${id}/SKILL.md`,
+              resource: dataPath('skills', id, 'SKILL.md'),
             },
             this.hooks.approve,
             `创建 Skill：${id}`,

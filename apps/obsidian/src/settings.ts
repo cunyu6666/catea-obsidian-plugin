@@ -1,7 +1,7 @@
 /**
  * [WHO]: Provides CateaSettings, syncSavedBillingStatus
- * [FROM]: Depends on obsidian, ./main, ../../../packages/agent-core/src/types, ../../../packages/agent-core/src/byok, ../../../packages/agent-core/src/vendor-presets, ../../../packages/integrations/src/skills, ../../../packages/integrations/src/mcp-presets, ../../../packages/personas/src, ./vendor-icons
- * [TO]: Consumed by apps/obsidian/src/main.tsx
+ * [FROM]: Depends on obsidian, ./main, ../../../packages/agent-core/src/types, ../../../packages/agent-core/src/byok, ../../../packages/agent-core/src/vendor-presets, ../../../packages/integrations/src/data-dir, ../../../packages/integrations/src/skills, ../../../packages/integrations/src/mcp-presets, ../../../packages/personas/src, ./vendor-icons
+ * [TO]: Consumed by apps/obsidian/src/main.tsx, apps/obsidian/src/panel.tsx
  * [HERE]: apps/obsidian/src/settings.ts - plugin settings tab for language, paper toggles, Agent persona and capabilities, subscription status, BYOK models with a vendor-preset grid, one-click MCP presets and MCP servers; ModelModal validates through normalizeModel
  */
 import {
@@ -30,6 +30,7 @@ import {
   vendorPresets,
   type VendorPreset,
 } from '../../../packages/agent-core/src/vendor-presets'
+import { withDataDir } from '../../../packages/integrations/src/data-dir'
 import { describeSkills } from '../../../packages/integrations/src/skills'
 import {
   createPresetServer,
@@ -250,7 +251,11 @@ function billingSummary(tr: (text: string) => string, status?: BillingStatus) {
   return tr('Free · 需要配置自己的模型 API Key。')
 }
 
-function renderQuotaProgress(parent: HTMLElement, tr: (text: string) => string, status?: BillingStatus) {
+function renderQuotaProgress(
+  parent: HTMLElement,
+  tr: (text: string) => string,
+  status?: BillingStatus,
+) {
   const monthly = status?.quota?.monthly,
     percent = monthly?.remaining_percent
   if (!status?.pro || typeof percent !== 'number') return
@@ -309,7 +314,8 @@ function addCurrencyDropdown(
 
 async function syncHostedBillingModel(owner: Catea, status?: BillingStatus) {
   const c = owner.agentSettings,
-    license = status?.license_key?.trim()
+    license =
+      status?.license_key?.trim() || c.models.find((model) => model.id === HOSTED_MODEL_ID)?.apiKey
   if (status?.pro && license) {
     c.models = c.models.filter(
       (model) =>
@@ -334,7 +340,7 @@ async function syncHostedBillingModel(owner: Catea, status?: BillingStatus) {
           structuredOutput: true,
         },
       },
-      true,
+      'preserve',
     )
     return
   }
@@ -342,7 +348,7 @@ async function syncHostedBillingModel(owner: Catea, status?: BillingStatus) {
   const previous = c.models,
     previousId = c.modelId
   c.models = c.models.filter((model) => model.id !== HOSTED_MODEL_ID)
-  c.modelId = selectedModel(c.models, c.modelId)?.id || ''
+  if (c.modelId === HOSTED_MODEL_ID) c.modelId = ''
   try {
     await owner.saveModels(HOSTED_MODEL_ID)
     if (!owner.globalByok) owner.saveSecret(HOSTED_MODEL_ID, '')
@@ -358,7 +364,11 @@ export async function syncSavedBillingStatus(owner: Catea, options: { refresh?: 
   const prefs = owner.agentSettings as typeof owner.agentSettings & BillingPreferences,
     email = prefs.billingEmail || prefs.billingStatus?.email || ''
   if (prefs.billingStatus?.pro) await syncHostedBillingModel(owner, prefs.billingStatus)
-  if (options.refresh === false) return
+  if (options.refresh === false) {
+    // Also scrub legacy plaintext credentials when the cached plan is no longer Pro.
+    if (prefs.billingStatus?.license_key) await owner.saveAgentSettings()
+    return
+  }
   if (!isEmail(email)) return
   const status = await fetchBillingStatus(email)
   prefs.billingStatus = status
@@ -461,7 +471,6 @@ export class CateaSettings extends PluginSettingTab {
     for (const [key, label] of [
       ['enabled', '启用纸张界面'],
       ['toolbar', '格式工具栏'],
-      ['tablerIcons', 'Tabler 图标'],
       ['hideProperties', '隐藏正文属性'],
       ['hideRibbon', '隐藏导航栏'],
       ['hideStatus', '隐藏状态栏'],
@@ -501,6 +510,35 @@ export class CateaSettings extends PluginSettingTab {
             c.gitHistory = value
             await p.saveAgentSettings()
             await p.syncGitHistory(value)
+          }),
+        )
+      },
+    })
+    appearance.push({
+      name: tr('记忆面板'),
+      desc: tr('在右侧栏按类型浏览和编辑记忆。默认关闭；只读当前人格与全局两个范围。'),
+      render: (s) => {
+        s.addToggle((t) =>
+          t.setValue(c.memoryPanel === true).onChange(async (value) => {
+            c.memoryPanel = value
+            await p.saveAgentSettings()
+            await p.syncMemoryPanel(value)
+          }),
+        )
+      },
+    })
+    const uncovered = p.uncoveredIcons ?? []
+    appearance.push({
+      name: tr('开启 Remix'),
+      desc: uncovered.length
+        ? `${tr('用 Remix 线性图标替换 Obsidian 自带图标，与侧栏和文件夹图标同族。关闭后恢复原图标。')} ${tr('未覆盖，仍用 Obsidian 原图标：')}${uncovered.join('、')}`
+        : tr('用 Remix 线性图标替换 Obsidian 自带图标，与侧栏和文件夹图标同族。关闭后恢复原图标。'),
+      render: (s) => {
+        s.addToggle((t) =>
+          t.setValue(c.remixIcons !== false).onChange(async (value) => {
+            c.remixIcons = value
+            await p.saveAgentSettings()
+            p.syncRemixIcons(value)
           }),
         )
       },
@@ -562,7 +600,7 @@ export class CateaSettings extends PluginSettingTab {
       },
       {
         name: tr('长期记忆'),
-        desc: tr('自动提取、召回和巩固；保存在当前知识库 .catea/memory。'),
+        desc: withDataDir(tr('自动提取、召回和巩固；保存在当前知识库 {dir}/memory。')),
         render: (s) => {
           s.addToggle((t) =>
             t.setValue(c.memory).onChange(async (value) => {
@@ -643,39 +681,41 @@ export class CateaSettings extends PluginSettingTab {
       },
     ]
     models.push(
-      ...c.models.filter((model) => model.id !== HOSTED_MODEL_ID).map((model) => ({
-        name: model.name,
-        desc: `${matchVendorPreset(model)?.label ?? (isOpenRouterModel(model) ? 'OpenRouter' : model.protocol === 'openai' ? tr('OpenAI 兼容') : tr('Anthropic 兼容'))} · ${model.model} · ${model.baseUrl}${model.apiKey ? '' : tr(' · 请补充 API Key')}`,
-        render: (s: Setting) => {
-          s.addButton((b) =>
-            b
-              .setButtonText(tr('编辑'))
-              .onClick(() =>
-                (isOpenRouterModel(model)
-                  ? new OpenRouterModal(p, model, () => this.refresh())
-                  : new ModelModal(p, model, () => this.refresh())
-                ).open(),
-              ),
-          )
-          s.addButton((b) =>
-            b.setButtonText(tr('移除')).onClick(async () => {
-              const previous = c.models,
-                previousId = c.modelId
-              c.models = c.models.filter((m) => m.id !== model.id)
-              c.modelId = selectedModel(c.models, c.modelId)?.id || ''
-              try {
-                await p.saveModels(model.id)
-                if (!p.globalByok) p.saveSecret(model.id, '')
-                this.refresh()
-              } catch (error) {
-                c.models = previous
-                c.modelId = previousId
-                new Notice(tr(error instanceof Error ? error.message : '模型移除失败，请重试'))
-              }
-            }),
-          )
-        },
-      })),
+      ...c.models
+        .filter((model) => model.id !== HOSTED_MODEL_ID)
+        .map((model) => ({
+          name: model.name,
+          desc: `${matchVendorPreset(model)?.label ?? (isOpenRouterModel(model) ? 'OpenRouter' : model.protocol === 'openai' ? tr('OpenAI 兼容') : tr('Anthropic 兼容'))} · ${model.model} · ${model.baseUrl}${model.apiKey ? '' : tr(' · 请补充 API Key')}`,
+          render: (s: Setting) => {
+            s.addButton((b) =>
+              b
+                .setButtonText(tr('编辑'))
+                .onClick(() =>
+                  (isOpenRouterModel(model)
+                    ? new OpenRouterModal(p, model, () => this.refresh())
+                    : new ModelModal(p, model, () => this.refresh())
+                  ).open(),
+                ),
+            )
+            s.addButton((b) =>
+              b.setButtonText(tr('移除')).onClick(async () => {
+                const previous = c.models,
+                  previousId = c.modelId
+                c.models = c.models.filter((m) => m.id !== model.id)
+                c.modelId = selectedModel(c.models, c.modelId)?.id || ''
+                try {
+                  await p.saveModels(model.id)
+                  if (!p.globalByok) p.saveSecret(model.id, '')
+                  this.refresh()
+                } catch (error) {
+                  c.models = previous
+                  c.modelId = previousId
+                  new Notice(tr(error instanceof Error ? error.message : '模型移除失败，请重试'))
+                }
+              }),
+            )
+          },
+        })),
     )
     models.push({
       name: tr('添加 OpenRouter'),
@@ -864,18 +904,21 @@ export class CateaSettings extends PluginSettingTab {
         desc: billingSummary(tr, billingPrefs.billingStatus),
         render: (s) => {
           s.addButton((button) =>
-            button.setButtonText(tr('订阅套餐')).setCta().onClick(() =>
-              new SubscriptionModal(
-                p,
-                billingPrefs,
-                () => this.refresh(),
-                async (status) => {
-                  billingPrefs.billingStatus = status
-                  billingPrefs.billingLastChecked = Date.now()
-                  await syncHostedBillingModel(p, status)
-                },
-              ).open(),
-            ),
+            button
+              .setButtonText(tr('订阅套餐'))
+              .setCta()
+              .onClick(() =>
+                new SubscriptionModal(
+                  p,
+                  billingPrefs,
+                  () => this.refresh(),
+                  async (status) => {
+                    billingPrefs.billingStatus = status
+                    billingPrefs.billingLastChecked = Date.now()
+                    await syncHostedBillingModel(p, status)
+                  },
+                ).open(),
+              ),
           )
           s.addButton((button) =>
             button.setButtonText(tr('一键订阅')).onClick(() =>
@@ -897,7 +940,8 @@ export class CateaSettings extends PluginSettingTab {
         ? [
             {
               name: tr('套餐额度'),
-              render: (s: Setting) => renderQuotaProgress(s.settingEl, tr, billingPrefs.billingStatus),
+              render: (s: Setting) =>
+                renderQuotaProgress(s.settingEl, tr, billingPrefs.billingStatus),
             },
           ]
         : []),
@@ -920,13 +964,13 @@ export class CateaSettings extends PluginSettingTab {
                 await syncHostedBillingModel(p, billingPrefs.billingStatus)
                 await p.saveAgentSettings()
                 new Notice(
-                  billingPrefs.billingStatus.pro
-                    ? tr('已切换到 PRO 套餐')
-                    : tr('当前为 Free 套餐'),
+                  billingPrefs.billingStatus.pro ? tr('已切换到 PRO 套餐') : tr('当前为 Free 套餐'),
                 )
                 this.refresh()
               } catch (error) {
-                new Notice(tr(error instanceof Error ? error.message : '无法读取 Pro 状态，请稍后重试'))
+                new Notice(
+                  tr(error instanceof Error ? error.message : '无法读取 Pro 状态，请稍后重试'),
+                )
               } finally {
                 button.setDisabled(false)
                 button.setButtonText(tr('刷新套餐状态'))
@@ -947,7 +991,7 @@ export class CateaSettings extends PluginSettingTab {
       {
         name: 'Skills',
         desc:
-          tr('将 Skill 文件夹放到 .catea/skills/<名称>/SKILL.md，再启用。') +
+          withDataDir(tr('将 Skill 文件夹放到 {dir}/skills/<名称>/SKILL.md，再启用。')) +
           ' ' +
           tr('随插件分发的 Skill 预设已列在这里；同名知识库目录优先于预设。'),
         render: (s) => {
@@ -1181,12 +1225,13 @@ export class CateaSettings extends PluginSettingTab {
   }
 }
 
-async function storeModel(owner: Catea, model: ModelConfig, select = false) {
+async function storeModel(owner: Catea, model: ModelConfig, select: boolean | 'preserve' = false) {
   const c = owner.agentSettings,
     previous = c.models,
     previousId = c.modelId
   c.models = c.models.filter((m) => m.id !== model.id).concat(model)
-  c.modelId = select ? model.id : selectedModel(c.models, c.modelId)?.id || model.id
+  if (select !== 'preserve')
+    c.modelId = select ? model.id : selectedModel(c.models, c.modelId)?.id || model.id
   try {
     await owner.saveModels()
     if (!owner.globalByok) owner.saveSecret(model.id, model.apiKey)
@@ -1197,14 +1242,6 @@ async function storeModel(owner: Catea, model: ModelConfig, select = false) {
     owner.emit()
     throw error
   }
-}
-
-function hostedModel(model: ModelConfig) {
-  return (
-    model.id === HOSTED_MODEL_ID ||
-    BILLING_APIS.some((base) => model.baseUrl.replace(/\/$/, '') === `${base}/hosted/v1`) ||
-    model.model === 'catea/pro'
-  )
 }
 
 class SubscriptionModal extends Modal {
@@ -1228,16 +1265,14 @@ class SubscriptionModal extends Modal {
       cls: 'catea-plan-modal__lede',
       text: tr('Free 自备 API Key；Pro 订阅后无需 API Key，即可使用 Catea 托管 AI 额度。'),
     })
-    new Setting(el)
-      .setName(tr('订阅邮箱'))
-      .addText((input) =>
-        input
-          .setPlaceholder('you@example.com')
-          .setValue(this.billing.billingEmail || '')
-          .onChange((value) => {
-            this.billing.billingEmail = value.trim()
-          }),
-      )
+    new Setting(el).setName(tr('订阅邮箱')).addText((input) =>
+      input
+        .setPlaceholder('you@example.com')
+        .setValue(this.billing.billingEmail || '')
+        .onChange((value) => {
+          this.billing.billingEmail = value.trim()
+        }),
+    )
     addCurrencyDropdown(new Setting(el).setName(tr('支付币种')), tr, this.currency, (currency) => {
       this.currency = currency
       this.contentEl.empty()
@@ -1281,7 +1316,7 @@ class SubscriptionModal extends Modal {
     options: {
       title: string
       eyebrow: string
-      price: string | BillingCurrency
+      price: string
       subtitle: string
       features: string[]
       action: string
@@ -1577,10 +1612,12 @@ class ModelModal extends Modal {
     new Setting(el)
       .setName('API key')
       .setDesc(
-        tr(
-          this.owner.globalByok
-            ? '加密保存在本机，跨知识库共享；不写入 .catea。'
-            : '优先保存到 Obsidian 安全存储；不可用时仅本次运行有效，不写入 .catea。',
+        withDataDir(
+          tr(
+            this.owner.globalByok
+              ? '加密保存在本机，跨知识库共享；不写入 {dir}。'
+              : '优先保存到 Obsidian 安全存储；不可用时仅本次运行有效，不写入 {dir}。',
+          ),
         ),
       )
       .addText((t) => {
@@ -1726,10 +1763,12 @@ class VendorGridModal extends Modal {
     new Setting(el)
       .setName('API key')
       .setDesc(
-        tr(
-          this.owner.globalByok
-            ? '加密保存在本机，跨知识库共享；不写入 .catea。'
-            : '优先保存到 Obsidian 安全存储；不可用时仅本次运行有效，不写入 .catea。',
+        withDataDir(
+          tr(
+            this.owner.globalByok
+              ? '加密保存在本机，跨知识库共享；不写入 {dir}。'
+              : '优先保存到 Obsidian 安全存储；不可用时仅本次运行有效，不写入 {dir}。',
+          ),
         ),
       )
       .addText((input) => {

@@ -5,7 +5,9 @@ preview-ui/app.js
 
 # Runtime data written by the plugin into the vault (sessions, memory, skills).
 # May contain private note content — must never be committed or distributed.
+# .catea-dev/ is the same tree written by a `--dev` build; see scripts/dev-target.mjs.
 .catea/
+.catea-dev/
 
 # Local test-vault configuration and agent traces.
 .obsidian/
