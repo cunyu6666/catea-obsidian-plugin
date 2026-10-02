@@ -27,6 +27,10 @@ jobs:
       - name: Install
         run: npm ci
 
+      # Bundle inspection tests require a build in a clean checkout.
+      - name: Build
+        run: npm run build
+
       # Per-file P3 contracts, upstream provenance, repo-wide
       # documentation/code isomorphism, and version consistency across
       # manifest.json, package.json, versions.json and the runtime constant.
@@ -47,9 +51,6 @@ jobs:
           npm run lint
           npm run check:marketplace
           npm run test:behavior
-
-      - name: Build
-        run: npm run build
 
       # Obsidian needs exactly these three as release assets; a build that omits
       # one cannot be detected after publishing.

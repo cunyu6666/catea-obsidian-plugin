@@ -49,7 +49,7 @@ import { Panel } from './panel'
 import { ObsidianTools, obsidianTools } from './obsidian-tools'
 import obsidianSkill from './skills/obsidian.md'
 import { ChangePreview } from 'catea-components'
-import { CateaSettings } from './settings'
+import { CateaSettings, syncSavedBillingStatus } from './settings'
 import { createAgentFactory } from './composition'
 import { mkdir } from 'node:fs/promises'
 const VIEW = 'catea-agent'
@@ -293,6 +293,12 @@ export default class Catea extends Base {
       }
     }
     this.refreshPaperLanguage()
+    try {
+      await syncSavedBillingStatus(this, { refresh: false })
+    } catch {
+      // Billing state should never block plugin startup. Users can refresh the
+      // plan explicitly from Settings → Plan, and hosted sends re-check before use.
+    }
     await this.addMiniMaxModels()
     this.installRibbonHover()
     this.installScrollbarVisibility()
@@ -667,6 +673,11 @@ export default class Catea extends Base {
   }
   async saveAgentSettings() {
     const clone = structuredClone(this.agentSettings)
+    // Billing responses may contain the hosted credential, including legacy config copies.
+    // Only the model credential store may persist it; vault settings keep public status.
+    const billing = (clone as typeof clone & { billingStatus?: { license_key?: string } })
+      .billingStatus
+    if (billing) delete billing.license_key
     if (clone.imageGeneration) clone.imageGeneration.apiKey = ''
     if (clone.videoGeneration) clone.videoGeneration.apiKey = ''
     if (clone.audioGeneration) clone.audioGeneration.apiKey = ''

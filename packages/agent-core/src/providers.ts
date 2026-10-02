@@ -84,7 +84,7 @@ export class ModelServiceError extends Error {
   readonly reason: 'context' | 'tools' | 'other'
   readonly status?: number
 
-  constructor(detail: string, status?: number) {
+  constructor(detail: string, status?: number, host?: string) {
     const reason =
       /context[_ ]length|too many tokens|maximum context|prompt is too long|input too long/i.test(
         detail,
@@ -96,7 +96,7 @@ export class ModelServiceError extends Error {
     super(
       status === undefined
         ? t('modelStreamFailed')
-        : t('modelRequestFailed', { status, detail: t('modelErrorDetailHidden') }),
+        : `${t('modelRequestFailed', { status, detail: t('modelErrorDetailHidden') })}${host ? ` [${host}]` : ''}`,
     )
     this.name = 'ModelServiceError'
     this.reason = reason
@@ -294,11 +294,21 @@ function anthropicMessages(
   return messages
 }
 
-async function responseError(response: Response): Promise<Error> {
+async function responseError(response: Response, fallbackUrl = ''): Promise<Error> {
   // Provider error bodies can echo request fields, including the model ID or prompt.
   // Classify the detail for retries, but never put the raw body in chat or storage.
   const body = (await response.text()).slice(0, 2_000)
-  return new ModelServiceError(body, response.status)
+  let host = ''
+  try {
+    host = new URL(response.url || fallbackUrl).host
+  } catch {
+    try {
+      host = new URL(fallbackUrl).host
+    } catch {
+      host = ''
+    }
+  }
+  return new ModelServiceError(body, response.status, host)
 }
 
 export async function streamModel(
@@ -357,7 +367,7 @@ export async function streamModel(
           : {}),
       }),
     })
-    if (!response.ok) throw await responseError(response)
+    if (!response.ok) throw await responseError(response, url)
     options.onTransport?.(
       response.headers.get('content-type')?.includes('text/event-stream') ? 'sse' : 'buffered',
     )
@@ -500,11 +510,18 @@ export async function streamModel(
         }
       : {}),
   }
+  const completionUrl = endpoint(config.baseUrl, '/chat/completions')
+  const cateaHosted = new URL(completionUrl).pathname.includes('/billing/hosted/v1/')
   const fetchCompletion = (includeUsage: boolean) =>
-    serviceFetch(endpoint(config.baseUrl, '/chat/completions'), {
+    serviceFetch(completionUrl, {
       method: 'POST',
       signal,
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${config.apiKey}` },
+      headers: {
+        'Content-Type': 'application/json',
+        ...(cateaHosted
+          ? { 'X-Catea-License': config.apiKey }
+          : { Authorization: `Bearer ${config.apiKey}` }),
+      },
       body: JSON.stringify({
         ...request,
         ...(includeUsage && streaming ? { stream_options: { include_usage: true } } : {}),
@@ -512,7 +529,7 @@ export async function streamModel(
     })
   let response = await fetchCompletion(true)
   if (response.status === 400 || response.status === 422) response = await fetchCompletion(false)
-  if (!response.ok) throw await responseError(response)
+  if (!response.ok) throw await responseError(response, completionUrl)
   options.onTransport?.(
     response.headers.get('content-type')?.includes('text/event-stream') ? 'sse' : 'buffered',
   )

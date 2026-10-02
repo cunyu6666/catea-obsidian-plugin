@@ -790,6 +790,7 @@ const hostMock = `
  export class PluginSettingTab {constructor(app,plugin){this.app=app;this.plugin=plugin;this.containerEl={empty(){},createDiv(){return {}}}}}
  export class Setting {constructor(){} setName(){return this} setDesc(){return this} setHeading(){return this}}
  export class Modal {} export class App {} export class Notice {}
+ export const requestUrl = (...args) => globalThis.billingRequest(...args)
 `
 async function settingsFixture() {
   const { CateaSettings } = await load('apps/obsidian/src/settings.ts', {
@@ -3124,4 +3125,116 @@ test('Note thumbnails repaint recycled rows, removed images and theme changes', 
   cleanups.forEach((callback) => callback())
   assert.equal(img, undefined)
   assert.equal(classes.has('catea-has-thumbnail'), false)
+})
+
+test('Billing credentials never reach vault config, including legacy status copies', async () => {
+  const source = await readFile('apps/obsidian/src/main.tsx', 'utf8')
+  const method = source.slice(
+    source.indexOf('  async saveAgentSettings()'),
+    source.indexOf('  async saveModels('),
+  )
+  const { transform } = await import('esbuild')
+  const { code } = await transform(`({${method}})`, { loader: 'ts' })
+  let persisted
+  const host = runInNewContext(code, {
+    structuredClone,
+    within: async (_vault, path) => path,
+    dataPath: (path) => `.catea/${path}`,
+    writeJson: async (_path, value) => {
+      persisted = value
+    },
+  })
+  for (const globalByok of [null, {}]) {
+    const owner = {
+      agentSettings: {
+        models: [{ ...model, apiKey: 'hosted-secret' }],
+        mcp: [],
+        billingStatus: { pro: true, license_key: 'hosted-secret', email: 'test@example.invalid' },
+      },
+      globalByok,
+      vaultPath: '/unused',
+      configWrites: { run: (fn) => fn() },
+      emit() {},
+    }
+    await host.saveAgentSettings.call(owner)
+    assert.equal(JSON.stringify(persisted).includes('hosted-secret'), false)
+    assert.equal(Object.hasOwn(persisted.billingStatus, 'license_key'), false)
+    assert.equal(persisted.billingStatus.email, 'test@example.invalid')
+    assert.equal(owner.agentSettings.models[0].apiKey, 'hosted-secret')
+  }
+})
+
+test('Pro startup and refresh preserve model selection and restore securely loaded credentials', async () => {
+  let response = { pro: true, license_key: 'renewed-secret', email: 'test@example.invalid' }
+  let requests = 0
+  const { syncSavedBillingStatus } = await load(
+    'apps/obsidian/src/settings.ts',
+    {
+      obsidian: hostMock,
+      '../../../packages/integrations/src/skills':
+        'export const listSkills=async()=>[];export const describeSkills=async()=>[]',
+    },
+    {
+      billingRequest: async () => {
+        requests++
+        return { status: 200, text: JSON.stringify(response) }
+      },
+    },
+  )
+  for (const selection of ['fixture', '', 'catea-pro-hosted']) {
+    const secrets = []
+    const owner = {
+      agentSettings: {
+        models: [
+          { ...model },
+          { ...model, id: 'catea-pro-hosted', apiKey: 'securely-loaded-secret' },
+        ],
+        modelId: selection,
+        billingEmail: 'test@example.invalid',
+        billingStatus: { pro: true },
+      },
+      async saveModels() {},
+      async saveAgentSettings() {},
+      async addMiniMaxModels() {},
+      saveSecret: (id, key) => secrets.push([id, key]),
+      emit() {},
+    }
+    const before = requests
+    await syncSavedBillingStatus(owner, { refresh: false })
+    assert.equal(requests, before)
+    assert.equal(owner.agentSettings.modelId, selection)
+    assert.equal(
+      owner.agentSettings.models.find((m) => m.id === 'catea-pro-hosted').apiKey,
+      'securely-loaded-secret',
+    )
+    await syncSavedBillingStatus(owner)
+    assert.equal(owner.agentSettings.modelId, selection)
+    assert.equal(owner.agentSettings.models.filter((m) => m.id === 'catea-pro-hosted').length, 1)
+    assert.equal(secrets.at(-1)[1], 'renewed-secret')
+    response = { pro: false }
+    await syncSavedBillingStatus(owner)
+    assert.equal(owner.agentSettings.modelId, selection === 'catea-pro-hosted' ? '' : selection)
+    assert.equal(
+      owner.agentSettings.models.some((m) => m.id === 'catea-pro-hosted'),
+      false,
+    )
+    response = { pro: true, license_key: 'renewed-secret', email: 'test@example.invalid' }
+  }
+  const owner = {
+    agentSettings: {
+      models: [{ ...model }],
+      modelId: 'fixture',
+      billingStatus: { pro: true, license_key: 'legacy-secret' },
+    },
+    async saveModels() {},
+    async saveAgentSettings() {},
+    async addMiniMaxModels() {},
+    saveSecret(_id, value) {
+      this.savedKey = value
+    },
+    emit() {},
+  }
+  await syncSavedBillingStatus(owner, { refresh: false })
+  assert.equal(owner.savedKey, 'legacy-secret')
+  assert.equal(owner.agentSettings.modelId, 'fixture')
 })

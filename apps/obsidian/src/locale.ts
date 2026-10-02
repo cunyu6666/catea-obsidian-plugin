@@ -402,6 +402,7 @@ export function humanizeError(raw: string, language: Language = 'zh') {
   const detail = raw.trim()
   const message = detail.replace(/^(?:上下文压缩失败|Context compaction failed)[:：]\s*/i, '')
   const pick = (zh: string, en: string) => (language === 'en' ? en : zh)
+  const source = message.match(/\[([a-z0-9.-]+(?::\d+)?)\]/i)?.[1]
   const compaction = message !== detail
   let friendly: string
   if (/^(?:aborted|AbortError|Request was aborted|已停止)$/i.test(message))
@@ -438,10 +439,15 @@ export function humanizeError(raw: string, language: Language = 'zh') {
       'The model service is busy or rate limited. Try again later or switch models.',
     )
   else if (/模型请求失败（(?:401|403)）|\b(?:HTTP\s*)?(?:401|403)\b/.test(message))
-    friendly = pick(
-      '模型服务拒绝了请求。请检查 API Key、余额和模型权限。',
-      'The model service rejected the request. Check the API key, balance, and model access.',
-    )
+    friendly = /api\.pencil\.chat|asgard-api-utj6\.onrender\.com/.test(message)
+      ? pick(
+          'Catea Pro 授权未通过。请到设置 → 套餐刷新状态后重试。',
+          'Catea Pro authorization failed. Refresh plan status in Settings → Plan, then retry.',
+        )
+      : pick(
+          '模型服务拒绝了请求。请检查 API Key、余额和模型权限。',
+          'The model service rejected the request. Check the API key, balance, and model access.',
+        )
   else if (/模型请求失败（(?:400|422)）|\b(?:HTTP\s*)?(?:400|422)\b/.test(message))
     friendly = pick(
       '模型服务不接受这次请求。请检查所选模型是否支持当前工具和附件，或切换模型。',
@@ -487,6 +493,7 @@ export function humanizeError(raw: string, language: Language = 'zh') {
       'The model did not return a complete response. Retry or switch models.',
     )
   else friendly = translate(language, message)
+  if (source) friendly = `${friendly} ${pick(`来源：${source}`, `Source: ${source}`)}`
   return compaction
     ? `${pick('上下文整理未完成：', 'Context compression did not finish: ')}${friendly}`
     : friendly
@@ -605,6 +612,56 @@ Object.assign(english, {
 Object.assign(english, { 请按批注继续: 'Please respond to these annotations' })
 
 Object.assign(english, { 引用批注: 'Annotate' })
+
+Object.assign(english, {
+  套餐: 'Plan',
+  当前套餐: 'Current plan',
+  订阅套餐: 'Subscribe',
+  一键订阅: 'Quick subscribe',
+  '订阅 Catea 套餐': 'Subscribe to a Catea plan',
+  'Free 自备 API Key；Pro 订阅后无需 API Key，即可使用 Catea 托管 AI 额度。':
+    'Free uses your own API key. Pro includes Catea-hosted AI usage with no API key required.',
+  '输入邮箱即可开通 Pro，立即使用 Catea 托管 AI 额度。':
+    'Enter your email to start Pro and use Catea-hosted AI usage right away.',
+  订阅邮箱: 'Subscription email',
+  支付币种: 'Payment currency',
+  人民币支付暂不可用: 'CNY payments are not available yet',
+  即将上线: 'Coming soon',
+  人民币支付即将上线: 'CNY payments are coming soon',
+  '自备 API Key': 'Bring your own API key',
+  '适合已有模型服务的用户。': 'For users who already have a model provider.',
+  '使用你自己的 API Key': 'Use your own API key',
+  模型和密钥仍保存在本机: 'Models and keys stay on this device',
+  '基础 Agent 和笔记工作流': 'Basic agent and note workflows',
+  当前默认套餐: 'Current default plan',
+  限时折扣: 'Limited-time offer',
+  月付订阅: 'Monthly subscription',
+  '开箱即用，无需配置 API Key。': 'Ready out of the box. No API key setup required.',
+  '包含 Catea 托管 AI 额度': 'Includes Catea-hosted AI usage',
+  '更多用量，适合长文档和 Agent 工作流': 'More usage for long documents and agent workflows',
+  '额度自动恢复，月度周期重置': 'Allowance restores automatically and resets monthly',
+  '高级功能优先开放：连接器、自定义 Persona、媒体生成':
+    'Priority access to advanced features: connectors, custom personas, and media generation',
+  '订阅 Pro': 'Subscribe to Pro',
+  同步套餐状态: 'Sync plan status',
+  '支付完成后回到这里刷新状态。': 'After payment, return here and refresh.',
+  刷新套餐状态: 'Refresh plan status',
+  '已切换到 PRO 套餐': 'Switched to the Pro plan',
+  '当前为 Free 套餐': 'You are on the Free plan',
+  'Free · 需要配置自己的模型 API Key。': 'Free · Set up your own model API key to use Catea.',
+  'PRO · 开箱即用，无需配置 API Key。': 'PRO · Ready to use. No API key setup required.',
+  有效期至: 'Valid until',
+  套餐额度: 'Plan usage',
+  距离重置: 'Resets in',
+  重置时间待同步: 'Reset time pending sync',
+  剩余: 'remaining',
+  本月剩余额度: 'Monthly usage remaining',
+  '支付链接创建失败，请稍后重试': 'Could not create a payment link. Try again later.',
+  '无法读取 Pro 状态，请稍后重试': 'Could not read Pro status. Try again later.',
+  请先填写有效邮箱: 'Enter a valid email first',
+  '支付页已打开，完成后回到这里刷新套餐状态':
+    'The payment page is open. After payment, return here and refresh plan status.',
+})
 
 Object.assign(english, {
   切换会话: 'Switch conversation',

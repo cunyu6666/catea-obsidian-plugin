@@ -716,6 +716,45 @@ body.gp-enabled .catea-editor-zoom-label { position: absolute; width: 1px; heigh
 .catea-memory-panel__primary { border-color: #5b806d; background: color-mix(in srgb, #7f9988 18%, var(--background-primary)); }
 
 .catea-file-changes-modal.modal {width:min(760px,calc(100vw - 32px));max-width:calc(100vw - 32px)}
+.catea-plan-modal.modal {width:min(820px,calc(100vw - 32px));max-width:calc(100vw - 32px)}
+.catea-plan-modal .modal-title {font-size:22px;letter-spacing:-.02em}
+.catea-plan-modal__lede {max-width:620px;margin:0 0 18px;color:var(--text-muted);line-height:1.7}
+.catea-plan-modal .setting-item {border-top:0;padding:8px 0}
+.catea-plan-grid {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-top:16px}
+.catea-plan-card {position:relative;display:flex;min-height:330px;flex-direction:column;gap:10px;padding:20px;border:1px solid var(--background-modifier-border);border-radius:18px;background:var(--background-primary);box-shadow:0 8px 28px rgba(20,28,23,.06)}
+.catea-plan-card.is-pro {border-color:rgba(var(--gp-accent-rgb,84,115,99),.42);background:linear-gradient(180deg,var(--background-primary),color-mix(in srgb,var(--gp-accent-soft,rgba(84,115,99,.10)) 52%,var(--background-primary)))}
+.catea-plan-card.is-current {border-color:rgba(var(--gp-accent-rgb,84,115,99),.58);box-shadow:0 10px 30px rgba(var(--gp-accent-rgb,84,115,99),.13)}
+.catea-plan-card__eyebrow {align-self:flex-start;padding:4px 9px;border-radius:999px;background:var(--background-secondary);color:var(--text-muted);font-size:12px;font-weight:600}
+.catea-plan-card.is-pro .catea-plan-card__eyebrow {background:var(--gp-accent-soft,rgba(84,115,99,.12));color:var(--interactive-accent)}
+.catea-plan-card h3 {margin:2px 0 0;font-size:24px;letter-spacing:-.03em}
+.catea-plan-card__price {display:flex;align-items:baseline;gap:8px;font-size:19px;font-weight:700;color:var(--text-normal)}
+.catea-plan-card__price del {color:var(--text-muted);font-size:14px;font-weight:500}
+.catea-plan-card__sale {font-size:24px;letter-spacing:-.03em;color:var(--interactive-accent)}
+.catea-plan-card__suffix {color:var(--text-muted);font-size:13px;font-weight:500}
+.catea-quick-price {margin:0 0 10px}
+.catea-currency-note {display:flex;align-items:baseline;gap:8px;margin:0 0 8px;color:var(--text-muted);font-size:12px;opacity:.72}
+.catea-currency-note .catea-plan-card__price {font-size:13px;font-weight:500}
+.catea-currency-note .catea-plan-card__price del {font-size:12px}
+.catea-currency-note .catea-plan-card__sale {font-size:15px;color:var(--text-muted)}
+.catea-currency-note .catea-plan-card__suffix {font-size:12px}
+.catea-plan-card p {margin:0;color:var(--text-muted);line-height:1.55}
+.catea-plan-card ul {display:grid;gap:8px;margin:4px 0 10px;padding:0;list-style:none}
+.catea-plan-card li {position:relative;padding-left:20px;color:var(--text-normal);line-height:1.45}
+.catea-plan-card li::before {content:"";position:absolute;left:0;top:.55em;width:7px;height:7px;border-radius:50%;background:var(--interactive-accent)}
+.catea-plan-card .setting-item {margin-top:auto;padding:0}
+.catea-plan-card .setting-item-info {display:none}
+.catea-plan-card .setting-item-control {width:100%;justify-content:stretch}
+.catea-plan-card button {width:100%;justify-content:center}
+.catea-quota-setting {display:block}
+.catea-quota-setting > .setting-item-info {margin-bottom:8px}
+.catea-quota-setting > .setting-item-control:empty {display:none}
+.catea-quota-progress {display:grid;gap:6px;width:100%;max-width:none}
+.catea-quota-progress__meta {display:flex;align-items:center;justify-content:space-between;gap:12px;color:var(--text-muted);font-size:var(--font-ui-smaller);line-height:1.3}
+.catea-quota-progress progress {width:100%;height:8px;overflow:hidden;border:0;border-radius:999px;background:var(--background-modifier-border)}
+.catea-quota-progress progress::-webkit-progress-bar {border-radius:999px;background:var(--background-modifier-border)}
+.catea-quota-progress progress::-webkit-progress-value {border-radius:999px;background:var(--interactive-accent)}
+.catea-quota-progress progress::-moz-progress-bar {border-radius:999px;background:var(--interactive-accent)}
+@media(max-width:720px){.catea-plan-grid{grid-template-columns:1fr}.catea-plan-card{min-height:auto}}
 .catea-support-modal.modal {width:min(440px,calc(100vw - 32px));}
 .catea-support-modal .modal-content>p {line-height:1.7;margin:0 0 12px;}
 .catea-support-modal .catea-support-modal__note {color:var(--text-muted);font-size:var(--font-ui-small);}

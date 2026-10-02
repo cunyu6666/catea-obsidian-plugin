@@ -23,8 +23,9 @@ the web, call MCP servers, and keep a long-term memory of the user's notes.
 - **In-process agent loop** — the CatUI standard loop runs inside the Obsidian
   host process; no ACP subprocess, no relay server. Model traffic goes straight to
   the configured endpoint over Node HTTP(S).
-- **Bring your own key, no backend** — there is no Catea account, no telemetry, and
-  no vendor backend. On machines with OS-backed encryption, models and keys live in
+- **Bring your own key or optional Pro** — BYOK talks directly to the configured
+  provider; optional Pro uses subscription billing and a hosted model endpoint.
+  There is no telemetry. On machines with OS-backed encryption, models and keys live in
   encrypted Obsidian userData shared across vaults. `.catea/config.json` never holds keys.
 - **Unified writing memory** — one canonical store per scope holds writing
   preferences, projects, concepts, materials, methods and editorial decisions.
