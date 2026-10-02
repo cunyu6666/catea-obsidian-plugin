@@ -838,3 +838,36 @@ export function pendingReplyText(messageId: string, language: Language = 'zh'): 
     hash = Math.imul(hash ^ messageId.charCodeAt(i), 16777619)
   return translate(language, replyAcknowledgements[(hash >>> 0) % replyAcknowledgements.length][0])
 }
+
+Object.assign(english, {
+  日记: 'Diary',
+  打开日记: 'Open diary',
+  返回: 'Back',
+  自定义: 'Customize',
+  更换头像: 'Change photo',
+  恢复默认头像: 'Reset photo',
+  名称: 'Name',
+  保存: 'Save',
+  陪伴始于: 'Together since',
+  日记主人: 'Companion',
+  所有日记: 'All entries',
+  查看所有日记: 'View all entries',
+  每天自动写日记: 'Write a diary every day',
+  检查待写日记: 'Check pending diaries',
+  '正在读取日记…': 'Loading diaries…',
+  '聊过的一天，值得被记住。今天的故事将在明天写下。':
+    'A day together is worth remembering. Today’s story will be written tomorrow.',
+  '在本地日期结束后，根据当天对话以 AI 的视角写下日记。未打开 Catea 的日期不补写，没有对话也会跳过。':
+    'After each local day ends, your AI companion writes from that day’s conversations. Days when Catea was not open are never backfilled. Days without conversations are also skipped.',
+  '使用当前默认聊天模型，会发送相关对话并消耗模型额度。名称与头像仅用于日记，不改变聊天 Persona。':
+    'Uses your current default chat model, sends relevant conversations and consumes model usage. The name and photo apply only to the diary, not the chat persona.',
+  '请配置可用的聊天模型，日记会在模型可用后重试。':
+    'Configure a chat model. Diaries will retry when a model is available.',
+  '日记生成暂未完成，将自动重试。':
+    'The diary could not be completed yet. It will retry automatically.',
+  无法读取日记数据: 'Unable to read diary data.',
+  '日记操作失败，请稍后重试': 'Unable to update the diary. Please try again.',
+  '请使用有效名称和小于 1 MB 的 PNG、JPEG 或 WebP 头像':
+    'Use a valid name and a PNG, JPEG or WebP photo under 1 MB.',
+  无法读取头像: 'Unable to read this photo.',
+})

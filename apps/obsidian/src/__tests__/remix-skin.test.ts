@@ -49,3 +49,19 @@ test('remix-skin | bodies are 24x24 fill-currentColor path markup', () => {
     assert.ok(!body.includes('<svg'), `${name} embeds a nested svg root`)
   }
 })
+
+test('remix-skin | sidebar tabs and vault switcher have semantic Remix glyphs', () => {
+  const expected = {
+    folder: 'folder',
+    search: 'search',
+    bookmark: 'bookmark',
+    list: 'list-unordered',
+    brain: 'brain',
+    'messages-square': 'chat-3',
+    'chevrons-up-down': 'expand-up-down',
+  }
+  for (const [native, remix] of Object.entries(expected)) {
+    assert.equal(LUCIDE_TO_REMIX[native], remix)
+    assert.ok(REMIX_ICON_BODIES[remix])
+  }
+})

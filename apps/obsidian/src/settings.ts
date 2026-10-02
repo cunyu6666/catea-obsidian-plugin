@@ -94,6 +94,8 @@ const BILLING_APIS = [
 const BILLING_API = BILLING_APIS[0]
 const HOSTED_BILLING_API = BILLING_API
 const HOSTED_MODEL_ID = 'catea-pro-hosted'
+// Keep checkout and pricing hidden until the hosted service is verified end to end.
+const BILLING_UI_ENABLED = false
 const PRO_PRICES: Record<BillingCurrency, PlanPrice> = {
   USD: { original: '$10', sale: '$3', suffix: '/ month' },
   CNY: { original: '¥60', sale: '¥18', suffix: '/ 月' },
@@ -327,7 +329,7 @@ async function syncHostedBillingModel(owner: Catea, status?: BillingStatus) {
       owner,
       {
         id: HOSTED_MODEL_ID,
-        name: 'Catea',
+        name: 'Pro',
         protocol: 'openai',
         baseUrl: `${HOSTED_BILLING_API}/hosted/v1`,
         apiKey: license,
@@ -1213,7 +1215,7 @@ export class CateaSettings extends PluginSettingTab {
     ]
     return [
       { heading: tr('更新'), rows: updates },
-      { heading: tr('套餐'), rows: billing },
+      ...(BILLING_UI_ENABLED ? [{ heading: tr('套餐'), rows: billing }] : []),
       { heading: tr('外观'), rows: appearance },
       { heading: 'Agent', rows: agent },
       { heading: tr('BYOK 模型'), rows: models },

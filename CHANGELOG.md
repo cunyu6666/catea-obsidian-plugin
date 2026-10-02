@@ -3,6 +3,31 @@
 Notable changes per release. The version is the one in `manifest.json`; the GitHub
 release tag is that same number with no `v` prefix.
 
+## 0.3.23
+
+### Added
+
+- Add a companion diary panel with persona profiles, local daily activity tracking,
+  and a toggle for automatic diary generation from completed conversations.
+- Introduce an English README with landscape artwork illustrating Catea workflows.
+
+### Fixed
+
+- Persist model selection per conversation; new conversations inherit the last used
+  model without changing other conversations.
+- Give memory records enough height for separate titles, summaries and metadata.
+- Complete Remix mappings for sidebar tabs and restore the vault switching arrows.
+- Render clear radio dots and checkbox ticks without host-theme shadows or extra
+  frames; support Enter to advance or submit questions while respecting IME input.
+- Cancel pending question auto-advance when a custom answer is edited.
+
+### Changed
+
+- Hide subscription, pricing and quota settings while hosted billing service
+  verification is pending. Retain existing credentials and model compatibility;
+  the hosted model display name is now Pro.
+- Build release assets before bundle inspection tests in the publishing workflow.
+
 ## 0.3.22
 
 ### Fixed

@@ -59,8 +59,11 @@ export function ApprovalCard({
   if (!question) return null
   const answer = answers[question.id] || { selected: [], custom: '' }
   const valid = answer.selected.length > 0 || Boolean(answer.custom.trim())
-  const update = (next: ApprovalCardAnswer) =>
+  const update = (next: ApprovalCardAnswer) => {
+    if (advanceTimer.current !== undefined) window.clearTimeout(advanceTimer.current)
+    advanceTimer.current = undefined
     setAnswers((current) => ({ ...current, [question.id]: next }))
+  }
   const move = (next: number) => {
     if (advanceTimer.current !== undefined) window.clearTimeout(advanceTimer.current)
     advanceTimer.current = undefined
@@ -83,7 +86,27 @@ export function ApprovalCard({
   }
 
   return (
-    <section className="anno-approval-card" data-state={status} aria-busy={status === 'submitting'}>
+    <section
+      className="anno-approval-card"
+      data-state={status}
+      aria-busy={status === 'submitting'}
+      onKeyDown={(event) => {
+        if (
+          event.key !== 'Enter' ||
+          event.nativeEvent.isComposing ||
+          event.repeat ||
+          event.shiftKey ||
+          event.altKey ||
+          event.ctrlKey ||
+          event.metaKey ||
+          !(event.target instanceof HTMLInputElement)
+        )
+          return
+        event.preventDefault()
+        event.stopPropagation()
+        if (status === 'pending' && valid) continueQuestion()
+      }}
+    >
       <span className="catea-sr-only">{status === 'answered' ? result : question.title}</span>
       <span className="anno-approval-card__icon" aria-hidden="true">
         <Icon name={status === 'answered' ? 'check' : 'question'} size={16} />
@@ -127,6 +150,7 @@ export function ApprovalCard({
                           disabled={status === 'submitting'}
                           onChange={() => choose(option.value)}
                         />
+                        <i className="anno-approval-card__control" aria-hidden="true" />
                         <span>{option.label}</span>
                       </label>
                       {option.preview && (

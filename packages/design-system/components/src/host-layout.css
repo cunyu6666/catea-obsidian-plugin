@@ -87,12 +87,8 @@ button:not(.mod-cta):not(.mod-cta) {box-shadow:none}
 .catea-panel .anno-approval-card__option label { min-height: 32px; gap: 8px; padding: 6px 8px; font-size: 13px; line-height: 20px; }
 .catea-panel .anno-approval-card__option label[data-selected="true"] { background: color-mix(in srgb, var(--accent) 9%, transparent); }
 .catea-panel .anno-approval-card__option label > span { white-space: normal; overflow-wrap: anywhere; }
-.catea-panel .anno-approval-card__option input { width: 18px; height: 18px; border: 1.5px solid color-mix(in srgb, var(--foreground) 35%, transparent); align-self: flex-start; margin-top: 1px; background: var(--surface); box-shadow: none; transition: border-color .15s, background .15s; }
-.catea-panel .anno-approval-card__option label:hover input { border-color: var(--accent); }
-.catea-panel .anno-approval-card__option input[type=radio]:checked { border-color: var(--accent); background: radial-gradient(circle, var(--accent) 0 4px, transparent 4.5px); box-shadow: none; }
-.catea-panel .anno-approval-card__option input[type=checkbox]:checked { border-color: var(--accent); background: var(--accent); box-shadow: inset 0 0 0 3px var(--surface); }
-.catea-panel .anno-approval-card__option input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-.catea-panel .anno-approval-card__option input[type=checkbox] { border-radius: 4px; }
+.catea-panel .anno-approval-card__control { width: 18px; height: 18px; align-self: flex-start; margin-top: 1px; }
+.catea-panel .anno-approval-card__option label:hover .anno-approval-card__control { border-color: var(--accent); }
 .catea-panel .anno-approval-card__custom { height: 32px; padding: 0 9px; border: 1px solid var(--border); border-radius: 7px; background: var(--background); font-family: inherit; font-size: 12px; }
 .catea-panel .anno-approval-card__footer { margin-top: 10px; gap: 8px; }
 .catea-panel .anno-approval-card__next,

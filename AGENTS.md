@@ -272,6 +272,7 @@ Vault-specific runtime data is written inside the user's vault, never into the p
 | Path | Purpose |
 |------|---------|
 | `.catea/config.json` | Vault toggles, selected model, MCP servers; model metadata only when global encryption is unavailable. **Never contains API keys** |
+| `.catea/diary/index.json` | Companion diaries, per-persona display profiles, automatic-generation toggle and durable catch-up cursor; dev builds use `.catea-dev/diary/index.json` |
 | `.catea/sessions/index.json` | Session list, capped at 500 entries |
 | `.catea/sessions/<id>.json` | Raw conversation and tool transcript for one session |
 | `.catea/skills/<id>/SKILL.md` | User-installed skill packages, enabled explicitly; shadows the bundled preset of the same id |
@@ -303,8 +304,7 @@ it may contain private note content.
 
 **Product UI**: bilingual by design, not by omission. User-facing strings are
 resolved through `apps/obsidian/src/locale.ts` and `packages/agent-core/src/i18n.ts`,
-and Chinese remains a supported UI language. `README.md` is intentionally
-bilingual, with English first and Chinese second in one document. The Chinese persona documents under `packages/personas/src/` are
+and Chinese remains a supported UI language. `README.md` is an English product introduction with landscape promotional artwork. The Chinese persona documents under `packages/personas/src/` are
 runtime prompt content and are deliberately not translated here. Templates under
 `docs/skills/` are the same category: a `SKILL.md` is injected into the prompt
 when enabled, so it is runtime content that merely lives beside the docs, and

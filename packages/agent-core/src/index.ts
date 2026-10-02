@@ -164,7 +164,7 @@ const runLoop = agentLoop as unknown as (
   stream: ReturnType<typeof providerStream>,
 ) => AsyncIterable<LoopEvent>
 export class Agent {
-  session: Session = this.fresh()
+  session: Session
   running = false
   historyBusy = false
   private abort?: AbortController
@@ -182,6 +182,7 @@ export class Agent {
     private hooks: Hooks,
     ports: { conversations: ConversationStore; memory: MemoryPort; modelClient: ModelClient },
   ) {
+    this.session = this.fresh()
     this.conversations = ports.conversations
     this.memory = ports.memory
     this.modelClient = ports.modelClient
@@ -190,11 +191,23 @@ export class Agent {
     return {
       id: crypto.randomUUID(),
       title: '新对话',
+      modelId:
+        selectedModel(this.settings().models, this.settings().modelId)?.id ||
+        this.settings().modelId,
       personaId: 'aria',
       messages: [],
       transcript: [],
       updated: Date.now(),
     }
+  }
+  async selectModel(id: string) {
+    if (this.running || this.historyBusy) return
+    const config = this.settings()
+    if (selectedModel(config.models, id)?.id !== id) return
+    this.session.modelId = id
+    config.modelId = id
+    this.hooks.change()
+    await this.save()
   }
   async list() {
     return this.conversations.list()
@@ -250,6 +263,9 @@ export class Agent {
     this.historyBusy = true
     try {
       this.session = (await this.conversations.load(id)) || this.fresh()
+      this.session.modelId ??=
+        selectedModel(this.settings().models, this.settings().modelId)?.id ||
+        this.settings().modelId
       this.settings().personaId = this.session.personaId
       this.restoreQuotes()
       repairToolProtocol(this.session)
@@ -451,6 +467,7 @@ export class Agent {
     this.compaction = undefined
     const config = structuredClone(this.settings())
     config.personaId = this.session.personaId
+    config.modelId = this.session.modelId ?? config.modelId
     // Per-message skill selection ("focus + temporary unlock"): when the composer
     // carries skill tags, this turn injects exactly those skills — including ones
     // not enabled in settings. Without tags the enabled set is used unchanged.
@@ -459,6 +476,8 @@ export class Agent {
     if (!config.enabled) throw new Error('Agent 已关闭')
     const model = selectedModel(config.models, config.modelId)
     if (!model) throw new Error('请先在设置中完成 BYOK 模型配置（包含 API Key）')
+    this.session.modelId = model.id
+    this.settings().modelId = model.id
     const userId = crypto.randomUUID()
     const firstTurn = this.session.messages.length === 0
     const previousTitle = this.session.title,

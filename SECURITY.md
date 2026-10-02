@@ -25,6 +25,7 @@ Vault-specific data is written into the user's own vault, never into the plugin 
 |---|---|
 | `.catea/config.json` | vault toggles, selected model, MCP server configuration; model metadata only when global BYOK encryption is unavailable. **Never contains API keys or tokens** |
 | `.catea/sessions/<id>.json` | the raw conversation and tool transcript for one session |
+| `.catea/diary/index.json` | generated companion diaries, local name/photo profiles and the daily scheduling cursor |
 | `.catea/memory/` | extracted memory, including per-persona engine directories |
 | `.catea/skills/<id>/SKILL.md` | skill packages the user installed and enabled |
 
@@ -82,6 +83,10 @@ treated as untrusted data, never as instructions.
 Note that search queries and fetched URLs are sent to those third parties, which is
 why the network-use disclosure exists in the README and in Obsidian's submission
 requirements.
+
+### Automatic companion diaries
+
+Daily diaries use completed, timestamped conversations from the retained session store, grouped by local date and persona. The current default model receives bounded excerpts without tool access. No other apps or vault notes are scanned for this feature. Automatic generation is enabled by default, pauses when Obsidian is closed or the Agent is disabled, and can be turned off in the diary panel. Only locally recorded active dates are eligible; dates when Catea was not running are never backfilled, including from imported or synced sessions. Entries are independent records: deleting a source conversation does not delete an already generated diary.
 
 ### The shell tool is not a sandbox
 

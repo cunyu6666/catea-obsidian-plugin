@@ -3238,3 +3238,224 @@ test('Pro startup and refresh preserve model selection and restore securely load
   assert.equal(owner.savedKey, 'legacy-secret')
   assert.equal(owner.agentSettings.modelId, 'fixture')
 })
+
+test('Session model selection persists independently and new sessions inherit the last used model', async () => {
+  const usedModels = []
+  const { Agent } = await load(
+    'packages/agent-core/src/index.ts',
+    {
+      './transport':
+        'export const serviceFetch=async()=>{throw new Error("Unexpected network request")}',
+      '../../agent-core/src/transport':
+        'export const serviceFetch=async()=>{throw new Error("Unexpected network request")}',
+      '../../integrations/src/mcp': 'export class McpPool {async connect(){return []}}',
+      '../../integrations/src/skills':
+        'export const loadSkills=async()=>[];export const readSkillResource=()=>{};export const listSkills=async()=>[];export const describeSkills=async()=>[];export const createSkill=async()=>({});export const presetSkillIds=[]',
+      '../upstream/loop/agent-loop': `export const agentLoop=async function*(_prompts,_context,options){
+      globalThis.usedModels.push(options.model.id);
+      const answer={role:'assistant',content:[{type:'text',text:'Done'}],stopReason:'stop',timestamp:Date.now()};
+      yield {type:'message_end',message:answer};yield {type:'agent_end'};
+    }`,
+    },
+    { structuredClone, TransformStream, usedModels },
+  )
+  const config = {
+    enabled: true,
+    models: [{ ...model }, { ...model, id: 'second', name: 'Second', model: 'second-model' }],
+    modelId: model.id,
+    personaId: 'aria',
+    skills: [],
+    mcp: [],
+    memory: false,
+    web: false,
+    shell: false,
+  }
+  const sessions = new Map()
+  const ports = {
+    conversations: {
+      save: async (s) => sessions.set(s.id, structuredClone(s)),
+      load: async (id) => structuredClone(sessions.get(id)),
+      list: async () => [],
+    },
+    memory: { close() {} },
+    modelClient: {
+      async *stream() {
+        yield { type: 'done', reply: { text: '{"title":"Task"}', calls: [] } }
+      },
+    },
+  }
+  const make = () =>
+    new Agent(
+      '/unused',
+      () => config,
+      { change() {}, notice() {}, approve: async () => true, ask: async () => ({}) },
+      ports,
+    )
+  const a = make(),
+    b = make()
+  await a.selectModel('second')
+  assert.equal(a.session.modelId, 'second')
+  assert.equal(b.session.modelId, 'fixture')
+  assert.equal(make().session.modelId, 'second')
+  await b.send('Use the original model', '')
+  assert.equal(b.session.messages.find((m) => m.role === 'assistant').model, 'Fixture')
+  assert.deepEqual(usedModels, ['fixture'])
+  assert.equal(config.modelId, 'fixture')
+  assert.equal(make().session.modelId, 'fixture')
+  await a.send('Use the second model', '')
+  assert.deepEqual(usedModels, ['fixture', 'second-model'])
+  assert.equal(make().session.modelId, 'second')
+  const reopened = make()
+  await reopened.open(a.session.id)
+  assert.equal(reopened.session.modelId, 'second')
+  assert.equal(b.session.modelId, 'fixture')
+  const branch = await b.branchAt(b.session.messages[0].id)
+  assert.equal(sessions.get(branch.sessionId).modelId, 'fixture')
+  const legacy = { ...structuredClone(b.session), id: 'legacy' }
+  delete legacy.modelId
+  sessions.set('legacy', legacy)
+  config.modelId = 'second'
+  await reopened.open('legacy')
+  assert.equal(sessions.get('legacy').modelId, 'second')
+  config.modelId = 'fixture'
+  assert.equal(reopened.session.modelId, 'second')
+  reopened.running = true
+  await reopened.selectModel('fixture')
+  assert.equal(reopened.session.modelId, 'second')
+  reopened.running = false
+  await reopened.newSession()
+  assert.equal(reopened.session.modelId, 'fixture')
+})
+
+test('Question controls submit current answers on Enter and ignore IME, modifiers and buttons', async () => {
+  const state = []
+  let cursor = 0
+  let timer
+  class Input {}
+  const { ApprovalCard } = await load(
+    'packages/design-system/components/src/ApprovalCard.tsx',
+    {
+      react: `export const useState=initial=>harness.state(initial); export const useRef=initial=>harness.state({current:initial})[0]; export const useEffect=()=>{};`,
+      'react/jsx-runtime': `export const jsx=(type,props)=>({type,props}); export const jsxs=jsx; export const Fragment='fragment';`,
+      'motion/react': `export const AnimatePresence='presence'; export const motion={div:'div'}; export const useReducedMotion=()=>true;`,
+      './Icon': `export const Icon=()=>null;`,
+    },
+    {
+      HTMLInputElement: Input,
+      harness: {
+        state(initial) {
+          const index = cursor++
+          if (!(index in state)) state[index] = initial
+          return [
+            state[index],
+            (value) => (state[index] = typeof value === 'function' ? value(state[index]) : value),
+          ]
+        },
+      },
+      window: {
+        setTimeout(callback) {
+          timer = callback
+          return 1
+        },
+        clearTimeout() {
+          timer = undefined
+        },
+      },
+    },
+  )
+  let submitted
+  let count = 0
+  const props = {
+    questions: [
+      {
+        id: 'first',
+        title: 'Choose one',
+        options: [{ value: 'a', label: 'A' }],
+        allowCustom: true,
+      },
+      {
+        id: 'second',
+        title: 'Choose several',
+        options: [
+          { value: 'b', label: 'B' },
+          { value: 'c', label: 'C' },
+        ],
+        multiple: true,
+        allowCustom: true,
+      },
+    ],
+    onSubmit(answers) {
+      submitted = answers
+      count++
+    },
+  }
+  const render = () => {
+    cursor = 0
+    return ApprovalCard(props)
+  }
+  const nodes = (node) =>
+    Array.isArray(node)
+      ? node.flatMap(nodes)
+      : !node || typeof node !== 'object'
+        ? []
+        : [node, ...nodes(node.props?.children)]
+  const inputs = (tree) => nodes(tree).filter((node) => node.type === 'input')
+  const enter = (tree, overrides = {}) =>
+    tree.props.onKeyDown({
+      key: 'Enter',
+      nativeEvent: {},
+      target: new Input(),
+      preventDefault() {},
+      stopPropagation() {},
+      ...overrides,
+    })
+  let tree = render()
+  enter(tree)
+  assert.equal(state[1], 0, 'empty answers must not advance')
+  inputs(tree)[0].props.onChange()
+  assert.ok(timer, 'single selection schedules the next question')
+  tree = render()
+  inputs(tree)
+    .at(-1)
+    .props.onChange({ target: { value: 'Custom first' } })
+  assert.equal(timer, undefined, 'editing a custom answer cancels auto-advance')
+  tree = render()
+  for (const overrides of [
+    { nativeEvent: { isComposing: true } },
+    { shiftKey: true },
+    { ctrlKey: true },
+    { altKey: true },
+    { metaKey: true },
+    { repeat: true },
+    { target: {} },
+  ]) {
+    enter(tree, overrides)
+    assert.equal(state[1], 0)
+  }
+  enter(tree)
+  assert.equal(state[1], 1)
+  tree = render()
+  inputs(tree)[0].props.onChange()
+  tree = render()
+  inputs(tree)[1].props.onChange()
+  tree = render()
+  inputs(tree)[2].props.onChange({ target: { value: 'Custom second' } })
+  tree = render()
+  props.status = 'submitting'
+  enter(render())
+  assert.equal(count, 0)
+  props.status = 'pending'
+  enter(render())
+  assert.equal(count, 1)
+  assert.equal(submitted.first.custom, 'Custom first')
+  assert.equal(submitted.first.selected.length, 0)
+  assert.equal(submitted.second.selected.join(','), 'b,c')
+  assert.equal(submitted.second.custom, 'Custom second')
+})
+
+test('Unverified billing exposes no pricing or subscription entry in either settings UI', async () => {
+  const { tab } = await settingsFixture()
+  const definitions = JSON.stringify(tab.getSettingDefinitions())
+  assert.doesNotMatch(definitions, /订阅|套餐|一键订阅|刷新套餐状态/)
+  assert.doesNotMatch(JSON.stringify(tab.sections()), /订阅|套餐/)
+})

@@ -33,7 +33,7 @@
   "check-square": "checkbox",
   "chevrons-down-up": "arrow-down-s",
   "chevrons-up": "arrow-up-s",
-  "chevrons-up-down": "drag-move-2",
+  "chevrons-up-down": "expand-up-down",
   "circle-alert": "alert",
   "circle-check": "checkbox-circle",
   "circle-help": "question",
@@ -190,7 +190,12 @@
   "wand-sparkles": "magic",
   "waypoints": "node-tree",
   "workflow": "route",
-  "wrench": "wrench"
+  "wrench": "wrench",
+  "folder": "folder",
+  "search": "search",
+  "bookmark": "bookmark",
+  "brain": "brain",
+  "list": "list-unordered"
  },
  "tier": {
   "a-large-small": "curated",
@@ -381,6 +386,11 @@
   "workflow": "tabler-fallback",
   "wrench": "identity",
   "arrow-left": "curated",
-  "plus": "curated"
+  "plus": "curated",
+  "folder": "identity",
+  "search": "identity",
+  "bookmark": "identity",
+  "brain": "identity",
+  "list": "curated"
  }
 }

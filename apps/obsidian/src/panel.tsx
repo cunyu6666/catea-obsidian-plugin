@@ -449,7 +449,7 @@ export function Panel({ plugin }: { plugin: Catea }) {
   const selectionId = plugin.selections.at(-1)?.id
   const config = plugin.agentSettings,
     models = configuredModels(config.models),
-    model = selectedModel(config.models, config.modelId),
+    model = selectedModel(config.models, agent.session.modelId ?? config.modelId),
     empty = !agent.session.messages.length
   useEffect(() => {
     setAnnotation(null)
@@ -481,10 +481,6 @@ export function Panel({ plugin }: { plugin: Catea }) {
       .then(setHistory)
       .catch((e: unknown) => setError(e instanceof Error ? e.message : String(e)))
   }, [agent, agent.running, agent.session.id, showHistory])
-  const save = () =>
-    void plugin
-      .saveAgentSettings()
-      .catch((e: unknown) => setError(e instanceof Error ? e.message : String(e)))
   const captureReplySelection = () => {
     if (config.enableReplyAnnotations !== true) return
     const selection = panelRef.current?.ownerDocument.defaultView?.getSelection()
@@ -577,6 +573,10 @@ export function Panel({ plugin }: { plugin: Catea }) {
       })
     }
     void (async () => {
+      if (model) {
+        config.modelId = model.id
+        await plugin.saveAgentSettings()
+      }
       if (isHostedBillingModel(model)) await syncSavedBillingStatus(plugin)
       return agent.running
         ? context().then((attached) =>
@@ -605,9 +605,10 @@ export function Panel({ plugin }: { plugin: Catea }) {
       value={model?.id || 'none'}
       onValueChange={(value) => {
         if (value === 'none') return
-        config.modelId = value
-        save()
-        update((n) => n + 1)
+        void agent
+          .selectModel(value)
+          .then(() => plugin.saveAgentSettings())
+          .catch((e: unknown) => setError(e instanceof Error ? e.message : String(e)))
       }}
     >
       <SelectTrigger className="model-trigger" aria-label={t('模型')}>

@@ -46,6 +46,8 @@ export type JournalEntry = { id: string; timestamp: string } & (
   | { type: 'custom'; customType: string; data: unknown }
 )
 export interface Session {
+  /** Per-session selection; absent in legacy sessions until first opened. */
+  modelId?: string
   attachments?: ChatAttachment[]
   id: string
   title: string

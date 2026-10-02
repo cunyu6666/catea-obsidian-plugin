@@ -672,7 +672,7 @@ body.gp-enabled .catea-editor-zoom-label { position: absolute; width: 1px; heigh
 .catea-memory-panel__row-name { min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 .catea-memory-panel__row-count { flex-shrink: 0; font-size: 11px; color: var(--text-muted); font-variant-numeric: tabular-nums; }
 .catea-memory-panel__grid { flex: 1; min-height: 0; overflow: auto; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; align-content: start; padding: 0 2px 12px; }
-.catea-memory-card { display: flex; flex-direction: column; align-items: stretch; gap: 4px; padding: 10px 11px 11px; border: 1px solid var(--background-modifier-border); border-radius: 10px; background: var(--background-primary); color: var(--text-normal); text-align: left; cursor: pointer; }
+.catea-memory-panel .catea-memory-card { height: auto; min-height: 78px; white-space: normal; display: flex; flex-direction: column; align-items: stretch; gap: 4px; padding: 10px 11px 11px; border: 1px solid var(--background-modifier-border); border-radius: 10px; background: var(--background-primary); color: var(--text-normal); text-align: left; cursor: pointer; }
 .catea-memory-card:hover:not(:disabled) { border-color: #5b806d; background: color-mix(in srgb, #7f9988 8%, var(--background-primary)); }
 .catea-memory-card:focus-visible { outline: 2px solid #5b806d; outline-offset: -2px; }
 .catea-memory-card:disabled { cursor: default; }
@@ -696,12 +696,12 @@ body.gp-enabled .catea-editor-zoom-label { position: absolute; width: 1px; heigh
 .catea-memory-panel__back { flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; padding: 0; border: 1px solid var(--background-modifier-border); border-radius: 8px; background: var(--background-primary); color: var(--text-muted); font-size: 11px; cursor: pointer; }
 .catea-memory-panel__title { flex: 1; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: 13px; font-weight: 600; text-align: center; }
 .catea-memory-panel__row--archived { margin-top: 8px; border-top: 1px solid var(--background-modifier-border); border-radius: 0 0 8px 8px; padding-top: 12px; }
-.catea-memory-panel__card { display: flex; flex-direction: column; align-items: stretch; gap: 4px; width: 100%; margin-bottom: 8px; padding: 11px 13px 12px; border: 1px solid var(--background-modifier-border); border-radius: 10px; background: var(--background-primary); color: var(--text-normal); text-align: left; cursor: pointer; overflow: hidden; }
+.catea-memory-panel .catea-memory-panel__card { height: auto; min-height: 112px; flex-shrink: 0; box-sizing: border-box; white-space: normal; box-shadow: none; display: flex; flex-direction: column; align-items: stretch; justify-content: flex-start; gap: 8px; width: 100%; margin-bottom: 10px; padding: 14px 16px; border: 1px solid var(--background-modifier-border); border-radius: 10px; background: var(--background-primary); color: var(--text-normal); text-align: left; cursor: pointer; overflow: hidden; }
 .catea-memory-panel__card:hover { border-color: #5b806d; background: color-mix(in srgb, #7f9988 6%, var(--background-primary)); }
 .catea-memory-panel__card:focus-visible { outline: 2px solid #5b806d; outline-offset: -2px; }
-.catea-memory-panel__card-name { display: block; font-size: 14px; font-weight: 600; line-height: 20px; color: var(--text-normal); overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
-.catea-memory-panel__card-summary { display: block; font-size: 12px; line-height: 18px; color: var(--text-muted); overflow: hidden; word-break: break-word; }
-.catea-memory-panel__card-meta { display: flex; align-items: center; gap: 6px; font-size: 10px; line-height: 14px; color: var(--text-faint); overflow: hidden; }
+.catea-memory-panel__card-name { flex-shrink: 0; display: block; font-size: 14px; font-weight: 600; line-height: 20px; color: var(--text-normal); overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.catea-memory-panel__card-summary { flex-shrink: 0; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; white-space: normal; font-size: 12px; line-height: 18px; color: var(--text-muted); overflow: hidden; word-break: break-word; }
+.catea-memory-panel__card-meta { flex-shrink: 0; min-height: 16px; display: flex; align-items: center; gap: 6px; font-size: 10px; line-height: 14px; color: var(--text-faint); overflow: hidden; }
 .catea-memory-panel__card-meta > em { font-style: normal; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 .catea-memory-panel__card-meta > time { margin-left: auto; flex-shrink: 0; }
 .catea-memory-panel__form { flex: 1; min-height: 0; overflow: auto; padding: 0 2px 12px; }
@@ -848,3 +848,47 @@ body.gp-enabled .workspace-sidedock-vault-profile .workspace-drawer-vault-switch
 body.gp-enabled .workspace-sidedock-vault-profile .workspace-drawer-vault-switcher:hover {
   background:var(--background-modifier-hover);
 }
+
+/* Companion diary: reference-inspired layout using the existing workspace theme. */
+.workspace-leaf-content .view-content.catea-diary-view {padding:0;overflow:auto}
+.catea-diary {--diary-sky:var(--background-primary);--diary-paper:var(--background-secondary);--diary-ink:var(--text-normal);min-height:100%;padding-bottom:28px;background:var(--background-primary);color:var(--diary-ink);font-family:var(--font-interface)}
+.catea-diary button {color:inherit;cursor:pointer}
+.catea-diary__cover {position:relative;min-height:340px;isolation:isolate;display:flex;align-items:flex-end;justify-content:center;text-align:center;padding:28px 20px 36px;overflow:hidden}
+.catea-diary__cover-image {position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:-2}
+.catea-diary__cover::after {content:"";position:absolute;inset:0;z-index:-1;background:linear-gradient(180deg,transparent 28%,transparent 50%,var(--diary-sky) 100%)}
+.catea-diary__edit {position:absolute;right:16px;top:18px;border:0;box-shadow:none;border-radius:50%;width:40px;height:40px;font-size:24px;background:var(--diary-paper)}
+.catea-diary__identity h1 {margin:0 0 10px;color:var(--text-normal);font-size:32px;line-height:1.2}
+.catea-diary__identity p {margin:0;color:var(--text-muted);font-size:14px}
+.catea-diary__scope {padding:4px 20px 18px}
+.catea-diary__scope label {display:flex;align-items:center;justify-content:center;gap:12px;font-size:12px}
+.catea-diary__scope select {max-width:65%;background:var(--diary-paper);border:0;border-radius:14px;color:inherit}
+.catea-diary__cards {display:flex;overflow-x:auto;gap:14px;padding:4px 20px 20px;scroll-snap-type:x proximity}
+.catea-diary button.catea-diary__card {display:flex;flex-direction:column;align-items:flex-start;text-align:left;flex:0 0 82%;min-width:0;min-height:256px;height:auto;padding:20px;border-radius:26px;background:var(--diary-paper);border:1px solid var(--background-modifier-border);box-shadow:0 7px 18px rgba(57,67,91,.06);scroll-snap-align:start;white-space:normal}
+.catea-diary__card h2 {font-size:18px;line-height:1.5;margin:16px 0 8px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.catea-diary__card p {font-size:14px;line-height:1.65;opacity:.68;margin:0;display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden}
+.catea-diary__card small {margin-top:14px;opacity:.5;font-size:11px}
+.catea-diary__calendar {display:flex;flex-direction:column;text-align:center;border-radius:10px;overflow:hidden;width:44px;background:var(--diary-paper)}
+.catea-diary__calendar span {background:var(--background-modifier-hover);font-size:10px;padding:2px}
+.catea-diary__calendar strong {font-size:20px;line-height:1.4;font-weight:500}
+.catea-diary button.catea-diary__all {display:block;margin:8px auto 28px;background:transparent;box-shadow:none;border:0;font-size:16px}
+.catea-diary__empty {padding:28px;line-height:1.8;text-align:center;opacity:.7}
+.catea-diary__settings {margin:20px 16px 0;padding:20px;border-radius:24px;background:var(--diary-paper)}
+.catea-diary__settings label {display:flex;justify-content:space-between;align-items:center;gap:12px}
+.catea-diary__settings p {font-size:12px;line-height:1.7;opacity:.7}
+.catea-diary__settings button {width:100%;margin-top:6px;border-radius:16px}
+.catea-diary__bar {position:sticky;top:0;z-index:1;display:flex;align-items:center;gap:14px;min-height:64px;padding:12px 16px;background:var(--diary-sky)}
+.catea-diary__bar button {background:none;box-shadow:none;border:0;font-size:25px;padding:0 8px;flex-shrink:0}
+.catea-diary__bar span {font-size:18px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.catea-diary__paper {margin:20px 16px 0;padding:26px 24px;border-radius:30px;background:var(--diary-paper);min-height:70vh}
+.catea-diary__paper h1 {font-size:26px;line-height:1.4;margin:0 0 18px;padding-bottom:18px;border-bottom:1px solid var(--background-modifier-border);overflow-wrap:anywhere}
+.catea-diary__paper time {font-size:13px;opacity:.55}
+.catea-diary__prose {font-size:16px;line-height:1.95;overflow-wrap:anywhere;white-space:pre-wrap}
+.catea-diary__prose p {margin:18px 0}
+.catea-diary__paper footer {margin:60px 0 4px;text-align:center;font-size:13px;opacity:.4}
+.catea-diary__archive {display:grid;gap:16px;padding:8px 16px}
+.catea-diary__custom {display:flex;flex-direction:column;align-items:center;gap:14px;padding:35px 20px}
+.catea-diary__avatar {width:132px;height:132px;border:3px solid var(--background-primary);border-radius:50%;object-fit:cover;margin-bottom:6px}
+.catea-diary__custom button {border-radius:20px}
+.catea-diary__field {display:flex;align-items:center;gap:20px;background:var(--diary-paper);border-radius:22px;padding:20px;width:100%;margin-top:24px}
+.catea-diary__field input {min-width:0;flex:1;background:transparent;border:0;text-align:right;color:inherit}
+.catea-diary__error {margin:20px;padding:14px;border-radius:16px;background:var(--background-modifier-error);color:var(--text-error);font-size:13px}
