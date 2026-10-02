@@ -311,6 +311,23 @@ async function responseError(response: Response, fallbackUrl = ''): Promise<Erro
   return new ModelServiceError(body, response.status, host)
 }
 
+function isEventStream(response: Response): boolean {
+  return response.headers.get('content-type')?.includes('text/event-stream') === true
+}
+
+function isJsonResponse(response: Response): boolean {
+  return response.headers.get('content-type')?.includes('json') === true
+}
+
+async function responseJson(response: Response, fallbackUrl: string): Promise<Record<string, unknown>> {
+  if (!isJsonResponse(response)) throw await responseError(response, fallbackUrl)
+  try {
+    return record(await response.json())
+  } catch {
+    throw await responseError(response, fallbackUrl)
+  }
+}
+
 export async function streamModel(
   config: ModelConfig,
   transcript: TranscriptItem[],
@@ -369,10 +386,10 @@ export async function streamModel(
     })
     if (!response.ok) throw await responseError(response, url)
     options.onTransport?.(
-      response.headers.get('content-type')?.includes('text/event-stream') ? 'sse' : 'buffered',
+      isEventStream(response) ? 'sse' : 'buffered',
     )
-    if (!response.headers.get('content-type')?.includes('text/event-stream')) {
-      const data = record(await response.json())
+    if (!isEventStream(response)) {
+      const data = await responseJson(response, url)
       const content = records(data.content)
       const text = content
         .filter((item) => item.type === 'text')
@@ -531,10 +548,10 @@ export async function streamModel(
   if (response.status === 400 || response.status === 422) response = await fetchCompletion(false)
   if (!response.ok) throw await responseError(response, completionUrl)
   options.onTransport?.(
-    response.headers.get('content-type')?.includes('text/event-stream') ? 'sse' : 'buffered',
+    isEventStream(response) ? 'sse' : 'buffered',
   )
-  if (!response.headers.get('content-type')?.includes('text/event-stream')) {
-    const data = record(await response.json())
+  if (!isEventStream(response)) {
+    const data = await responseJson(response, completionUrl)
     const choice = records(data.choices)[0] || {}
     const message = record(choice.message)
     const text = typeof message.content === 'string' ? message.content : ''
