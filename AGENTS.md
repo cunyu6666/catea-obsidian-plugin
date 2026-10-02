@@ -418,6 +418,7 @@ Five deliberate exclusions:
 - [Architecture decisions and acceptance record](./docs/ARCHITECTURE.md)
 - [Module boundaries and UI migration status](./docs/MODULARIZATION.md)
 - [DIP bootstrap design spec](./docs/specs/2026-09-28-dip-bootstrap-design.md)
+- [Connector manifest bridge design](./docs/specs/2026-10-02-connector-manifest-bridge-design.md)
 - [Third-party notices](./THIRD_PARTY_NOTICES.md)
 
 ---
