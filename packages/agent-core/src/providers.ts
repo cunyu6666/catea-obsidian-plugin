@@ -315,16 +315,22 @@ function isEventStream(response: Response): boolean {
   return response.headers.get('content-type')?.includes('text/event-stream') === true
 }
 
-function isJsonResponse(response: Response): boolean {
-  return response.headers.get('content-type')?.includes('json') === true
-}
-
 async function responseJson(response: Response, fallbackUrl: string): Promise<Record<string, unknown>> {
-  if (!isJsonResponse(response)) throw await responseError(response, fallbackUrl)
+  const body = await response.text()
   try {
-    return record(await response.json())
+    return record(JSON.parse(body))
   } catch {
-    throw await responseError(response, fallbackUrl)
+    let host = ''
+    try {
+      host = new URL(response.url || fallbackUrl).host
+    } catch {
+      try {
+        host = new URL(fallbackUrl).host
+      } catch {
+        host = ''
+      }
+    }
+    throw new ModelServiceError(body.slice(0, 2_000), response.status, host)
   }
 }
 
