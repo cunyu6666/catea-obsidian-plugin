@@ -371,6 +371,10 @@ function maskLicense(value: string | undefined) {
   return license ? `${license.slice(0, 10)}… len=${license.length}` : '(empty)'
 }
 
+function headerValue(headers: Record<string, string>, name: string) {
+  return headers[name] || headers[name.toLowerCase()] || headers[name.toUpperCase()] || ''
+}
+
 async function hostedProbe(url: string, license: string, stream: boolean) {
   const response = await requestUrl({
     url,
@@ -387,8 +391,13 @@ async function hostedProbe(url: string, license: string, stream: boolean) {
     }),
     throw: false,
   })
+  const headers = response.headers as Record<string, string>,
+    contentType = headerValue(headers, 'content-type') || 'unknown',
+    server = headerValue(headers, 'server') || 'unknown',
+    renderId = headerValue(headers, 'rndr-id') || 'none',
+    cfRay = headerValue(headers, 'cf-ray') || 'none'
   const body = new TextDecoder().decode(response.arrayBuffer).replace(/\s+/g, ' ').trim()
-  return `${response.status} • ${String(response.headers['content-type'] || 'unknown')} • ${body.slice(0, 160)}`
+  return `${response.status} • ${contentType} • server=${server} • rndr=${renderId} • cf=${cfRay} • ${body.slice(0, 160)}`
 }
 
 async function runBillingDiagnostics(owner: Catea, prefs: BillingPreferences) {
@@ -413,11 +422,18 @@ async function runBillingDiagnostics(owner: Catea, prefs: BillingPreferences) {
     lines.push(`billing/me: ${error instanceof Error ? error.message : String(error)}`)
   }
   if (license) {
-    for (const stream of [false, true]) {
-      try {
-        lines.push(`hosted stream=${String(stream)}: ${await hostedProbe(hostedUrl, license, stream)}`)
-      } catch (error) {
-        lines.push(`hosted stream=${String(stream)}: ${error instanceof Error ? error.message : String(error)}`)
+    for (const base of BILLING_APIS) {
+      const probeUrl = `${base}/hosted/v1/chat/completions`
+      for (const stream of [false, true]) {
+        try {
+          lines.push(
+            `hosted ${new URL(base).host} stream=${String(stream)}: ${await hostedProbe(probeUrl, license, stream)}`,
+          )
+        } catch (error) {
+          lines.push(
+            `hosted ${new URL(base).host} stream=${String(stream)}: ${error instanceof Error ? error.message : String(error)}`,
+          )
+        }
       }
     }
   } else lines.push('hosted: skipped, missing license')
