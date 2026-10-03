@@ -746,6 +746,7 @@ body.gp-enabled .catea-editor-zoom-label { position: absolute; width: 1px; heigh
 .catea-plan-card .setting-item-control {width:100%;justify-content:stretch}
 .catea-plan-card button {width:100%;justify-content:center}
 .catea-quota-setting {display:block}
+.catea-local-model-status {margin-top:6px;color:var(--text-muted);font-size:var(--font-ui-smaller)}
 .catea-quota-setting > .setting-item-info {margin-bottom:8px}
 .catea-quota-setting > .setting-item-control:empty {display:none}
 .catea-quota-progress {display:grid;gap:6px;width:100%;max-width:none}

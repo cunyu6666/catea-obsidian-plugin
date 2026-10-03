@@ -31,6 +31,7 @@ declare namespace NodeJS {
   }
 }
 declare module 'node:fs' {
+  export function createReadStream(path: string): AsyncIterable<Buffer>
   export interface Stats {
     size: number
     mtimeMs: number
@@ -49,6 +50,11 @@ declare module 'node:fs' {
   export function writeFileSync(path: string, data: string, encoding?: 'utf8' | 'utf-8'): void
 }
 declare module 'node:fs/promises' {
+  export interface FileHandle {
+    writeFile(data: Uint8Array): Promise<void>
+    close(): Promise<void>
+  }
+  export function open(path: string, flags: 'wx'): Promise<FileHandle>
   export function readFile(path: string, encoding: 'utf8' | 'utf-8'): Promise<string>
   export function readFile(path: string): Promise<Buffer>
   export function readdir(path: string): Promise<string[]>
@@ -91,6 +97,7 @@ declare module 'node:os' {
 declare module 'node:crypto' {
   export interface Hash {
     update(data: string): this
+    update(data: Uint8Array): this
     digest(encoding: 'hex'): string
   }
   export function createHash(algorithm: string): Hash

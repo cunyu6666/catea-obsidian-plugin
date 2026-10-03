@@ -1,6 +1,6 @@
 /**
  * [WHO]: Provides Catea, default
- * [FROM]: Depends on ./DiaryPanel, ./diary, ../../../packages/integrations/src/conversation-store, ../../../packages/agent-core/src/model-client, ../../../packages/agent-core/src/byok, ../../../packages/personas/src, ./sidebar-views, ../../../typings/runtime, ./folder-icons, ./remix-skin, ./GitHistoryPanel, ./MemoryPanel, ./global-byok, ./updates, ./theme, ./note-thumbnails, ./note-previews, ./locale, ./selection, ./session-drafts, ./support-prompt, ../../../packages/agent-core/src/types, obsidian, react-dom/client, ./paper.cjs, ../../../packages/agent-core/src, ../../../packages/integrations/src/data-dir, ../../../packages/integrations/src/storage, ../../../packages/integrations/src/skills, ../../../packages/integrations/src/legacy-snapshots, ../../../packages/integrations/src/mcp-presets, ./panel, ./obsidian-tools, ./skills/obsidian.md, catea-components, ./settings, ./composition, node:fs/promises
+ * [FROM]: Depends on ../../../packages/agent-core/src/local-model, ./DiaryPanel, ./diary, ../../../packages/integrations/src/conversation-store, ../../../packages/agent-core/src/model-client, ../../../packages/agent-core/src/byok, ../../../packages/personas/src, ./sidebar-views, ../../../typings/runtime, ./folder-icons, ./remix-skin, ./GitHistoryPanel, ./MemoryPanel, ./global-byok, ./updates, ./theme, ./note-thumbnails, ./note-previews, ./locale, ./selection, ./session-drafts, ./support-prompt, ../../../packages/agent-core/src/types, obsidian, react-dom/client, ./paper.cjs, ../../../packages/agent-core/src, ../../../packages/integrations/src/data-dir, ../../../packages/integrations/src/storage, ../../../packages/integrations/src/skills, ../../../packages/integrations/src/legacy-snapshots, ../../../packages/integrations/src/mcp-presets, ./panel, ./obsidian-tools, ./skills/obsidian.md, catea-components, ./settings, ./composition, node:fs/promises, ./local-model
  * [TO]: Consumed by apps/obsidian/src/folder-icons.ts, apps/obsidian/src/note-previews.ts, apps/obsidian/src/note-thumbnails.ts,
  *   apps/obsidian/src/obsidian-tools.ts, apps/obsidian/src/panel.tsx,
  *   apps/obsidian/src/selection.ts, apps/obsidian/src/settings.ts, apps/obsidian/src/GitHistoryPanel.tsx
@@ -13,6 +13,8 @@ import { SidebarViews } from './sidebar-views'
 import { GitHistoryPanel } from './GitHistoryPanel'
 import { DiaryPanel } from './DiaryPanel'
 import { DiaryService } from './diary'
+import { LocalModelService } from './local-model'
+import { LITE_MODEL_ID } from '../../../packages/agent-core/src/local-model'
 import { VaultConversationStore } from '../../../packages/integrations/src/conversation-store'
 import { DirectModelClient } from '../../../packages/agent-core/src/model-client'
 import { selectedModel } from '../../../packages/agent-core/src/byok'
@@ -139,6 +141,7 @@ export default class Catea extends Base {
   refreshThumbnails: () => void = () => {}
   obsidian!: ObsidianTools
   diary!: DiaryService
+  localModel!: LocalModelService
   agent!: Agent
   tabs: Agent[] = []
   vaultPath = ''
@@ -229,6 +232,11 @@ export default class Catea extends Base {
       ...this.agentSettings,
       ...(await readJson(await within(this.vaultPath, dataPath('config.json')), {})),
     }
+    if (this.agentSettings.localAuxiliaryModel !== undefined) {
+      this.agentSettings.localTitles ??= this.agentSettings.localAuxiliaryModel === true
+      this.agentSettings.localDiary ??= this.agentSettings.localAuxiliaryModel === true
+      delete this.agentSettings.localAuxiliaryModel
+    }
     this.updates = new UpdateChecker(
       this.agentSettings,
       this.manifest.version,
@@ -317,7 +325,27 @@ export default class Catea extends Base {
     this.obsidian = new ObsidianTools(this, (title, detail, signal) =>
       this.confirm(title, detail, signal),
     )
-    const create = createAgentFactory(this.vaultPath, () => this.agentSettings)
+    this.localModel = new LocalModelService({
+      enabled: () => this.localModelEnabled(),
+      chatEnabled: () => this.agentSettings.localChat === true,
+      changed: () => this.emit(),
+    })
+    void this.localModel
+      .initialize()
+      .then(() => {
+        if (this.localModel.state.phase === 'ready' && this.agentSettings.localDiary)
+          void this.diary?.process(true).catch(() => {})
+      })
+      .catch(() => {})
+    this.register(() => {
+      void this.localModel.close().catch(() => {})
+    })
+    const auxiliaryModel = (signal: AbortSignal) =>
+      this.agentSettings.localTitles ? this.localModel.select(signal) : Promise.resolve(null)
+    const create = createAgentFactory(this.vaultPath, () => this.agentSettings, auxiliaryModel, {
+      models: () => this.chatModels(),
+      client: { stream: (request, signal) => this.localModel.streamChat(request, signal) },
+    })
     this.createTabAgent = () => {
       let agent!: Agent
       agent = create({
@@ -339,6 +367,8 @@ export default class Catea extends Base {
     this.tabs = [this.agent]
     this.agent.memory.setEnabled(this.agentSettings.enabled && this.agentSettings.memory)
     this.diary = new DiaryService(this.vaultPath, {
+      auxiliaryModel: (signal) =>
+        this.agentSettings.localDiary ? this.localModel.select(signal) : Promise.resolve(null),
       conversations: new VaultConversationStore(this.vaultPath),
       client: new DirectModelClient(),
       model: async () => {
@@ -781,6 +811,64 @@ export default class Catea extends Base {
   }
   async openDiary() {
     await this.sidebarViews.sync(DIARY_VIEW, () => true, true)
+  }
+  localModelEnabled() {
+    return !!(
+      this.agentSettings.localChat ||
+      this.agentSettings.localTitles ||
+      this.agentSettings.localDiary
+    )
+  }
+  chatModels() {
+    const models = this.agentSettings.models.filter((model) => model.id !== LITE_MODEL_ID)
+    const lite = this.localModel?.chatModel()
+    return lite ? [...models, lite] : models
+  }
+  async setLocalFeature(feature: 'localChat' | 'localTitles' | 'localDiary', enabled: boolean) {
+    const previous = this.agentSettings[feature]
+    this.agentSettings[feature] = enabled
+    try {
+      await this.saveAgentSettings()
+    } catch (error) {
+      this.agentSettings[feature] = previous
+      this.emit()
+      throw error
+    }
+    this.emit()
+    if (feature === 'localChat' && !enabled)
+      for (const agent of this.tabs) if (agent.session.modelId === LITE_MODEL_ID) agent.stop()
+    if (!this.localModelEnabled()) await this.localModel.disable()
+    else if (enabled) {
+      try {
+        await this.prepareLocalModel()
+      } catch (error) {
+        if (this.agentSettings[feature]) throw error
+      }
+    }
+  }
+  async prepareLocalModel() {
+    await this.localModel.prepare()
+    // Apply a switch changed while the shared preparation was pending.
+    await this.localModel.prepare()
+    if (this.agentSettings.localDiary) void this.diary?.process(true).catch(() => {})
+  }
+  async removeLocalModel() {
+    const previous = {
+      localChat: this.agentSettings.localChat,
+      localTitles: this.agentSettings.localTitles,
+      localDiary: this.agentSettings.localDiary,
+    }
+    Object.assign(this.agentSettings, { localChat: false, localTitles: false, localDiary: false })
+    try {
+      await this.saveAgentSettings()
+    } catch (error) {
+      Object.assign(this.agentSettings, previous)
+      this.emit()
+      throw error
+    }
+    for (const agent of this.tabs) if (agent.session.modelId === LITE_MODEL_ID) agent.stop()
+    await this.localModel.remove()
+    this.emit()
   }
   async syncMemoryPanel(reveal = false) {
     await this.sidebarViews.sync(MEMORY_VIEW, () => this.agentSettings.memoryPanel === true, reveal)

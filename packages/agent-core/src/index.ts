@@ -1,6 +1,6 @@
 /**
  * [WHO]: Provides Agent, Hooks, Message, Session, Settings
- * [FROM]: Depends on ../../integrations/src/media-generation, ../../integrations/src/image-generation, ./i18n, ../upstream/loop/agent-loop, ./context, ./compaction, ./compaction-summary, ./contracts, ./upstream-stream, ./ask-user-question, ./types, ../../integrations/src/web, ./byok, ./model-capabilities, ./permission-policy, ./providers, ../../personas/src, ../../integrations/src/data-dir, ../../integrations/src/skills, ../../integrations/src/tools, ../../integrations/src/mcp, ../../memory/src/tools, ./protocol-repair, ./conversation-title
+ * [FROM]: Depends on ../../integrations/src/media-generation, ../../integrations/src/image-generation, ./i18n, ../upstream/loop/agent-loop, ./context, ./compaction, ./compaction-summary, ./contracts, ./upstream-stream, ./ask-user-question, ./types, ../../integrations/src/web, ./byok, ./model-capabilities, ./permission-policy, ./providers, ../../personas/src, ../../integrations/src/data-dir, ../../integrations/src/skills, ../../integrations/src/tools, ../../integrations/src/mcp, ../../memory/src/tools, ./protocol-repair, ./conversation-title, ./local-model
  * [TO]: Consumed by apps/obsidian/src/composition.ts, apps/obsidian/src/main.tsx,
  *   apps/obsidian/src/panel.tsx
  * [HERE]: packages/agent-core/src/index.ts - class Agent owns one session: persists it, repairs interrupted tool calls, assembles tools, drives agentLoop and enqueues memory; index capped at 500
@@ -18,7 +18,14 @@ import { agentLoop } from '../upstream/loop/agent-loop'
 import { WorkingContext } from './context'
 import { CompactionCoordinator, type CompactionEvent } from './compaction'
 import { ModelCompactionSummary } from './compaction-summary'
-import type { ConversationStore, MemoryPort, Message, ModelClient, Session } from './contracts'
+import type {
+  AuxiliaryModel,
+  ConversationStore,
+  MemoryPort,
+  Message,
+  ModelClient,
+  Session,
+} from './contracts'
 import {
   providerStream,
   fromTranscript,
@@ -42,7 +49,7 @@ import { selectedModel } from './byok'
 import { modelCapabilities } from './model-capabilities'
 import { requirePermission } from './permission-policy'
 import { type ToolDefinition } from './providers'
-import type { ModelConfig, ChatAttachment, FileChange } from './types'
+import type { ModelConfig, ChatAttachment, FileChange, TranscriptItem } from './types'
 import {
   generateImage,
   imageGenerationReady,
@@ -62,8 +69,13 @@ import { McpPool, type McpConfig } from '../../integrations/src/mcp'
 import { memoryTools, memoryReadOnly } from '../../memory/src/tools'
 import { repairToolProtocol } from './protocol-repair'
 import { generateConversationTitle } from './conversation-title'
+import { isLiteModel, LITE_MODEL_ID } from './local-model'
 
 export interface Settings {
+  localChat?: boolean
+  localTitles?: boolean
+  localDiary?: boolean
+  localAuxiliaryModel?: boolean
   videoGeneration?: MediaGenerationConfig
   audioGeneration?: MediaGenerationConfig
   imageGeneration?: ImageGenerationConfig
@@ -176,24 +188,39 @@ export class Agent {
   readonly memory: MemoryPort
   private conversations: ConversationStore
   private modelClient: ModelClient
+  private availableModels: () => ModelConfig[]
+  private localChat?: ModelClient
+  private auxiliaryModel?: (signal: AbortSignal) => Promise<AuxiliaryModel | null>
   constructor(
     private vault: string,
     private settings: () => Settings,
     private hooks: Hooks,
-    ports: { conversations: ConversationStore; memory: MemoryPort; modelClient: ModelClient },
+    ports: {
+      conversations: ConversationStore
+      memory: MemoryPort
+      modelClient: ModelClient
+      auxiliaryModel?: (signal: AbortSignal) => Promise<AuxiliaryModel | null>
+      models?: () => ModelConfig[]
+      localChat?: ModelClient
+    },
   ) {
+    this.availableModels = ports.models || (() => this.settings().models)
+    this.localChat = ports.localChat
     this.session = this.fresh()
     this.conversations = ports.conversations
     this.memory = ports.memory
     this.modelClient = ports.modelClient
+    this.auxiliaryModel = ports.auxiliaryModel
   }
   private fresh(): Session {
     return {
       id: crypto.randomUUID(),
       title: '新对话',
       modelId:
-        selectedModel(this.settings().models, this.settings().modelId)?.id ||
-        this.settings().modelId,
+        this.settings().modelId === LITE_MODEL_ID
+          ? LITE_MODEL_ID
+          : selectedModel(this.availableModels(), this.settings().modelId)?.id ||
+            this.settings().modelId,
       personaId: 'aria',
       messages: [],
       transcript: [],
@@ -203,7 +230,7 @@ export class Agent {
   async selectModel(id: string) {
     if (this.running || this.historyBusy) return
     const config = this.settings()
-    if (selectedModel(config.models, id)?.id !== id) return
+    if (selectedModel(this.availableModels(), id)?.id !== id) return
     this.session.modelId = id
     config.modelId = id
     this.hooks.change()
@@ -264,7 +291,7 @@ export class Agent {
     try {
       this.session = (await this.conversations.load(id)) || this.fresh()
       this.session.modelId ??=
-        selectedModel(this.settings().models, this.settings().modelId)?.id ||
+        selectedModel(this.availableModels(), this.settings().modelId)?.id ||
         this.settings().modelId
       this.settings().personaId = this.session.personaId
       this.restoreQuotes()
@@ -408,6 +435,7 @@ export class Agent {
     // Mid-run steering cannot rebuild the system prompt, so tags only affect
     // the injection of a turn that has not started yet.
     if (!this.running) return this.send(text, noteContext, files, skills, quotes)
+    if (this.session.modelId === LITE_MODEL_ID) return
     this.addAttachments(files)
     const content = [text, noteContext].filter(Boolean).join('\n\n'),
       displayId = crypto.randomUUID()
@@ -466,6 +494,7 @@ export class Agent {
     if (this.running || this.historyBusy || !text.trim()) return
     this.compaction = undefined
     const config = structuredClone(this.settings())
+    config.models = this.availableModels()
     config.personaId = this.session.personaId
     config.modelId = this.session.modelId ?? config.modelId
     // Per-message skill selection ("focus + temporary unlock"): when the composer
@@ -474,8 +503,22 @@ export class Agent {
     // skill_read reads the same snapshot, so its guard stays consistent.
     if (skills?.length) config.skills = [...new Set(skills)]
     if (!config.enabled) throw new Error('Agent 已关闭')
+    if (config.modelId === LITE_MODEL_ID && !config.models.some(isLiteModel))
+      throw new Error(
+        config.language === 'en'
+          ? 'Enable and prepare Catea Lite in settings.'
+          : '请在设置中开启并准备 Catea Lite。',
+      )
     const model = selectedModel(config.models, config.modelId)
     if (!model) throw new Error('请先在设置中完成 BYOK 模型配置（包含 API Key）')
+    const local = isLiteModel(model)
+    if (local && files.length)
+      throw new Error(
+        config.language === 'en'
+          ? 'Catea Lite supports text chat only. Remove attachments first.'
+          : 'Catea Lite 仅支持文字对话，请先移除附件。',
+      )
+    if (local && !this.localChat) throw new Error('Catea Lite is unavailable')
     this.session.modelId = model.id
     this.settings().modelId = model.id
     const userId = crypto.randomUUID()
@@ -514,7 +557,11 @@ export class Agent {
     this.hooks.change()
     // Publish the turn before asynchronous note preparation can delay the UI.
     try {
-      noteContext = typeof noteContext === 'function' ? await noteContext() : noteContext
+      noteContext = local
+        ? ''
+        : typeof noteContext === 'function'
+          ? await noteContext()
+          : noteContext
       signal.throwIfAborted()
     } catch (error) {
       this.session.messages = this.session.messages.filter(
@@ -539,6 +586,7 @@ export class Agent {
         .join('\n\n'),
     })
     this.hooks.change()
+    let localAnswerRecorded = false
     let pendingSave: Promise<void> | undefined
     const save = () => {
       pendingSave = this.save()
@@ -546,6 +594,98 @@ export class Agent {
     }
     try {
       await save()
+      if (local) {
+        const input = this.session.transcript.at(-1)!
+        const appendJournal = (item: TranscriptItem) => {
+          this.session.journal?.push({
+            id: crypto.randomUUID(),
+            type: 'message',
+            timestamp: new Date().toISOString(),
+            message: fromTranscript(item),
+          })
+        }
+        if (!this.session.journal)
+          this.session.journal = this.session.transcript.slice(0, -1).map((item) => ({
+            id: crypto.randomUUID(),
+            type: 'message',
+            timestamp: new Date().toISOString(),
+            message: fromTranscript(item),
+          }))
+        appendJournal(input)
+        for await (const event of this.localChat!.stream(
+          {
+            model,
+            system: `You are ${persona(config.personaId).name}, a Catea Lite conversational companion. Reply concisely in the user's language. Text chat only: no tools, file or web access. Never claim to perform actions. Identify only as Catea or ${persona(config.personaId).name}.\n${persona(config.personaId).content.split(/\n\n/)[1]?.slice(0, 220) || ''}`,
+            transcript: this.session.messages
+              .filter(
+                (message) =>
+                  (message.role === 'user' &&
+                    message.delivery !== 'queued' &&
+                    message.delivery !== 'deferred') ||
+                  (message.role === 'assistant' && message.id !== reply.id && message.text.trim()),
+              )
+              .map((message) => ({
+                role: message.role,
+                content: [
+                  message.text,
+                  ...(message.quotes || []).map(
+                    (quote) =>
+                      `${quote.path}: ${quote.text}${quote.comment ? `\n${quote.comment}` : ''}`,
+                  ),
+                ].join('\n\n'),
+              })),
+            tools: [],
+            attachments: new Map(),
+            maxTokens: 1024,
+          },
+          signal,
+        )) {
+          if (event.type === 'delta') reply.text += event.text
+          if (event.type === 'done') reply.text = event.reply.text || reply.text
+          this.hooks.change()
+        }
+        signal.throwIfAborted()
+        if (!reply.text.trim())
+          throw new Error(
+            config.language === 'en' ? 'The model returned no response.' : '模型未返回回复内容。',
+          )
+        reply.status = 'complete'
+        reply.completedAt = Date.now()
+        const answer: TranscriptItem = { role: 'assistant', content: reply.text }
+        this.session.transcript.push(answer)
+        localAnswerRecorded = true
+        appendJournal(answer)
+        await save()
+        if (config.localTitles) {
+          try {
+            const auxiliary = await this.auxiliaryModel?.(signal)
+            const first = this.session.messages.find((m) => m.role === 'user')
+            if (
+              auxiliary &&
+              first &&
+              !this.session.titleGenerated &&
+              this.session.title === first.text.slice(0, 40) &&
+              (this.session.titleAttempts || 0) < 3
+            ) {
+              this.session.titleAttempts = (this.session.titleAttempts || 0) + 1
+              const title = await generateConversationTitle(
+                auxiliary.client,
+                auxiliary.model,
+                first.text,
+                reply.text,
+                signal,
+              )
+              if (title && !signal.aborted && this.session.title === first.text.slice(0, 40)) {
+                this.session.title = title
+                this.session.titleGenerated = true
+              }
+            }
+          } catch {
+            /* Optional metadata never changes a successful local reply. */
+          }
+        }
+        return
+      }
       const key = JSON.stringify(config.mcp)
       if (this.mcpKey !== key) {
         this.mcpKey = ''
@@ -1095,11 +1235,12 @@ Internal note references use [[path|label]]. Only call listed tools. Preserve ra
         reply.text.trim() &&
         !signal.aborted
       ) {
-        this.session.titleAttempts = (this.session.titleAttempts || 0) + 1
         try {
+          const auxiliary = await this.auxiliaryModel?.(signal)
+          this.session.titleAttempts = (this.session.titleAttempts || 0) + 1
           const title = await generateConversationTitle(
-            this.modelClient,
-            model,
+            auxiliary?.client || this.modelClient,
+            auxiliary?.model || model,
             firstUser.text,
             reply.text,
             signal,
@@ -1136,6 +1277,16 @@ Internal note references use [[path|label]]. Only call listed tools. Preserve ra
       reply.status = signal.aborted ? 'stopped' : 'error'
       reply.error = signal.aborted ? '已停止' : e instanceof Error ? e.message : String(e)
     } finally {
+      if (local && !localAnswerRecorded && reply.text.trim()) {
+        const partial: TranscriptItem = { role: 'assistant', content: reply.text }
+        this.session.transcript.push(partial)
+        this.session.journal?.push({
+          id: crypto.randomUUID(),
+          type: 'message',
+          timestamp: new Date().toISOString(),
+          message: fromTranscript(partial),
+        })
+      }
       // Complete outstanding calls so a cancelled turn cannot poison the next provider request.
       repairToolProtocol(this.session)
       // Keep steering queued during cancellation as explicit unsent work, never silently drop it.

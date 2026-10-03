@@ -9,6 +9,8 @@ import { streamModel } from './providers'
 
 export class DirectModelClient implements ModelClient {
   async *stream(request: Readonly<ModelRequest>, signal: AbortSignal): AsyncIterable<ModelEvent> {
+    if (request.model.transport === 'local')
+      throw new Error('Local models require the local runtime')
     const pending: ModelEvent[] = []
     let wake: (() => void) | undefined
     let finished = false,

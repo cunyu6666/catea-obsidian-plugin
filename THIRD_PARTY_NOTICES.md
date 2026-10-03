@@ -1,5 +1,26 @@
 # Source notices
 
+## Local auxiliary model
+
+Catea Lite is the product display name for Qwen3-0.6B, not a separately trained
+model. The optional download is Bartowski's Q4_K_M conversion of the Qwen model,
+from `bartowski/Qwen_Qwen3-0.6B-GGUF` at revision
+`60b85c0e3d8fe0f6474f406922a26d12aca4550d`. The artifact is 484220320 bytes,
+SHA-256 `9acfc1e001311f34b4252001b626f2e466d592a42065f66571bff3790d4e1b14`.
+Weights retain their Apache-2.0 license; branding does not alter the weights.
+Source: https://huggingface.co/Qwen/Qwen3-0.6B and
+https://huggingface.co/bartowski/Qwen_Qwen3-0.6B-GGUF.
+
+The CPU runtime is `@wllama/wllama` 2.4.0 (MIT), containing llama.cpp
+`b8948-42401c7` (MIT). Its single-thread WebAssembly binary is compressed and
+embedded at build time; no executable runtime is fetched at user activation.
+An in-memory, digest-checked build adaptation forces browser-worker file loading
+inside Obsidian and guarantees worker termination after a failed exit; see
+`scripts/local-model-runtime-patch.mjs` and `docs/LOCAL_MODEL.md`.
+Wllama's `@huggingface/jinja` dependency retains its MIT license.
+Full license texts are retained in `LOCAL-MODEL-LICENSE.txt` and in the main.js
+header so installations using only Obsidian's three release assets retain them.
+
 - ANNO (user-owned local source): streaming providers, transcript/attachment types and helpers, Persona definitions. Source: apps/extension/src. These are adapted for the Obsidian host.
 - CatUI mem-core: packages/memory/upstream is a source snapshot; source revision and modification are recorded in packages/memory/UPSTREAM.md. GPL-3.0 license retained at packages/memory/LICENSE and in release output LICENSE. No CatUI process is required.
 - ANNO / Craft Agents UI: Composer, AttachmentCards, ResponseCard and AgentActivities adapted in the design system, vendored here under packages/design-system. Craft Agents upstream attribution is retained in packages/design-system/CRAFT-AGENTS-NOTICE.

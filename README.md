@@ -45,7 +45,9 @@ Choose a persona for the work, add reusable instructions through **Skills**, or 
 
 Catea can write a daily diary in your AI companion's own voice, based on completed conversations with that persona. Open **Diary** from the ribbon or the **Catea: Open diary** command to browse recent cards, read an entry, and customize the diary name and photo.
 
-After a local calendar day ends, Catea writes one entry per persona that had a conversation. It only records days when Catea was running and there were completed conversations. Unopened days are never backfilled, even if older conversations are later synced into the vault. It uses your current default chat model and consumes model usage; relevant conversation excerpts are sent to that endpoint. Turn off **Write a diary every day** in the diary panel to pause automatic generation. Entries and profile images stay in the vault under `.catea/diary/index.json`.
+After a local calendar day ends, Catea writes one entry per persona that had a conversation. It only records days when Catea was running and there were completed conversations. Unopened days are never backfilled, even if older conversations are later synced into the vault. By default, it uses your current chat model and consumes model usage; relevant conversation excerpts are sent to that endpoint. Turn off **Write a diary every day** in the diary panel to pause automatic generation. Entries and profile images stay in the vault under `.catea/diary/index.json`.
+
+For local inference, open **Settings → Catea → Local assistant** and enable **Local chat**, **Conversation titles**, or **Diaries** independently. Catea Lite downloads about 462 MB once, without a key or chat credits. Local chat then appears in the sidebar model picker with a **32K context** and supports text conversations only. Progress and retry appear beside the shared download; **Delete download** turns off all three features and frees its disk space. See [local inference](./docs/LOCAL_MODEL.md) for verification and limits.
 
 This feature is in the working source and is not yet in a published release.
 
@@ -82,6 +84,8 @@ Catea supports English and Chinese in the product interface. You can check for u
 **You control actions.** Default **Assist** mode asks before file changes and other sensitive actions. **Full access** skips those approvals. Bash is disabled by default; when enabled, it can access files beyond your vault.
 
 Web search and page reading use Exa, Jina, or DuckDuckGo. Enabled MCP servers receive the inputs needed for their tools. Automatic GitHub release checks run at most once daily and send no notes or keys. Web search and automatic update checks have separate off switches.
+
+Enabling Catea Lite downloads fixed, checksum-verified public weights from Hugging Face and its file-delivery hosts. This download sends no conversations or keys. The weights stay in Obsidian's machine-local data directory, outside your vault; selected local chat, titles and diaries run offline after preparation.
 
 An optional, static GitHub Star invitation may appear inside the Catea sidebar at most once per local calendar month. It makes no network requests and can be disabled in **Settings → Catea → Support prompt**.
 

@@ -5,6 +5,7 @@ import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 import { build } from 'esbuild'
 import type { Session, ModelRequest, ModelClient } from '../packages/agent-core/src/contracts.ts'
+import type { AuxiliaryModel } from '../packages/agent-core/src/contracts.ts'
 import { REPO_ROOT } from './dip-contract.ts'
 
 async function service(dev = false) {
@@ -64,6 +65,8 @@ async function fixture(dev = false) {
     },
   }
   const options = {
+    auxiliaryModel: undefined as
+      ((signal: AbortSignal) => Promise<AuxiliaryModel | null>) | undefined,
     conversations: {
       list: async () => sessions.map((s) => ({ id: s.id, title: s.title })),
       load: async (id: string) => sessions.find((s) => s.id === id) || null,
@@ -274,6 +277,71 @@ test('development diaries stay in the isolated data directory', async () => {
   try {
     assert.ok(await readFile(join(f.vault, '.catea-dev/diary/index.json'), 'utf8'))
     await assert.rejects(readFile(join(f.vault, '.catea/diary/index.json'), 'utf8'))
+  } finally {
+    await f.cleanup()
+  }
+})
+
+test('local diary routing works without a BYOK model and never falls back on preparation failure', async () => {
+  const f = await fixture()
+  try {
+    f.sessions.push(session('local', 'aria', new Date(2026, 9, 1, 12)))
+    f.setTime(new Date(2026, 9, 2, 12))
+    f.ready(false)
+    f.options.auxiliaryModel = async () => {
+      throw new Error('Download pending')
+    }
+    await f.diary.process(true)
+    assert.equal(f.requests.length, 0)
+    assert.equal((await f.diary.snapshot()).error, 'local')
+    let local = 0
+    f.options.auxiliaryModel = async () => ({
+      model: {
+        id: 'local',
+        name: 'Catea Lite',
+        protocol: 'openai',
+        model: 'local',
+        baseUrl: '',
+        apiKey: '',
+        contextWindow: 4096,
+      },
+      client: {
+        async *stream() {
+          local++
+          yield {
+            type: 'done',
+            reply: {
+              text: '{"title":"A local day","body":"I helped plan the next step."}',
+              calls: [],
+            },
+          }
+        },
+      },
+    })
+    await f.diary.process(true)
+    assert.equal(local, 1)
+    assert.equal(f.requests.length, 0)
+    assert.equal((await f.diary.snapshot()).entries.length, 1)
+  } finally {
+    await f.cleanup()
+  }
+})
+
+test('enabling diaries records attendance immediately, before the next scheduled tick', async () => {
+  const f = await fixture()
+  try {
+    await f.diary.setEnabled(false)
+    f.setTime(new Date(2026, 9, 2, 12))
+    await f.diary.process()
+    await f.diary.setEnabled(true)
+    assert.ok((await f.diary.snapshot()).activeDates.includes('2026-10-02'))
+    f.sessions.push(session('today', 'aria', new Date(2026, 9, 2, 12)))
+    f.diary.close()
+    f.setTime(new Date(2026, 9, 3, 12))
+    const reopened = new f.DiaryService(f.vault, f.options)
+    await reopened.process()
+    assert.equal((await reopened.snapshot()).entries[0].date, '2026-10-02')
+    reopened.close()
   } finally {
     await f.cleanup()
   }

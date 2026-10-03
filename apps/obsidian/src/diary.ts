@@ -5,6 +5,7 @@
  * [HERE]: apps/obsidian/src/diary.ts - durable daily first-person diaries from completed conversations, with recorded active days and cancellable bounded generation
  */
 import type {
+  AuxiliaryModel,
   ConversationStore,
   ModelClient,
   Session,
@@ -34,9 +35,10 @@ export interface DiaryState {
   retryAt: number
   profiles: Record<string, DiaryProfile>
   entries: DiaryEntry[]
-  error: '' | 'model' | 'generation'
+  error: '' | 'model' | 'generation' | 'local'
 }
 interface Options {
+  auxiliaryModel?: (signal: AbortSignal) => Promise<AuxiliaryModel | null>
   conversations: ConversationStore
   client: ModelClient
   model: () => Promise<ModelConfig | undefined>
@@ -167,7 +169,14 @@ export class DiaryService {
   async setEnabled(enabled: boolean) {
     await this.initialize()
     if (!enabled) this.abort?.abort()
-    await this.writes.run(() => this.persist({ ...this.state!, enabled, retryAt: 0, error: '' }))
+    await this.writes.run(() => {
+      const today = diaryDate(this.now())
+      const activeDates =
+        enabled && !this.state!.activeDates.includes(today)
+          ? [...this.state!.activeDates, today]
+          : this.state!.activeDates
+      return this.persist({ ...this.state!, enabled, activeDates, retryAt: 0, error: '' })
+    })
   }
   async setProfile(id: string, profile: DiaryProfile) {
     await this.initialize()
@@ -241,7 +250,14 @@ export class DiaryService {
         for (const [id, group] of groups) {
           if (this.state!.entries.some((e) => e.date === date && e.personaId === id)) continue
           if (abort.signal.aborted || this.closed || !this.state!.enabled) return
-          const model = await this.options.model()
+          let auxiliary: AuxiliaryModel | null | undefined
+          try {
+            auxiliary = await this.options.auxiliaryModel?.(abort.signal)
+          } catch (failure) {
+            error = 'local'
+            throw failure
+          }
+          const model = auxiliary?.model || (await this.options.model())
           if (!model) {
             error = 'model'
             throw new Error('No diary model')
@@ -256,7 +272,7 @@ export class DiaryService {
           const input = group.text.slice(0, budget)
           const signal = AbortSignal.any([abort.signal, AbortSignal.timeout(120000)])
           let output = ''
-          for await (const event of this.options.client.stream(
+          for await (const event of (auxiliary?.client || this.options.client).stream(
             {
               model,
               tools: [],

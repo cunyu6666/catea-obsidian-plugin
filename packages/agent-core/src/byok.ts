@@ -1,11 +1,12 @@
 /**
  * [WHO]: Provides OPENROUTER_BASE_URL, OPENROUTER_FREE_MODEL, configuredModels, createOpenRouterModel, defaultBaseUrl, isOpenRouterModel, normalizeModel, selectedModel
- * [FROM]: Depends on ./types
+ * [FROM]: Depends on ./types, ./local-model
  * [TO]: Consumed by apps/obsidian/src/panel.tsx, apps/obsidian/src/settings.ts,
  *   packages/agent-core/src/index.ts, packages/agent-core/src/vendor-presets.ts
  * [HERE]: packages/agent-core/src/byok.ts - validates ModelConfig and resolves configured and selected models; requires name, model and key; contextWindow integer 4096-2000000; credential-free HTTP(S) URL
  */
 import type { ModelConfig } from './types'
+import { isLiteModel, liteModel } from './local-model'
 
 export const defaultBaseUrl = (protocol: ModelConfig['protocol']) =>
   protocol === 'anthropic' ? 'https://api.anthropic.com/v1' : 'https://api.openai.com/v1'
@@ -34,6 +35,10 @@ export function createOpenRouterModel(id: string, apiKey: string, modelId: strin
 }
 
 export function normalizeModel(draft: ModelConfig): ModelConfig {
+  if (draft.transport === 'local') {
+    if (!isLiteModel(draft)) throw new Error('Unknown local model')
+    return liteModel()
+  }
   const model = {
     ...draft,
     name: draft.name.trim(),

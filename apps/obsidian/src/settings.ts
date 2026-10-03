@@ -1,6 +1,6 @@
 /**
  * [WHO]: Provides CateaSettings, syncSavedBillingStatus
- * [FROM]: Depends on obsidian, ./main, ../../../packages/agent-core/src/types, ../../../packages/agent-core/src/byok, ../../../packages/agent-core/src/vendor-presets, ../../../packages/integrations/src/data-dir, ../../../packages/integrations/src/skills, ../../../packages/integrations/src/mcp-presets, ../../../packages/personas/src, ./vendor-icons
+ * [FROM]: Depends on obsidian, ./main, ../../../packages/agent-core/src/types, ../../../packages/agent-core/src/byok, ../../../packages/agent-core/src/vendor-presets, ../../../packages/integrations/src/data-dir, ../../../packages/integrations/src/skills, ../../../packages/integrations/src/mcp-presets, ../../../packages/personas/src, ./vendor-icons, ./local-model
  * [TO]: Consumed by apps/obsidian/src/main.tsx, apps/obsidian/src/panel.tsx
  * [HERE]: apps/obsidian/src/settings.ts - plugin settings tab for language, paper toggles, Agent persona and capabilities, subscription status, BYOK models with a vendor-preset grid, one-click MCP presets and MCP servers; ModelModal validates through normalizeModel
  */
@@ -40,6 +40,7 @@ import {
 } from '../../../packages/integrations/src/mcp-presets'
 import { vendorIconDataUrl, vendorIcons, vendorMonogram } from './vendor-icons'
 import { persona, personas } from '../../../packages/personas/src'
+import type { LocalModelState } from './local-model'
 interface SettingsRow {
   name: string
   desc?: string
@@ -380,6 +381,11 @@ export async function syncSavedBillingStatus(owner: Catea, options: { refresh?: 
 }
 
 export class CateaSettings extends PluginSettingTab {
+  private localSubscriptions = new Set<() => void>()
+  hide() {
+    for (const unsubscribe of this.localSubscriptions) unsubscribe()
+    this.localSubscriptions.clear()
+  }
   constructor(
     app: App,
     private owner: Catea,
@@ -404,6 +410,7 @@ export class CateaSettings extends PluginSettingTab {
     else this.renderLegacy()
   }
   private renderLegacy() {
+    this.hide()
     this.containerEl.empty()
     this.containerEl.addClass('catea-settings')
     const intro = this.containerEl.createDiv({ cls: 'catea-settings__intro' })
@@ -433,6 +440,119 @@ export class CateaSettings extends PluginSettingTab {
       tr = p.t,
       c = p.agentSettings
     const billingPrefs = c as typeof c & BillingPreferences
+    const localModel: SettingsRow[] = [
+      {
+        name: 'Catea Lite',
+        desc: tr('首次开启任一功能会下载约 462 MB，完成后自动使用。无需 API Key。'),
+        render: (s) => {
+          s.settingEl.addClass('catea-local-model-setting')
+          const status = s.descEl.createDiv({
+            cls: 'catea-local-model-status',
+            attr: { role: 'status', 'aria-live': 'polite' },
+          })
+          let retry: import('obsidian').ButtonComponent
+          let remove: import('obsidian').ButtonComponent
+          let removing = false
+          const statusText = (state?: LocalModelState) => {
+            if (state?.phase === 'downloading') return `${tr('正在下载')} ${state.progress}%`
+            if (state?.phase === 'loading') return tr('正在准备，稍候即可使用…')
+            if (state?.phase === 'error') return tr('暂时无法准备，请重试。')
+            if (p.localModelEnabled() && state?.usable) return tr('已就绪 · 在本机运行')
+            if (state?.installed) return tr('已下载 · 开启即可使用')
+            return tr('未开启')
+          }
+          const update = () => {
+            const state = p.localModel?.state
+            status.setText(statusText(state))
+            if (retry !== undefined) {
+              retry.buttonEl.hidden = state?.phase !== 'error' || !p.localModelEnabled()
+              retry.buttonEl.style.display = retry.buttonEl.hidden ? 'none' : ''
+            }
+            if (remove !== undefined) {
+              remove.buttonEl.hidden = !state?.installed
+              remove.buttonEl.style.display = remove.buttonEl.hidden ? 'none' : ''
+              remove.setDisabled(removing)
+            }
+          }
+          const prepare = async () => {
+            try {
+              await p.prepareLocalModel()
+            } catch {
+              if (!p.localModelEnabled()) new Notice(tr('无法保存设置，请重试。'))
+              status.setText(tr('暂时无法准备，请重试。'))
+            }
+            update()
+          }
+          s.addButton((button) => {
+            retry = button
+            button.setButtonText(tr('重试')).onClick(() => void prepare())
+          })
+          s.addButton((button) => {
+            remove = button
+            button.setButtonText(tr('删除下载')).onClick(async () => {
+              removing = true
+              update()
+              try {
+                await p.removeLocalModel()
+              } catch {
+                new Notice(tr('无法删除下载，请重试。'))
+              } finally {
+                removing = false
+                update()
+              }
+            })
+          })
+          update()
+          const unsubscribe = p.subscribe(() => {
+            if (!s.settingEl.isConnected) {
+              unsubscribe()
+              this.localSubscriptions.delete(unsubscribe)
+            } else update()
+          })
+          this.localSubscriptions.add(unsubscribe)
+        },
+      },
+      ...(
+        [
+          [
+            'localChat',
+            '本地聊天',
+            '开启后出现在模型选择器。32K 上下文，仅支持文字对话，不使用工具。',
+          ],
+          ['localTitles', '对话标题', '用 Catea Lite 在本机生成对话标题，不消耗聊天额度。'],
+          ['localDiary', '日记', '用 Catea Lite 在本机生成日记，不消耗聊天额度。'],
+        ] as const
+      ).map(([feature, name, description]) => ({
+        name: tr(name),
+        desc: tr(description),
+        render: (setting: Setting) => {
+          setting.addToggle((toggle) => {
+            const update = () => toggle.setValue(c[feature] === true)
+            toggle.setValue(c[feature] === true).onChange(async (value) => {
+              try {
+                await p.setLocalFeature(feature, value)
+              } catch {
+                new Notice(
+                  tr(
+                    p.localModel?.state.phase === 'error'
+                      ? '暂时无法准备，请重试。'
+                      : '无法保存设置，请重试。',
+                  ),
+                )
+              }
+              update()
+            })
+            const unsubscribe = p.subscribe(() => {
+              if (!setting.settingEl.isConnected) {
+                unsubscribe()
+                this.localSubscriptions.delete(unsubscribe)
+              } else update()
+            })
+            this.localSubscriptions.add(unsubscribe)
+          })
+        },
+      })),
+    ]
     const appearance: SettingsRow[] = [
       {
         name: tr('语言 / Language'),
@@ -1218,6 +1338,7 @@ export class CateaSettings extends PluginSettingTab {
       ...(BILLING_UI_ENABLED ? [{ heading: tr('套餐'), rows: billing }] : []),
       { heading: tr('外观'), rows: appearance },
       { heading: 'Agent', rows: agent },
+      { heading: tr('本地助手'), rows: localModel },
       { heading: tr('BYOK 模型'), rows: models },
       { heading: tr('图像生成'), rows: imageGeneration },
       ...mediaSections,

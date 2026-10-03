@@ -6,6 +6,7 @@
   "type": "module",
   "dependencies": {
     "@tomplum/react-git-log": "2.5.0",
+    "@wllama/wllama": "2.4.0",
     "catea-components": "^0.1.0",
     "motion": "^12.43.0",
     "react": "^18.3.1",

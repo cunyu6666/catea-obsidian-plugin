@@ -7,6 +7,10 @@ tools, and the paper-appearance extras that adapt the agent core to Obsidian.
 
 ## Member List
 
+local-model-cache.ts: Fixed-version, streamed model downloads into machine-local cache, with size and SHA-256 verification, atomic rename and exclusive temporary files.
+local-model-runtime.ts: Bundled, compressed CPU WebAssembly runtime using Wllama in a worker; non-thinking ChatML, verified Q8-cache 32K chat and 4K auxiliary budgets, whole-turn history trimming, validated JSON stopping and explicit unload.
+local-model.ts: Catea Lite chat/title/diary lifecycle, progress and loading self-test, serialized chat/title/diary inference and ephemeral 32K model availability, cancellation and two-minute idle release; enabled failures never fall back to cloud.
+
 DiaryPanel.tsx: Companion diary sidebar with a photo cover, recent cards, archive, paper reader, per-persona name/avatar customization and an automatic-generation toggle; all colors inherit the workspace theme.
 diary.ts: Durable first-person diary service: completed conversations grouped by local date and persona, next-day generation only for locally recorded active dates (unopened dates are never backfilled), bounded seven-entry-day batches, bounded model calls, 30-minute retry backoff, cancellation and atomic storage.
 assets.d.ts: Declares `*.md`, `*.css` and embedded `*.png` module types, plus optional Electron host transport types; no runtime code.
@@ -19,7 +23,7 @@ memory-icons.ts: One Remix Icon 4.9.1 line glyph per memory type, inlined as SVG
 folder-icons.ts: Folder context-menu picker with ten Remix line icons and ten colors, persisted per path, tracking folder rename and deletion.
 git-history.ts: Shell-free Git inspection with timeout and output caps; history and commit stats are scoped to the vault.
 global-byok.ts: Stores BYOK model profiles in an encrypted machine-local file under Obsidian userData, with migration from vault-local profiles and deletion tombstones.
-composition.ts: Creates shared conversation storage and memory, routes background memory diagnostics to the console without toast notifications, then injects them into each tab's Agent at the Obsidian boundary.
+composition.ts: Injects separate local chat and optional title clients with a dynamic model collection, creates shared conversation storage and memory, routes background memory diagnostics to the console without toast notifications, then injects them into each tab's Agent at the Obsidian boundary.
 DiagramDialog.tsx: Portals children into a native `<dialog>` opened with `showModal()`, giving Escape handling, focus trap and focus restore for diagram zoom.
 MermaidDiagram.tsx: Renders Mermaid through Obsidian `loadMermaid` after a 180 ms debounce; zoom clamped to 0.25-4x.
 StreamingChatResponse.tsx: requestAnimationFrame typewriter reveal for streamed text that never splits surrogate pairs; auto-follows scroll within 40 px in a card and 80 px in chat.

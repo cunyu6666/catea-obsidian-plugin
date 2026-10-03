@@ -6,6 +6,44 @@
  */
 export type Language = 'zh' | 'en'
 const english: Record<string, string> = {
+  'Catea Lite 未就绪': 'Catea Lite unavailable',
+  '开启 Catea Lite →': 'Enable Catea Lite →',
+  '本次生成已停止，回复已保留。': 'Generation stopped. Your partial reply has been kept.',
+  继续对话: 'Continue chat',
+  继续刚才的对话: 'Continue our conversation',
+  本地助手: 'Local assistant',
+  '在本机生成对话标题和日记，不消耗聊天额度。首次开启下载约 462 MB，完成后自动使用。':
+    'Generate conversation titles and diaries on this device without using chat credits. Turning this on downloads about 462 MB, then starts automatically.',
+  正在下载: 'Downloading',
+  '正在准备，稍候即可使用…': 'Preparing, ready shortly…',
+  '暂时无法准备，请重试。': 'Could not prepare the model. Please retry.',
+  '已就绪 · 标题和日记在本机生成': 'Ready · Titles and diaries stay on this device',
+  '已下载 · 开启即可使用': 'Downloaded · Turn on to use',
+  未开启: 'Off',
+  重试: 'Retry',
+  删除下载: 'Delete download',
+  '无法保存设置，请重试。': 'Could not save settings. Please retry.',
+  '无法删除下载，请重试。': 'Could not delete the download. Please retry.',
+  '使用 Catea Lite 在本机生成，不发送对话、不消耗模型额度。名称与头像仅用于日记。':
+    'Generated on this device with Catea Lite, without sending conversations or using model credits. The name and avatar apply only to diaries.',
+  '首次开启任一功能会下载约 462 MB，完成后自动使用。无需 API Key。':
+    'Enabling any feature downloads about 462 MB once, then it is ready to use. No API key needed.',
+  '已就绪 · 在本机运行': 'Ready · Runs on this device',
+  本地聊天: 'Local chat',
+  '开启后出现在模型选择器。32K 上下文，仅支持文字对话，不使用工具。':
+    'Appears in the model picker when enabled. 32K context, text chat only, no tools.',
+  '用 Catea Lite 在本机生成对话标题，不消耗聊天额度。':
+    'Generate conversation titles on this device with Catea Lite, without using chat credits.',
+  '用 Catea Lite 在本机生成日记，不消耗聊天额度。':
+    'Generate diaries on this device with Catea Lite, without using chat credits.',
+  '本地 · 32K · 仅对话': 'Local · 32K · Chat only',
+  '正在本机回复…': 'Replying on this device…',
+  '在设置中开启 Catea Lite，或选择其他模型':
+    'Enable Catea Lite in settings, or choose another model',
+  'Catea Lite 仅支持文字对话，请先移除附件。':
+    'Catea Lite supports text chat only. Remove attachments first.',
+  'Catea Lite 暂时不可用，日记会在准备好后重试。':
+    'Catea Lite is temporarily unavailable. Diaries will retry when it is ready.',
   视频生成: 'Video generation',
   语音合成: 'Speech synthesis',
   启用视频生成: 'Enable video generation',
@@ -374,6 +412,10 @@ export function translate(language: Language, text: string) {
 }
 
 export function humanizeError(raw: string, language: Language = 'zh') {
+  if (/Catea Lite 32K context limit exceeded/.test(raw))
+    return language === 'en'
+      ? 'This message is too long for Catea Lite. Shorten it and try again.'
+      : '这条消息超过 Catea Lite 的上下文容量，请缩短后重试。'
   if (raw.startsWith('MCP_UNAVAILABLE ')) {
     try {
       const issue = JSON.parse(raw.slice('MCP_UNAVAILABLE '.length)) as {

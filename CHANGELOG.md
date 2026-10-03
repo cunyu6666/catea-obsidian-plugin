@@ -7,12 +7,16 @@ release tag is that same number with no `v` prefix.
 
 ### Added
 
+- Add Catea Lite with independent local chat, title and diary switches,
+  a 32K text-only sidebar model,
+  verified model downloads, progress, retry and deletion, and automatic memory release.
 - Add a companion diary panel with persona profiles, local daily activity tracking,
   and a toggle for automatic diary generation from completed conversations.
 - Introduce an English README with landscape artwork illustrating Catea workflows.
 
 ### Fixed
 
+- Record diary attendance immediately when automatic generation is re-enabled.
 - Persist model selection per conversation; new conversations inherit the last used
   model without changing other conversations.
 - Give memory records enough height for separate titles, summaries and metadata.

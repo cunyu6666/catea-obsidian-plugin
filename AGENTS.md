@@ -14,7 +14,7 @@ is aspirational.
 ## Project Overview
 
 Catea is a desktop-only Obsidian plugin that pairs a paper-style workspace
-with a fully local, bring-your-own-key agent. Built with TypeScript, React 19, and
+with a fully local, bring-your-own-key agent. Built with TypeScript, React 18, and
 esbuild, it provides a right-sidebar agent that can read and edit the vault, search
 the web, call MCP servers, and keep a long-term memory of the user's notes.
 
@@ -205,6 +205,15 @@ Shiki grammar set through `shiki/core` (the full registry plus an inlined Onigur
 WASM added about 10 MB), and Mermaid renders through the Obsidian runtime that is
 already loaded rather than a bundled second renderer. `.github/workflows/ci.yml`
 asserts the size on every build.
+
+The optional Catea Lite chat/title/diary model downloads only pinned model weights
+after activation. Its CPU WebAssembly runtime ships compressed inside `main.js`
+and runs inference in a worker. Three independent switches share the download;
+local chat uses a verified 32K text-only context, with no tools or cloud fallback.
+Weights live in machine-global Obsidian userData,
+never in a vault or release bundle. Keep `main.js` below the existing 5 MB gate.
+Full runtime and model license notices ship in `LOCAL-MODEL-LICENSE.txt` and the
+bundle header. See `docs/LOCAL_MODEL.md` for architecture and acceptance limits.
 
 **Runtime requirement.** The gates run on Node's built-in test runner, use native
 TypeScript type stripping, and bundle selected fixtures with esbuild. Run `npm ci`

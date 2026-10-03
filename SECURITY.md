@@ -88,6 +88,29 @@ requirements.
 
 Daily diaries use completed, timestamped conversations from the retained session store, grouped by local date and persona. The current default model receives bounded excerpts without tool access. No other apps or vault notes are scanned for this feature. Automatic generation is enabled by default, pauses when Obsidian is closed or the Agent is disabled, and can be turned off in the diary panel. Only locally recorded active dates are eligible; dates when Catea was not running are never backfilled, including from imported or synced sessions. Entries are independent records: deleting a source conversation does not delete an already generated diary.
 
+### Optional Catea Lite model
+
+Turning on Catea Lite explicitly authorizes a fixed-version, approximately 462 MiB
+model-weight download from Hugging Face and its file delivery redirects. The
+download contains no conversation, vault content, API key or subscription data.
+Size and SHA-256 must match before a temporary file is published as the model.
+Weights are cached outside vaults under `<Obsidian userData>/catea/models/` and
+can be shared across vaults, including development builds. The setting and
+generated titles/diaries remain vault-local. A delete action removes only the
+fixed model file; symlink targets are refused.
+
+Three independent switches choose local chat, titles, and diaries. Local chat
+appears only after preparation and runs with a 32,768-token CPU WebAssembly
+context using a runtime embedded in the shipped plugin. It cannot invoke tools,
+read the current note, recall/extract memory, or call remote compaction. Explicit
+quote snapshots are accepted as text; files and binary attachments are refused.
+The active context can drop complete old turns, preserving the saved transcript.
+Selected local task failures never fall back to remote inference. Disabling local
+chat retains an unavailable selection until the user chooses another model.
+Auxiliary switches independently restore their default-model behavior when off.
+The runtime unloads after two minutes without work, when all local features are
+off, and on plugin unload. Raw runtime diagnostics are suppressed.
+
 ### The shell tool is not a sandbox
 
 `bash` executes real commands, can leave the vault, and is **disabled by default**.

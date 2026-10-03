@@ -2,12 +2,14 @@ import { build } from 'esbuild'
 import postcss from 'postcss'
 import { agentLoopPatchPlugin } from './agent-loop-patch.mjs'
 import { paperIconPrunePlugin } from './paper-icon-prune.mjs'
+import { localModelRuntimePlugin } from './local-model-runtime-patch.mjs'
 import { buildStyles } from '../packages/design-system/scripts/build.mjs'
 import { devDataDir, devManifest, relocatePromptPaths } from './dev-target.mjs'
 import { readFile, writeFile, mkdir, copyFile, stat } from 'node:fs/promises'
 import { existsSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { resolve, dirname } from 'node:path'
+import { gzipSync } from 'node:zlib'
 const devMode = process.argv.includes('--dev')
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const manifest = JSON.parse(await readFile(resolve(root, 'manifest.json'), 'utf8'))
@@ -44,6 +46,11 @@ const skillLicenses = await Promise.all(
     async (name) => `${name}\n${await readFile(resolve(root, name), 'utf8')}`,
   ),
 )
+// Ship the CPU runtime through the normal plugin update path; only weights download later.
+const localWasm = gzipSync(
+  await readFile(resolve(dependencyRoot('@wllama/wllama'), 'esm/single-thread/wllama.wasm')),
+  { level: 9 },
+).toString('base64')
 await mkdir(out, { recursive: true })
 await build({
   absWorkingDir: root,
@@ -53,7 +60,7 @@ await build({
   minify: true,
   legalComments: 'none',
   banner: {
-    js: `/*! Bundled skill adaptations — license notices\n${skillLicenses.join('\n\n').replaceAll('*/', '* /')}\n*/`,
+    js: `/*! Bundled skill adaptations and local inference — license notices\n${[...skillLicenses, await readFile(resolve(root, 'LOCAL-MODEL-LICENSE.txt'), 'utf8')].join('\n\n').replaceAll('*/', '* /')}\n*/`,
   },
   nodePaths: [resolve(root, 'node_modules')],
   platform: 'node',
@@ -62,7 +69,11 @@ await build({
   jsx: 'automatic',
   loader: { '.md': 'text', '.png': 'dataurl', '.css': 'empty' },
   external: ['obsidian', 'electron', '@electron/remote'],
-  define: { 'process.env.NODE_ENV': '"production"', CATEA_DATA_DIR: JSON.stringify(dataDir) },
+  define: {
+    'process.env.NODE_ENV': '"production"',
+    CATEA_DATA_DIR: JSON.stringify(dataDir),
+    CATEA_LOCAL_WASM: JSON.stringify(localWasm),
+  },
   alias: {
     '@catui/ai/stream': resolve(root, 'packages/agent-core/src/upstream-stream.ts'),
     '@catui/ai': resolve(root, 'packages/agent-core/upstream/ai'),
@@ -74,6 +85,7 @@ await build({
     ...(devMode ? [promptPathPlugin] : []),
     agentLoopPatchPlugin(root),
     paperIconPrunePlugin(root),
+    localModelRuntimePlugin(),
   ],
 })
 const dockIcons = [
@@ -179,6 +191,7 @@ await copyFile(resolve(root, 'TABLER-LICENSE.txt'), resolve(out, 'TABLER-LICENSE
 await copyFile(resolve(root, 'REMIX-LICENSE.txt'), resolve(out, 'REMIX-LICENSE.txt'))
 for (const name of ['SKILL-CREATOR-LICENSE.txt', 'FIND-SKILL-LICENSE.txt'])
   await copyFile(resolve(root, name), resolve(out, name))
+await copyFile(resolve(root, 'LOCAL-MODEL-LICENSE.txt'), resolve(out, 'LOCAL-MODEL-LICENSE.txt'))
 
 for (const name of ['CRAFT-AGENTS-LICENSE', 'CRAFT-AGENTS-NOTICE', 'BEUI-LICENSE.txt'])
   await copyFile(resolve(root, 'packages/design-system', name), resolve(out, name))

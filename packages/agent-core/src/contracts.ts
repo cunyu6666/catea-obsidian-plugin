@@ -1,9 +1,10 @@
 /**
- * [WHO]: Provides ConversationStore, JournalEntry, MemoryJob, MemoryPort, Message, ModelClient, ModelEvent, ModelRequest, Session, SessionSummary
+ * [WHO]: Provides AuxiliaryModel, ConversationStore, JournalEntry, MemoryJob, MemoryPort, Message, ModelClient, ModelEvent, ModelRequest, Session, SessionSummary
  * [FROM]: Depends on ./types, ./upstream-stream, ./providers
  * [TO]: Consumed by packages/agent-core/src/index.ts, packages/agent-core/src/context.ts,
  *   apps/obsidian/src/MessageQuotes.tsx, packages/agent-core/src/model-client.ts, packages/agent-core/src/upstream-stream.ts,
- *   packages/integrations/src/conversation-store.ts, packages/memory/src/index.ts, packages/memory/src/extraction.ts
+ *   packages/integrations/src/conversation-store.ts, packages/memory/src/index.ts, packages/memory/src/extraction.ts,
+ *   apps/obsidian/src/composition.ts, apps/obsidian/src/diary.ts, apps/obsidian/src/local-model.ts
  * [HERE]: packages/agent-core/src/contracts.ts - host-neutral conversation and memory ports with serializable session data
  */
 import type { ChatAttachment, ModelConfig, ToolEvent, TranscriptItem } from './types'
@@ -84,6 +85,11 @@ export type ModelEvent =
   | { type: 'done'; reply: ModelReply }
 export interface ModelClient {
   stream(request: Readonly<ModelRequest>, signal: AbortSignal): AsyncIterable<ModelEvent>
+}
+/** A separate model for optional metadata; null means the feature is disabled. */
+export interface AuxiliaryModel {
+  client: ModelClient
+  model: ModelConfig
 }
 export interface MemoryJob {
   id: string

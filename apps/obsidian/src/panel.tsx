@@ -1,6 +1,6 @@
 /**
  * [WHO]: Provides Panel
- * [FROM]: Depends on ../../../packages/agent-core/src/attachments, ../../../packages/agent-core/src/types, ./StreamingChatResponse, ./MessageQuotes, react, ./ChatMarkdown, catea-components, obsidian, ../../../packages/agent-core/src, ../../../packages/agent-core/src/byok, ../../../packages/agent-core/src/model-capabilities, ./session-drafts, ./locale, ./tool-presenters, ./turn-review, ../cat-welcome.png, ./main, ./settings
+ * [FROM]: Depends on ../../../packages/agent-core/src/local-model, ../../../packages/agent-core/src/attachments, ../../../packages/agent-core/src/types, ./StreamingChatResponse, ./MessageQuotes, react, ./ChatMarkdown, catea-components, obsidian, ../../../packages/agent-core/src, ../../../packages/agent-core/src/byok, ../../../packages/agent-core/src/model-capabilities, ./session-drafts, ./locale, ./tool-presenters, ./turn-review, ../cat-welcome.png, ./main, ./settings
  * [TO]: Consumed by apps/obsidian/src/main.tsx
  * [HERE]: apps/obsidian/src/panel.tsx - React sidebar root composing a header session dropdown, history, message list and composer; maps model picker, approvals, quotes and attachments
  */
@@ -38,10 +38,11 @@ import {
 } from 'catea-components'
 import { FuzzySuggestModal, TFolder } from 'obsidian'
 import type { Agent, Message } from '../../../packages/agent-core/src'
+import { isLiteModel, LITE_MODEL_ID } from '../../../packages/agent-core/src/local-model'
 import { configuredModels, selectedModel } from '../../../packages/agent-core/src/byok'
 import { unsupportedAttachment } from '../../../packages/agent-core/src/model-capabilities'
 import type { SessionDraft } from './session-drafts'
-import { humanizeError, type Language } from './locale'
+import { humanizeError, translate, type Language } from './locale'
 import { createToolPresenters } from './tool-presenters'
 import { collectFileChanges, showStandaloneFileReview } from './turn-review'
 import catWelcome from '../cat-welcome.png'
@@ -91,13 +92,18 @@ function MessageError({
   language,
   stopped,
   onContinue,
+  chatOnly = false,
 }: {
+  chatOnly?: boolean
   raw: string
   language: Language
   stopped: boolean
   onContinue?: () => void
 }) {
-  const message = humanizeError(raw, language)
+  const message =
+    chatOnly && stopped
+      ? translate(language, '本次生成已停止，回复已保留。')
+      : humanizeError(raw, language)
   return (
     <div
       className={`message-error${stopped ? ' is-stopped' : ''}`}
@@ -106,10 +112,14 @@ function MessageError({
       <span>{message}</span>
       {onContinue && (
         <button type="button" onClick={onContinue}>
-          {language === 'en' ? 'Continue task' : '继续任务'}
+          {chatOnly
+            ? translate(language, '继续对话')
+            : language === 'en'
+              ? 'Continue task'
+              : '继续任务'}
         </button>
       )}
-      {message !== raw && (
+      {message !== raw && !(chatOnly && stopped) && (
         <details>
           <summary>{language === 'en' ? 'Technical details' : '技术详情'}</summary>
           <code>{raw}</code>
@@ -448,8 +458,13 @@ export function Panel({ plugin }: { plugin: Catea }) {
   useEffect(() => plugin.subscribe(() => update((n) => n + 1)), [plugin])
   const selectionId = plugin.selections.at(-1)?.id
   const config = plugin.agentSettings,
-    models = configuredModels(config.models),
-    model = selectedModel(config.models, agent.session.modelId ?? config.modelId),
+    models = configuredModels(plugin.chatModels()),
+    requestedModelId = agent.session.modelId ?? config.modelId,
+    model =
+      requestedModelId === LITE_MODEL_ID
+        ? models.find(isLiteModel)
+        : selectedModel(models, requestedModelId),
+    localChat = requestedModelId === LITE_MODEL_ID || isLiteModel(model),
     empty = !agent.session.messages.length
   useEffect(() => {
     setAnnotation(null)
@@ -536,7 +551,9 @@ export function Panel({ plugin }: { plugin: Catea }) {
   }
   const continueTask = () => {
     changeDraft(sessionId, (current) =>
-      current.text.trim() ? current : { ...current, text: t('继续刚才的任务') },
+      current.text.trim()
+        ? current
+        : { ...current, text: t(localChat ? '继续刚才的对话' : '继续刚才的任务') },
     )
     panelRef.current?.querySelector<HTMLTextAreaElement>('.anno-composer__input')?.focus()
   }
@@ -555,6 +572,11 @@ export function Panel({ plugin }: { plugin: Catea }) {
       preparingSessions.current.has(target)
     )
       return
+    if (localChat && agent.running) return
+    if (localChat && sendingFiles.length) {
+      setError(t('Catea Lite 仅支持文字对话，请先移除附件。'))
+      return
+    }
     if (model && unsupportedAttachment(model, sendingFiles)) {
       setError(t('附件已保留：当前模型不支持此类图片或二进制文档，请切换支持该附件的模型。'))
       return
@@ -615,15 +637,20 @@ export function Panel({ plugin }: { plugin: Catea }) {
         <SelectValue />
       </SelectTrigger>
       <SelectContent>
+        {requestedModelId === LITE_MODEL_ID && !model && (
+          <SelectItem value="none" disabled>
+            {t('Catea Lite 未就绪')}
+          </SelectItem>
+        )}
         {models.length ? (
           models.map((m) => (
             <SelectItem key={m.id} value={m.id}>
               {m.name}
             </SelectItem>
           ))
-        ) : (
+        ) : requestedModelId !== LITE_MODEL_ID ? (
           <SelectItem value="none">{t('未配置模型')}</SelectItem>
-        )}
+        ) : null}
       </SelectContent>
     </Select>
   )
@@ -634,7 +661,7 @@ export function Panel({ plugin }: { plugin: Catea }) {
         onKeyDownCapture={(event) => {
           // Full IME bypass: arrows navigate candidate windows, Enter confirms
           // composition — none of them may reach the picker.
-          if (!slash || event.nativeEvent.isComposing) return
+          if (!slash || localChat || event.nativeEvent.isComposing) return
           if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
             event.preventDefault()
             event.stopPropagation()
@@ -661,7 +688,7 @@ export function Panel({ plugin }: { plugin: Catea }) {
         onKeyUpCapture={recheckSlash}
         onClickCapture={recheckSlash}
       >
-        {slash && (
+        {slash && !localChat && (
           <SkillPicker
             items={slashItems}
             activeIndex={slashActive}
@@ -682,9 +709,13 @@ export function Panel({ plugin }: { plugin: Catea }) {
           stopLabel={t('停止生成')}
           placeholder={
             !model
-              ? t('先在设置中配置模型')
+              ? t(
+                  requestedModelId === LITE_MODEL_ID
+                    ? '在设置中开启 Catea Lite，或选择其他模型'
+                    : '先在设置中配置模型',
+                )
               : agent.running
-                ? t('补充要求，会在安全边界接入…')
+                ? t(localChat ? '正在本机回复…' : '补充要求，会在安全边界接入…')
                 : empty
                   ? t('搜索或向 AI 提问…')
                   : t('继续对话…')
@@ -696,9 +727,9 @@ export function Panel({ plugin }: { plugin: Catea }) {
           hasSubmitContent={
             files.length > 0 || draft.quotes.some((quote) => !!quote.comment?.trim())
           }
-          onPickFiles={(input) => void readFiles(input)}
-          onPickFolder={addFolder}
-          onDropFiles={(input) => void readFiles(input)}
+          onPickFiles={localChat ? undefined : (input) => void readFiles(input)}
+          onPickFolder={localChat ? undefined : addFolder}
+          onDropFiles={localChat ? undefined : (input) => void readFiles(input)}
           attachLabel={t('添加附件')}
           fileLabel={t('添加文件')}
           folderLabel={t('添加文件夹')}
@@ -706,6 +737,9 @@ export function Panel({ plugin }: { plugin: Catea }) {
           disabled={!config.enabled || !model || (agent.historyBusy && !agent.running)}
           attachments={
             <>
+              {localChat && (
+                <div className="catea-local-model-status">{t('本地 · 32K · 仅对话')}</div>
+              )}
               {draft.skills.length > 0 && (
                 <div className="catea-skill-tags">
                   {draft.skills.map((id) => (
@@ -793,7 +827,9 @@ export function Panel({ plugin }: { plugin: Catea }) {
       )}
       {!model && (
         <div className="chat-notice">
-          <button onClick={() => plugin.openAgentSettings()}>{t('配置 BYOK 模型 →')}</button>
+          <button onClick={() => plugin.openAgentSettings()}>
+            {t(localChat ? '开启 Catea Lite →' : '配置 BYOK 模型 →')}
+          </button>
         </div>
       )}
     </>
@@ -1194,6 +1230,7 @@ export function Panel({ plugin }: { plugin: Catea }) {
                         )}
                         {m.error && (
                           <MessageError
+                            chatOnly={m.model === 'Catea Lite'}
                             raw={m.error}
                             language={config.language || 'zh'}
                             stopped={m.status === 'stopped'}

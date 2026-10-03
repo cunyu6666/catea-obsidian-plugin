@@ -6,7 +6,7 @@
  * [FROM]: Depends on (none)
  * [TO]: Consumed by apps/obsidian/src/main.tsx, apps/obsidian/src/panel.tsx, apps/obsidian/src/settings.ts, apps/obsidian/src/turn-review.ts,
  *   packages/agent-core/src/ask-user-question.ts, packages/agent-core/src/attachments.ts,
- *   packages/agent-core/src/byok.ts, packages/agent-core/src/index.ts,
+ *   packages/agent-core/src/byok.ts, packages/agent-core/src/index.ts, packages/agent-core/src/local-model.ts,
  *   packages/agent-core/src/model-capabilities.ts,
  *   packages/agent-core/src/providers.ts, packages/agent-core/src/upstream-stream.ts,
  *   packages/agent-core/src/vendor-presets.ts,
@@ -25,6 +25,7 @@ export interface ModelCapabilities {
 }
 
 export interface ModelConfig {
+  transport?: 'local'
   id: string
   name: string
   protocol: ModelProtocol

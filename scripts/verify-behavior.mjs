@@ -3459,3 +3459,330 @@ test('Unverified billing exposes no pricing or subscription entry in either sett
   assert.doesNotMatch(definitions, /订阅|套餐|一键订阅|刷新套餐状态/)
   assert.doesNotMatch(JSON.stringify(tab.sections()), /订阅|套餐/)
 })
+
+test('Local auxiliary titles preserve pending retries and never use the cloud metadata client', async () => {
+  const { Agent } = await load(
+    'packages/agent-core/src/index.ts',
+    {
+      './transport':
+        'export const serviceFetch=async()=>{throw new Error("Unexpected network request")}',
+      '../../agent-core/src/transport':
+        'export const serviceFetch=async()=>{throw new Error("Unexpected network request")}',
+      '../../integrations/src/mcp': 'export class McpPool {async connect(){return []}}',
+      '../../integrations/src/skills':
+        'export const loadSkills=async()=>[];export const readSkillResource=()=>{};export const listSkills=async()=>[];export const describeSkills=async()=>[];export const createSkill=async()=>({});export const presetSkillIds=[]',
+      '../upstream/loop/agent-loop': `export const agentLoop=async function*(){
+      yield {type:'message_end',message:{role:'assistant',content:[{type:'text',text:'A useful reply'}],stopReason:'stop',timestamp:Date.now()}};yield {type:'agent_end'};
+    }`,
+    },
+    { structuredClone, TransformStream },
+  )
+  let ready = false,
+    cloud = 0,
+    local = 0
+  const config = {
+    enabled: true,
+    models: [model],
+    modelId: model.id,
+    personaId: 'aria',
+    skills: [],
+    mcp: [],
+    memory: false,
+    web: false,
+    shell: false,
+    localTitles: true,
+  }
+  const agent = new Agent(
+    '/unused',
+    () => config,
+    { change() {}, notice() {}, approve: async () => true, ask: async () => ({}) },
+    {
+      conversations: { save: async () => {}, list: async () => [] },
+      memory: { close() {} },
+      modelClient: {
+        async *stream() {
+          cloud++
+          yield { type: 'done', reply: { text: '{"title":"Cloud"}', calls: [] } }
+        },
+      },
+      auxiliaryModel: async () => {
+        if (!ready) throw new Error('Preparing')
+        return {
+          model: { ...model, id: 'local', apiKey: '' },
+          client: {
+            async *stream() {
+              local++
+              yield { type: 'done', reply: { text: '{"title":"Local title"}', calls: [] } }
+            },
+          },
+        }
+      },
+    },
+  )
+  await agent.send('Please help', '')
+  assert.equal(agent.session.title, 'Please help')
+  assert.equal(agent.session.titleAttempts || 0, 0)
+  assert.equal(cloud, 0)
+  ready = true
+  await agent.send('Continue', '')
+  assert.equal(agent.session.title, 'Local title')
+  assert.equal(local, 1)
+  assert.equal(cloud, 0)
+  assert.equal(agent.session.messages.find((m) => m.role === 'assistant').model, model.name)
+})
+
+test('Lite settings expose three independent switches and shared download progress', async () => {
+  const { tab, plugin } = await settingsFixture()
+  const all = rows(tab)
+  const row = all.find((item) => item.name === 'Catea Lite')
+  assert.ok(row)
+  assert.doesNotMatch(row.desc, /qwen|gguf|wasm|python|ollama/i)
+  const listeners = new Set(),
+    changes = {},
+    buttons = []
+  let status = '',
+    removed = 0
+  plugin.localModel = {
+    state: { phase: 'idle', installed: false, progress: 0, usable: false },
+    prepare: async () => {},
+  }
+  plugin.prepareLocalModel = async () => {}
+  plugin.localModelEnabled = () =>
+    !!(
+      plugin.agentSettings.localChat ||
+      plugin.agentSettings.localTitles ||
+      plugin.agentSettings.localDiary
+    )
+  plugin.subscribe = (fn) => {
+    listeners.add(fn)
+    return () => listeners.delete(fn)
+  }
+  const update = () => {
+    for (const fn of listeners) fn()
+  }
+  plugin.setLocalFeature = async (feature, value) => {
+    plugin.agentSettings[feature] = value
+    plugin.localModel.state = {
+      phase: 'downloading',
+      installed: false,
+      progress: 37,
+      usable: false,
+    }
+    update()
+  }
+  plugin.removeLocalModel = async () => {
+    removed++
+    Object.assign(plugin.agentSettings, { localChat: false, localTitles: false, localDiary: false })
+    plugin.localModel.state = { phase: 'idle', installed: false, progress: 0, usable: false }
+    update()
+  }
+  row.render({
+    settingEl: { isConnected: true, addClass() {} },
+    descEl: {
+      createDiv: () => ({
+        setText: (value) => {
+          status = value
+        },
+      }),
+    },
+    addToggle() {
+      throw new Error('Header must not introduce a fourth switch')
+    },
+    addButton(fn) {
+      const button = {
+        buttonEl: { hidden: false, style: {} },
+        setButtonText(value) {
+          this.text = value
+          return this
+        },
+        setDisabled() {
+          return this
+        },
+        onClick(fn) {
+          this.click = fn
+          return this
+        },
+      }
+      buttons.push(button)
+      fn(button)
+      return this
+    },
+  })
+  for (const name of ['本地聊天', '对话标题', '日记']) {
+    const item = all.find(
+      (row) =>
+        (row.name === name && row.desc.includes('Catea Lite')) ||
+        (row.name === name && row.desc.includes('32K')),
+    )
+    assert.ok(item, name)
+    item.render({
+      settingEl: { isConnected: true },
+      addToggle(fn) {
+        fn({
+          setValue() {
+            return this
+          },
+          onChange(fn) {
+            changes[name] = fn
+            return this
+          },
+        })
+        return this
+      },
+    })
+  }
+  assert.equal(status, '未开启')
+  assert.ok(buttons.every((button) => button.buttonEl.style.display === 'none'))
+  await changes['本地聊天'](true)
+  assert.equal(plugin.agentSettings.localChat, true)
+  assert.equal(plugin.agentSettings.localTitles, undefined)
+  assert.equal(plugin.agentSettings.localDiary, undefined)
+  assert.equal(status, '正在下载 37%')
+  plugin.localModel.state.phase = 'error'
+  update()
+  assert.equal(buttons[0].buttonEl.hidden, false)
+  plugin.localModel.state = { phase: 'ready', installed: true, progress: 100, usable: true }
+  update()
+  assert.equal(status, '已就绪 · 在本机运行')
+  assert.equal(buttons[1].buttonEl.hidden, false)
+  assert.equal(buttons[0].buttonEl.style.display, 'none')
+  await changes['日记'](true)
+  assert.equal(plugin.agentSettings.localChat, true)
+  assert.equal(plugin.agentSettings.localTitles, undefined)
+  await buttons[1].click()
+  assert.equal(removed, 1)
+  assert.equal(status, '未开启')
+  tab.hide()
+  assert.equal(listeners.size, 0)
+})
+
+test('Lite multi-turn chat never reads notes, calls tools, cloud clients or memory and saves stopped replies', async () => {
+  const unexpected = () => {
+    throw new Error('Unexpected external operation')
+  }
+  const { Agent } = await load(
+    'packages/agent-core/src/index.ts',
+    {
+      './transport':
+        'export const serviceFetch=async()=>{throw new Error("Unexpected network request")}',
+      '../../agent-core/src/transport':
+        'export const serviceFetch=async()=>{throw new Error("Unexpected network request")}',
+      '../../integrations/src/mcp':
+        'export class McpPool {async connect(){throw new Error("MCP must not be called")}}',
+      '../../integrations/src/skills':
+        'export const loadSkills=async()=>{throw new Error("Skills must not be loaded")};export const readSkillResource=()=>{};export const listSkills=async()=>[];export const describeSkills=async()=>[];export const createSkill=async()=>({});export const presetSkillIds=[]',
+      '../upstream/loop/agent-loop':
+        'export const agentLoop=async function*(){throw new Error("Tools must not run")}',
+    },
+    { structuredClone, TransformStream },
+  )
+  const { liteModel, LITE_MODEL_ID } = await load('packages/agent-core/src/local-model.ts')
+  let enabled = true,
+    cancel = false,
+    requests = []
+  const config = {
+    enabled: true,
+    models: [model],
+    modelId: LITE_MODEL_ID,
+    personaId: 'aria',
+    memory: true,
+    skills: ['private'],
+    mcp: [{ id: 'private' }],
+    web: true,
+    shell: true,
+    localChat: true,
+    localTitles: false,
+  }
+  let agent
+  agent = new Agent(
+    '/unused',
+    () => config,
+    { change() {}, notice() {}, approve: unexpected, ask: unexpected },
+    {
+      conversations: { save: async () => {}, list: async () => [] },
+      memory: { injection: unexpected, enqueue: unexpected, close() {} },
+      modelClient: { stream: unexpected },
+      auxiliaryModel: unexpected,
+      models: () => (enabled ? [model, liteModel()] : [model]),
+      localChat: {
+        async *stream(request, signal) {
+          requests.push(structuredClone({ ...request, attachments: undefined }))
+          assert.equal(request.tools.length, 0)
+          assert.equal(request.attachments.size, 0)
+          yield { type: 'delta', text: cancel ? 'Partial reply' : 'Local reply' }
+          if (cancel) {
+            agent.stop()
+            signal.throwIfAborted()
+          }
+          yield { type: 'done', reply: { text: 'Local reply', calls: [] } }
+        },
+      },
+    },
+  )
+  await agent.send('First local turn', unexpected)
+  assert.equal(agent.session.messages.at(-1).status, 'complete')
+  assert.equal(agent.session.modelId, LITE_MODEL_ID)
+  assert.equal(requests[0].model.contextWindow, 32768)
+  await agent.send('Second local turn', unexpected)
+  assert.deepEqual(
+    Array.from(requests[1].transcript, (item) => item.content),
+    ['First local turn', 'Local reply', 'Second local turn'],
+  )
+  assert.equal(agent.session.titleGenerated, undefined)
+  assert.equal(agent.session.journal.length, 4)
+  await assert.rejects(
+    agent.send('Attachment', unexpected, [{ id: 'file', kind: 'text', path: 'private.md' }]),
+    /文字对话/,
+  )
+  cancel = true
+  await agent.send('Stop me', unexpected)
+  assert.equal(agent.session.messages.at(-1).status, 'stopped')
+  assert.equal(agent.session.transcript.at(-1).content, 'Partial reply')
+  cancel = false
+  await agent.send('Continue after stop', unexpected)
+  assert.ok(requests.at(-1).transcript.some((item) => item.content === 'Partial reply'))
+  enabled = false
+  await assert.rejects(agent.send('Do not send this to the cloud', unexpected), /Catea Lite/)
+  assert.equal(requests.length, 4)
+  const next = new Agent(
+    '/unused',
+    () => config,
+    { change() {}, notice() {}, approve: unexpected, ask: unexpected },
+    {
+      conversations: { save: async () => {}, list: async () => [] },
+      memory: { close() {} },
+      modelClient: { stream: unexpected },
+      models: () => [model],
+    },
+  )
+  assert.equal(next.session.modelId, LITE_MODEL_ID)
+  await assert.rejects(next.send('Keep the unavailable local selection', unexpected), /Catea Lite/)
+})
+
+test('Lite identity is canonical, needs no key, and cannot reach the remote model client', async () => {
+  const { liteModel } = await load('packages/agent-core/src/local-model.ts')
+  const { normalizeModel } = await load('packages/agent-core/src/byok.ts')
+  const canonical = liteModel()
+  const normalized = normalizeModel({
+    ...canonical,
+    name: 'Wrong',
+    contextWindow: 4096,
+    baseUrl: 'https://example.invalid',
+    apiKey: 'Wrong',
+  })
+  assert.equal(normalized.name, 'Catea Lite')
+  assert.equal(normalized.contextWindow, 32768)
+  assert.equal(normalized.baseUrl, '')
+  assert.equal(normalized.apiKey, '')
+  assert.throws(() => normalizeModel({ ...canonical, id: 'unknown' }))
+  const { DirectModelClient } = await load('packages/agent-core/src/model-client.ts', {
+    './providers': 'export const streamModel=()=>{throw new Error("Unexpected network request")}',
+  })
+  await assert.rejects(async () => {
+    for await (const _ of new DirectModelClient().stream(
+      { model: canonical },
+      new AbortController().signal,
+    )) {
+    }
+  }, /local runtime/)
+})

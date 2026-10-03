@@ -244,15 +244,19 @@ export function DiaryPanel({ plugin }: { plugin: Catea }) {
             </p>
             <p>
               {t(
-                '使用当前默认聊天模型，会发送相关对话并消耗模型额度。名称与头像仅用于日记，不改变聊天 Persona。',
+                plugin.agentSettings.localDiary
+                  ? '使用 Catea Lite 在本机生成，不发送对话、不消耗模型额度。名称与头像仅用于日记。'
+                  : '使用当前默认聊天模型，会发送相关对话并消耗模型额度。名称与头像仅用于日记，不改变聊天 Persona。',
               )}
             </p>
             {state?.error && (
               <p role="status">
                 {t(
-                  state.error === 'model'
-                    ? '请配置可用的聊天模型，日记会在模型可用后重试。'
-                    : '日记生成暂未完成，将自动重试。',
+                  state.error === 'local'
+                    ? 'Catea Lite 暂时不可用，日记会在准备好后重试。'
+                    : state.error === 'model'
+                      ? '请配置可用的聊天模型，日记会在模型可用后重试。'
+                      : '日记生成暂未完成，将自动重试。',
                 )}
               </p>
             )}
