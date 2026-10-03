@@ -93,7 +93,9 @@ const BILLING_APIS = [
   'https://asgard-api-utj6.onrender.com/billing',
 ] as const
 const BILLING_API = BILLING_APIS[0]
-const HOSTED_BILLING_API = BILLING_API
+// The hosted model path stays on Render until api.pencil.chat no longer resolves
+// to the legacy Tengine origin for Obsidian/Electron requests.
+const HOSTED_BILLING_API = BILLING_APIS[1]
 const HOSTED_MODEL_ID = 'catea-pro-hosted'
 // Keep checkout and pricing hidden until the hosted service is verified end to end.
 const BILLING_UI_ENABLED = false
