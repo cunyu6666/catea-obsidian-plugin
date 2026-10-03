@@ -97,6 +97,8 @@ const HOSTED_BILLING_API = BILLING_API
 const HOSTED_MODEL_ID = 'catea-pro-hosted'
 // Keep checkout and pricing hidden until the hosted service is verified end to end.
 const BILLING_UI_ENABLED = false
+// Internal-only diagnostics. Enable while debugging Asgard billing/model connectivity.
+const BILLING_DIAGNOSTICS_ENABLED = false
 const PRO_PRICES: Record<BillingCurrency, PlanPrice> = {
   USD: { original: '$10', sale: '$3', suffix: '/ month' },
   CNY: { original: '¥60', sale: '¥18', suffix: '/ 月' },
@@ -362,6 +364,66 @@ async function syncHostedBillingModel(owner: Catea, status?: BillingStatus) {
     owner.emit()
     throw error
   }
+}
+
+function maskLicense(value: string | undefined) {
+  const license = value?.trim() || ''
+  return license ? `${license.slice(0, 10)}… len=${license.length}` : '(empty)'
+}
+
+async function hostedProbe(url: string, license: string, stream: boolean) {
+  const response = await requestUrl({
+    url,
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Catea-License': license,
+    },
+    body: JSON.stringify({
+      model: 'catea/pro',
+      messages: [{ role: 'user', content: 'ping' }],
+      stream,
+      ...(stream ? { stream_options: { include_usage: true } } : {}),
+    }),
+    throw: false,
+  })
+  const body = new TextDecoder().decode(response.arrayBuffer).replace(/\s+/g, ' ').trim()
+  return `${response.status} • ${String(response.headers['content-type'] || 'unknown')} • ${body.slice(0, 160)}`
+}
+
+async function runBillingDiagnostics(owner: Catea, prefs: BillingPreferences) {
+  const email = prefs.billingEmail || prefs.billingStatus?.email || '',
+    model = owner.agentSettings.models.find((item) => item.id === HOSTED_MODEL_ID),
+    license = prefs.billingStatus?.license_key || model?.apiKey || '',
+    hostedUrl = `${HOSTED_BILLING_API}/hosted/v1/chat/completions`
+  const lines = [
+    `email: ${email || '(empty)'}`,
+    `cached plan: ${prefs.billingStatus?.plan || '(none)'} / pro=${String(prefs.billingStatus?.pro)}`,
+    `cached status: ${prefs.billingStatus?.status || '(none)'}`,
+    `hosted model: ${model ? `${model.name} / ${model.model}` : '(missing)'}`,
+    `hosted baseUrl: ${model?.baseUrl || '(missing)'}`,
+    `license: ${maskLicense(license)}`,
+  ]
+  try {
+    if (isEmail(email)) {
+      const status = await fetchBillingStatus(email)
+      lines.push(`billing/me: pro=${String(status.pro)} status=${status.status || '(none)'}`)
+    } else lines.push('billing/me: skipped, invalid email')
+  } catch (error) {
+    lines.push(`billing/me: ${error instanceof Error ? error.message : String(error)}`)
+  }
+  if (license) {
+    for (const stream of [false, true]) {
+      try {
+        lines.push(`hosted stream=${String(stream)}: ${await hostedProbe(hostedUrl, license, stream)}`)
+      } catch (error) {
+        lines.push(`hosted stream=${String(stream)}: ${error instanceof Error ? error.message : String(error)}`)
+      }
+    }
+  } else lines.push('hosted: skipped, missing license')
+  const report = lines.join('\n')
+  console.info('[Catea billing diagnostics]\n' + report)
+  return report
 }
 
 export async function syncSavedBillingStatus(owner: Catea, options: { refresh?: boolean } = {}) {
@@ -1102,6 +1164,33 @@ export class CateaSettings extends PluginSettingTab {
           )
         },
       },
+      ...(BILLING_DIAGNOSTICS_ENABLED
+        ? [
+            {
+              name: '套餐授权诊断',
+              desc: '测试套餐状态、授权密钥和 Asgard 托管模型接口。结果会写入控制台。',
+              render: (s: Setting) =>
+                s.addButton((button) =>
+                  button.setButtonText('运行诊断').onClick(async () => {
+                    button.setDisabled(true)
+                    button.setButtonText('正在检查…')
+                    try {
+                      const report = await runBillingDiagnostics(p, billingPrefs)
+                      await navigator.clipboard?.writeText(report).catch(() => undefined)
+                      new Notice('诊断完成，结果已复制并写入控制台')
+                    } catch (error) {
+                      new Notice(
+                        tr(error instanceof Error ? error.message : '无法读取 Pro 状态，请稍后重试'),
+                      )
+                    } finally {
+                      button.setDisabled(false)
+                      button.setButtonText('运行诊断')
+                    }
+                  }),
+                ),
+            },
+          ]
+        : []),
     ]
     const skills: SettingsRow[] = [
       {
