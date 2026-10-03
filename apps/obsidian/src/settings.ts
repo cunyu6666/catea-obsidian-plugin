@@ -146,7 +146,7 @@ function billingStatus(value: unknown): BillingStatus {
   const body = record(value),
     features = record(body.features)
   return {
-    pro: body.pro === true || body.plan === 'pro_monthly',
+    pro: body.pro === true,
     email: typeof body.email === 'string' ? body.email : undefined,
     license_key: typeof body.license_key === 'string' ? body.license_key : undefined,
     plan: typeof body.plan === 'string' ? body.plan : undefined,
@@ -262,6 +262,7 @@ function renderQuotaProgress(
   const monthly = status?.quota?.monthly,
     percent = monthly?.remaining_percent
   if (!status?.pro || typeof percent !== 'number') return
+  for (const node of Array.from(parent.querySelectorAll('.catea-quota-progress'))) node.remove()
   parent.addClass('catea-quota-setting')
   const remaining = Math.max(0, Math.min(100, Math.round(percent))),
     resetsIn = formatDurationUntil(monthly?.reset_at)

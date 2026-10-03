@@ -85,6 +85,10 @@ export class ModelServiceError extends Error {
   readonly status?: number
 
   constructor(detail: string, status?: number, host?: string) {
+    const visibleDetail = detail
+      .slice(0, 500)
+      .replace(/\s+/g, ' ')
+      .trim()
     const reason =
       /context[_ ]length|too many tokens|maximum context|prompt is too long|input too long/i.test(
         detail,
@@ -96,7 +100,10 @@ export class ModelServiceError extends Error {
     super(
       status === undefined
         ? t('modelStreamFailed')
-        : `${t('modelRequestFailed', { status, detail: t('modelErrorDetailHidden') })}${host ? ` [${host}]` : ''}`,
+        : `${t('modelRequestFailed', {
+            status,
+            detail: status === 200 && visibleDetail ? visibleDetail : t('modelErrorDetailHidden'),
+          })}${host ? ` [${host}]` : ''}`,
     )
     this.name = 'ModelServiceError'
     this.reason = reason

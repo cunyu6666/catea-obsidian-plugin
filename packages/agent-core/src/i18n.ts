@@ -9,7 +9,7 @@
 const labels: Record<string, string> = {
   attachmentUnavailable: '附件无法读取',
   modelStreamFailed: '模型响应失败',
-  modelRequestFailed: '模型请求失败（{status}）',
+  modelRequestFailed: '模型请求失败（{status}）：{detail}',
   modelErrorDetailHidden: '请检查接口、模型与密钥',
   modelStreamMissing: '接口未返回响应流',
   modelInvalidArguments: '模型返回的工具参数不是有效 JSON',
