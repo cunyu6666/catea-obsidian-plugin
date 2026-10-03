@@ -52,8 +52,14 @@ import { syncSavedBillingStatus } from './settings'
 const toolPresenters = createToolPresenters()
 const catReplyActions = ['正在踩奶…', '正在舔爪…', '正在甩尾巴…', '正在扒拉键盘…'] as const
 
-function isHostedBillingModel(model: { baseUrl: string } | undefined) {
-  return model?.baseUrl.replace(/\/$/, '').endsWith('/billing/hosted/v1') === true
+function isHostedBillingModel(
+  model: { id?: string; baseUrl: string; model?: string } | undefined,
+) {
+  return (
+    model?.id === 'catea-pro-hosted' ||
+    model?.model === 'catea/pro' ||
+    model?.baseUrl.replace(/\/$/, '').endsWith('/billing/hosted/v1') === true
+  )
 }
 
 function MessageCopyButton({
