@@ -330,7 +330,17 @@ async function responseJson(response: Response, fallbackUrl: string): Promise<Re
         host = ''
       }
     }
-    throw new ModelServiceError(body.slice(0, 2_000), response.status, host)
+    const excerpt = body
+      .slice(0, 160)
+      .replace(/\s+/g, ' ')
+      .trim()
+    throw new ModelServiceError(
+      response.status === 200
+        ? `Provider returned a non-JSON response with HTTP 200. Check the model base URL and API route. Response starts with: ${excerpt}`
+        : body.slice(0, 2_000),
+      response.status,
+      host,
+    )
   }
 }
 
