@@ -350,7 +350,17 @@ async function nativeWebSearch(
       signal: fallbackSignal,
     })
     if (res.ok) {
-      const data = (await res.json()) as Record<string, unknown>
+      const text = await res.text()
+      let data: Record<string, unknown>
+      try {
+        const parsed: unknown = JSON.parse(text)
+        data =
+          parsed && typeof parsed === 'object' && !Array.isArray(parsed)
+            ? (parsed as Record<string, unknown>)
+            : {}
+      } catch {
+        data = {}
+      }
       const abstract = typeof data.AbstractText === 'string' ? data.AbstractText : ''
       const source = typeof data.AbstractSource === 'string' ? data.AbstractSource : ''
       const url = typeof data.AbstractURL === 'string' ? data.AbstractURL : ''
