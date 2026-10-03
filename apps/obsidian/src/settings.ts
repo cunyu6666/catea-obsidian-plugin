@@ -93,7 +93,9 @@ const BILLING_APIS = [
   'https://asgard-api-utj6.onrender.com/billing',
 ] as const
 const BILLING_API = BILLING_APIS[0]
-const HOSTED_BILLING_API = BILLING_API
+// Use the Render origin for hosted model calls until api.pencil.chat consistently
+// resolves to the Cloudflare/Render origin from Obsidian/Electron.
+const HOSTED_BILLING_API = BILLING_APIS[1]
 const HOSTED_MODEL_ID = 'catea-pro-hosted'
 // Keep checkout and pricing hidden until the hosted service is verified end to end.
 const BILLING_UI_ENABLED = false
