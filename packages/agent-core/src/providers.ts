@@ -550,7 +550,7 @@ export async function streamModel(
   }
   const completionUrl = endpoint(config.baseUrl, '/chat/completions')
   const cateaHosted = new URL(completionUrl).pathname.includes('/billing/hosted/v1/')
-  const fetchCompletion = (includeUsage: boolean) =>
+  const fetchCompletion = (includeUsage: boolean, forceBuffered = false) =>
     serviceFetch(completionUrl, {
       method: 'POST',
       signal,
@@ -562,7 +562,10 @@ export async function streamModel(
       },
       body: JSON.stringify({
         ...request,
-        ...(includeUsage && streaming ? { stream_options: { include_usage: true } } : {}),
+        ...(forceBuffered ? { stream: false } : {}),
+        ...(includeUsage && streaming && !forceBuffered
+          ? { stream_options: { include_usage: true } }
+          : {}),
       }),
     })
   let response = await fetchCompletion(true)
@@ -570,7 +573,16 @@ export async function streamModel(
   if (!response.ok) throw await responseError(response, completionUrl)
   options.onTransport?.(isEventStream(response) ? 'sse' : 'buffered')
   if (!isEventStream(response)) {
-    const data = await responseJson(response, completionUrl)
+    let data: Record<string, unknown>
+    try {
+      data = await responseJson(response, completionUrl)
+    } catch (error) {
+      if (!cateaHosted || !streaming || !(error instanceof ModelServiceError) || error.status !== 200)
+        throw error
+      response = await fetchCompletion(false, true)
+      if (!response.ok) throw await responseError(response, completionUrl)
+      data = await responseJson(response, completionUrl)
+    }
     const choice = records(data.choices)[0] || {}
     const message = record(choice.message)
     const text = typeof message.content === 'string' ? message.content : ''
