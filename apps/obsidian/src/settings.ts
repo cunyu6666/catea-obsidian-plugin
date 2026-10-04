@@ -1719,6 +1719,22 @@ class CreditPackModal extends Modal {
       el = this.contentEl
     this.titleEl.setText(tr('购买一次性 credits 包'))
     el.addClass('catea-plan-modal')
+    if (this.billing.billingStatus?.pro !== true) {
+      el.createEl('p', {
+        cls: 'catea-plan-modal__lede',
+        text: tr('一次性 credits 包仅适用于 Pro。请先订阅 Pro 后再购买额外额度。'),
+      })
+      new Setting(el).addButton((button) =>
+        button
+          .setButtonText(tr('订阅 Pro'))
+          .setCta()
+          .onClick(() => {
+            this.close()
+            new SubscriptionModal(this.owner, this.billing, this.saved, this.updateStatus).open()
+          }),
+      )
+      return
+    }
     el.createEl('p', {
       cls: 'catea-plan-modal__lede',
       text: tr(
@@ -1762,6 +1778,10 @@ class CreditPackModal extends Modal {
   ) {
     const tr = this.owner.t,
       email = this.billing.billingEmail || ''
+    if (this.billing.billingStatus?.pro !== true) {
+      new Notice(tr('一次性 credits 包仅适用于 Pro。请先订阅 Pro 后再购买额外额度。'))
+      return
+    }
     if (!isEmail(email)) {
       new Notice(tr('请先填写有效邮箱'))
       return

@@ -696,6 +696,8 @@ Object.assign(english, {
   '还没有额外额度。套餐额度用完后，可购买一次性 credits 包继续使用。':
     'No extra credits yet. When your plan usage runs out, you can buy one-time credits to keep using hosted AI.',
   '购买一次性 credits 包': 'Buy one-time credits',
+  '一次性 credits 包仅适用于 Pro。请先订阅 Pro 后再购买额外额度。':
+    'One-time credits packs are only available for Pro. Subscribe to Pro before buying extra credits.',
   购买: 'Buy',
   '高级功能优先开放：连接器、自定义 Persona、媒体生成':
     'Priority access to advanced features: connectors, custom personas, and media generation',
