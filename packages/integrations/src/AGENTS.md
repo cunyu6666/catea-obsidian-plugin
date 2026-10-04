@@ -9,10 +9,11 @@ package builds on.
 ## Member List
 
 conversation-store.ts: Vault-backed conversation persistence with serialized writes, a 500-session index, eviction cleanup and delete rollback.
+connectors.ts: Built-in connector manifest registry for the first MVP apps, email and Figma; declares read/write capabilities, auth/key requirements, semantic tools and adapter routes, and exposes read-only discovery tools for the Agent.
 data-dir.ts: Single compile-time root for all vault-local plugin state; `scripts/build.mjs` injects `CATEA_DATA_DIR` so a development bundle reads and writes `.catea-dev` instead of the released plugin's `.catea`, and falls back to `.catea` when unbundled.
 find-skill.md: Preset skill prompt that ships inside the bundle; discovers skills through the skills.sh HTTP search API and gates any third-party text behind user confirmation before `skill_create`.
 image-generation.ts: Configurable OpenAI Images or DashScope generation, bounded responses, key-free image downloads and exclusive vault-local writes under Attachments/Catea.
-index.ts: Barrel re-exporting the integration surface (VaultTools, McpPool, skill loaders, storage helpers); nothing imports it, consumers import the submodules directly.
+index.ts: Barrel re-exporting the integration surface (VaultTools, connector manifests, McpPool, skill loaders, storage helpers); nothing imports it, consumers import the submodules directly.
 legacy-snapshots.ts: One-way migration that deletes only the obsolete `.catea/snapshots` tree created by pre-0.3.12 full-vault recovery.
 media-generation.ts: DashScope video task submission/resumption and bounded abortable polling, plus synchronous MP3 speech synthesis; key-free downloads and exclusive vault-local media writes.
 mcp.ts: `McpPool` isolates failed servers with sanitized diagnostics and a 15-second discovery deadline, connects enabled stdio and HTTP MCP servers, paginates tool discovery and namespaces tool names to 64 chars; catalog cap 1000, call timeout 120 s, output 24000 chars; carries the optional `envSecret` variable name for stdio token injection.

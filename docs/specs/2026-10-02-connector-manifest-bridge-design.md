@@ -291,19 +291,22 @@ connection status, sync cursors, and last checked time.
 6. A connector manifest cannot grant new permissions by itself; it only
    describes capabilities that the runtime and user enable.
 
-## 9. Initial Connectors
+## 9. MVP Connectors
 
-| Connector | First adapter | First write mode |
+The minimum MVP is intentionally limited to two applications. Both must declare
+read and write capabilities in the manifest layer before executable adapters are
+wired in.
+
+| Connector | First read mode | First write mode |
 |---|---|---|
-| Figma | Official MCP or local plugin bridge | Canvas write through Plugin API |
-| Email | Gmail API, Microsoft Graph, or SMTP adapter | Draft creation before send |
-| WeRead | Official Agent API for read; local SDK for experimental write | Review/thought write behind strict approval |
+| Email | Gmail API, Microsoft Graph or IMAP search/read | Draft creation before send through Gmail API, Microsoft Graph, SMTP or a mailto fallback |
+| Figma | Figma file/node context through official MCP or REST metadata | Canvas write through official MCP `use_figma` or a local plugin bridge |
 
 ## 10. Implementation Plan
 
 1. Define a JSON schema for connector manifests.
 2. Add a manifest loader under `packages/integrations/src/connectors/`.
-3. Add built-in read-only manifests for Figma, Gmail, Outlook, and WeRead.
+3. Add built-in read-only manifests for Email and Figma.
 4. Add account metadata storage and secret references.
 5. Expose `connector_list` and `connector_capabilities`.
 6. Add Figma as the first executable connector through an adapter interface.
@@ -318,4 +321,3 @@ connection status, sync cursors, and last checked time.
 | Should MCP presets be migrated into manifests? | Yes eventually, but only after the manifest runtime exists |
 | Does Figma use official MCP first or local bridge first? | Official MCP for compatibility research; local bridge for product control |
 | How much adapter code belongs in Catea? | Keep protocol glue in Catea; keep app-specific heavy logic in adapter packages |
-

@@ -1,6 +1,6 @@
 /**
  * [WHO]: Provides Agent, Hooks, Message, Session, Settings
- * [FROM]: Depends on ../../integrations/src/media-generation, ../../integrations/src/image-generation, ./i18n, ../upstream/loop/agent-loop, ./context, ./compaction, ./compaction-summary, ./contracts, ./upstream-stream, ./ask-user-question, ./types, ../../integrations/src/web, ./byok, ./model-capabilities, ./permission-policy, ./providers, ../../personas/src, ../../integrations/src/data-dir, ../../integrations/src/skills, ../../integrations/src/tools, ../../integrations/src/mcp, ../../memory/src/tools, ./protocol-repair, ./conversation-title, ./local-model
+ * [FROM]: Depends on ../../integrations/src/media-generation, ../../integrations/src/image-generation, ./i18n, ../upstream/loop/agent-loop, ./context, ./compaction, ./compaction-summary, ./contracts, ./upstream-stream, ./ask-user-question, ./types, ../../integrations/src/web, ./byok, ./model-capabilities, ./permission-policy, ./providers, ../../personas/src, ../../integrations/src/data-dir, ../../integrations/src/skills, ../../integrations/src/tools, ../../integrations/src/mcp, ../../integrations/src/connectors, ../../memory/src/tools, ./protocol-repair, ./conversation-title, ./local-model
  * [TO]: Consumed by apps/obsidian/src/composition.ts, apps/obsidian/src/main.tsx,
  *   apps/obsidian/src/panel.tsx
  * [HERE]: packages/agent-core/src/index.ts - class Agent owns one session: persists it, repairs interrupted tool calls, assembles tools, drives agentLoop and enqueues memory; index capped at 500
@@ -66,6 +66,7 @@ import {
 } from '../../integrations/src/skills'
 import { VaultTools, fileTools, type Approve } from '../../integrations/src/tools'
 import { McpPool, type McpConfig } from '../../integrations/src/mcp'
+import { connectorTools, runConnectorTool } from '../../integrations/src/connectors'
 import { memoryTools, memoryReadOnly } from '../../memory/src/tools'
 import { repairToolProtocol } from './protocol-repair'
 import { generateConversationTitle } from './conversation-title'
@@ -709,6 +710,7 @@ export class Agent {
           : []),
         ...(imageGenerationReady(config.imageGeneration) ? [imageGenerationTool] : []),
         ...(this.hooks.host?.tools || []),
+        ...connectorTools,
         ...(config.web ? [...webTools, ...linkWorldTools] : []),
         askUserQuestionTool,
         ...fileTools.filter(
@@ -926,6 +928,7 @@ Internal note references use [[path|label]]. Only call listed tools. Preserve ra
           )
           return this.pool.call(name, args, signal)
         }
+        if (name.startsWith('connector_')) return runConnectorTool(name, args)
         if (name.startsWith('memory_')) {
           if (!this.settings().memory) throw new Error('记忆工具已关闭')
           await requirePermission(
