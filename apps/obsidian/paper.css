@@ -749,14 +749,16 @@ body.gp-enabled .catea-editor-zoom-label { position: absolute; width: 1px; heigh
 .catea-credit-pack-section h3 {margin:0 0 6px;font-size:17px;letter-spacing:-.02em}
 .catea-credit-pack-section__lede {margin:0;color:var(--text-muted);line-height:1.6}
 .catea-credit-pack-grid {display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:14px}
-.catea-credit-pack-card {display:flex;min-height:190px;flex-direction:column;gap:8px;padding:16px;border:1px solid var(--background-modifier-border);border-radius:16px;background:var(--background-primary)}
-.catea-credit-pack-card h4 {margin:0;font-size:18px;letter-spacing:-.02em}
-.catea-credit-pack-card__price {color:var(--interactive-accent);font-size:24px;font-weight:700;letter-spacing:-.03em}
-.catea-credit-pack-card p {margin:0;color:var(--text-muted);font-size:13px;line-height:1.45}
+.catea-credit-pack-card {display:flex;min-height:176px;flex-direction:column;gap:10px;padding:18px;border:1px solid var(--background-modifier-border);border-radius:16px;background:var(--background-primary)}
+.catea-credit-pack-card__label {color:var(--text-muted);font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase}
+.catea-credit-pack-card__price {color:var(--text-normal);font-size:30px;font-weight:800;letter-spacing:-.04em;line-height:1.05}
+.catea-credit-pack-card p {margin:0;color:var(--text-muted);font-size:15px;font-weight:650;line-height:1.35}
 .catea-credit-pack-card .setting-item {margin-top:auto;padding:0}
 .catea-credit-pack-card .setting-item-info {display:none}
 .catea-credit-pack-card .setting-item-control {width:100%;justify-content:stretch}
 .catea-credit-pack-card button {width:100%;justify-content:center}
+.catea-credit-pack-card button.catea-credit-pack-card__button {background:var(--interactive-accent);color:var(--text-on-accent);box-shadow:0 8px 22px rgba(var(--gp-accent-rgb,84,115,99),.18)}
+.catea-credit-pack-card button.catea-credit-pack-card__button:hover {background:var(--interactive-accent-hover)}
 .catea-quota-setting {display:block}
 .catea-local-model-status {margin-top:6px;color:var(--text-muted);font-size:var(--font-ui-smaller)}
 .catea-quota-setting > .setting-item-info {margin-bottom:8px}

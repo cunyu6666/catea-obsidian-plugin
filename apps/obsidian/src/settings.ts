@@ -121,14 +121,14 @@ const CREDIT_PACKS: Array<{
   {
     plan: 'credits_20k',
     credits: '20,000',
-    label: 'Small top-up',
+    label: 'Small',
     prices: { USD: '$3', CNY: '¥18' },
   },
-  { plan: 'credits_50k', credits: '50,000', label: 'More room', prices: { USD: '$6', CNY: '¥36' } },
+  { plan: 'credits_50k', credits: '50,000', label: 'Value', prices: { USD: '$6', CNY: '¥36' } },
   {
     plan: 'credits_100k',
     credits: '100,000',
-    label: 'Best value',
+    label: 'Power',
     prices: { USD: '$9.9', CNY: '¥60' },
   },
 ]
@@ -1742,20 +1742,15 @@ class CreditPackModal extends Modal {
     const grid = section.createDiv({ cls: 'catea-credit-pack-grid' })
     for (const pack of CREDIT_PACKS) {
       const card = grid.createDiv({ cls: 'catea-credit-pack-card' })
-      card.createDiv({ cls: 'catea-plan-card__eyebrow', text: pack.label })
-      card.createEl('h4', { text: `${pack.credits} credits` })
+      card.createDiv({ cls: 'catea-credit-pack-card__label', text: `Credits Pack · ${pack.label}` })
       card.createDiv({
         cls: 'catea-credit-pack-card__price',
         text: creditPackPriceText(pack, this.currency),
       })
-      card.createEl('p', {
-        text:
-          this.currency === 'CNY'
-            ? tr('一次性购买，支持微信支付，不会自动续费。')
-            : tr('一次性购买，不会自动续费。'),
-      })
+      card.createEl('p', { text: `${pack.credits} credits` })
       new Setting(card).addButton((button) =>
         button
+          .setClass('catea-credit-pack-card__button')
           .setButtonText(`${tr('购买')} · ${creditPackPriceText(pack, this.currency)}`)
           .onClick(() => void this.purchase(pack.plan, button)),
       )
