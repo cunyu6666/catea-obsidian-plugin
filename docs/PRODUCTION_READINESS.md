@@ -10,14 +10,18 @@ and hosted-model operations are safe to expose.
 - The plugin billing UI is disabled by default through `BILLING_UI_ENABLED`.
 - Internal billing diagnostics are disabled by default through
   `BILLING_DIAGNOSTICS_ENABLED`.
-- The public API and hosted-model paths use `https://api.pencil.chat/billing`.
+- The public API and hosted-model paths temporarily use the Render origin. The
+  branded `api.pencil.chat` domain remains a diagnostic target until its
+  regional DNS behavior is stable.
 - On 2026-10-04, the authoritative DNS record and the Cloudflare, Google, AliDNS,
   and 114 public resolvers all returned the Render CNAME chain. The health route
   reached Render successfully. A prior regional response returned an Alibaba
   `Tengine` HTML page, so DNS stability remains an open production gate.
-- On 2026-10-04, live checkout probes for the USD monthly subscription, CNY
-  30-day pass, and CNY credit pack all returned the production
-  `pancake.waffo.ai` checkout host rather than a sandbox host.
+- On 2026-10-04, checkout probes returned `pancake.waffo.ai`, but that hostname
+  is shared by both environments and is not proof of Live Mode. Comparing the
+  returned product IDs against the ignored local environment inventory showed
+  that the deployed monthly and 20K/50K/100K credit checkouts all use the test
+  catalog. Payment is therefore not production-ready.
 - Known credential-pattern scans over the complete Git histories of the plugin,
   API, and Web repositories found no committed MiniMax key, Creem key, Waffo
   private-key blob, or tracked private environment file. GitHub server-side
@@ -44,10 +48,13 @@ an installed Obsidian build.
   Confirm the custom domain returns Render JSON/SSE from target user networks,
   not an Alibaba `Tengine` HTML page. Consider a proxied DNS/CDN route only after
   validating streaming and request timeout behavior.
-- Verify the Render environment as one production set: Waffo provider and
-  production environment, merchant and store, every subscription/pass/credit
-  product, webhook verification, branded success URL, hosted-model provider,
-  persistent database, and production secrets.
+- Replace the deployed Waffo test configuration with one reviewed production
+  set: the production-bound private key, merchant and store, published Live
+  product IDs for the subscription, 30-day pass, and every credit pack, the
+  production webhook verification key, branded success URL, hosted-model
+  provider, and persistent database. A checkout hostname is insufficient
+  evidence; verify returned IDs against the Live catalog and process a real
+  low-value payment whose webhook reports `mode: "prod"`.
 - Define refund, dispute, cancellation, and chargeback behavior. Waffo refund and
   dispute events currently record the event but do not revoke Pro access or
   reverse unused credits.

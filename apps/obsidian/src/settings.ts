@@ -99,10 +99,10 @@ const BILLING_APIS = [
   'https://api.pencil.chat/billing',
   'https://asgard-api-utj6.onrender.com/billing',
 ] as const
-const BILLING_API = BILLING_APIS[0]
-// Keep the public model endpoint on Catea's domain; the Render origin remains a
-// diagnostics fallback so operators can distinguish DNS from service failures.
-const HOSTED_BILLING_API = BILLING_APIS[0]
+// Route production traffic through the Render origin until api.pencil.chat no
+// longer resolves intermittently to an Alibaba Tengine HTML page.
+const BILLING_API = BILLING_APIS[1]
+const HOSTED_BILLING_API = BILLING_APIS[1]
 const HOSTED_MODEL_ID = 'catea-pro-hosted'
 // Keep checkout and pricing hidden until the production security review is complete.
 const BILLING_UI_ENABLED = false
