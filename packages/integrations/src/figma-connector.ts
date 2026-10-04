@@ -248,6 +248,31 @@ async function defaultFigmaMcpCall(
   }
 }
 
+async function callLocalBridge(
+  operation: FigmaConnectorCall,
+  args: Record<string, unknown>,
+  signal: AbortSignal,
+): Promise<unknown> {
+  if (operation === 'read') throw new Error('Local Figma bridge read is not implemented yet')
+  const response = await fetch('http://127.0.0.1:38451/v1/actions', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      operation,
+      target: record(args.target),
+      document: normalizeDocument(args, operation),
+    }),
+    signal,
+  })
+  const payload = await response.json()
+  if (!response.ok) throw new Error(JSON.stringify(payload).slice(0, 1000))
+  return {
+    connector: 'figma',
+    adapter: 'figma_local_plugin_bridge',
+    bridge: payload,
+  }
+}
+
 export async function callFigmaConnector(
   operation: FigmaConnectorCall,
   args: Record<string, unknown>,
@@ -256,6 +281,8 @@ export async function callFigmaConnector(
   call: FigmaMcpCall = defaultFigmaMcpCall,
   signal: AbortSignal,
 ): Promise<unknown> {
+  if (config.adapter === 'figma_local_plugin_bridge')
+    return callLocalBridge(operation, args, signal)
   if (config.adapter && config.adapter !== 'figma_official_mcp')
     throw new Error(`Figma adapter is not executable yet: ${config.adapter}`)
   const target = parseFigmaTarget(args)

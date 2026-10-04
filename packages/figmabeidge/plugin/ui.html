@@ -1,0 +1,97 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <style>
+      body {
+        margin: 0;
+        padding: 14px;
+        font: 12px/1.45 Inter, ui-sans-serif, system-ui, sans-serif;
+        color: #202124;
+        background: #ffffff;
+      }
+      .row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: #d93025;
+      }
+      .dot.ok {
+        background: #188038;
+      }
+      code {
+        display: block;
+        margin-top: 12px;
+        padding: 8px;
+        border: 1px solid #e0e0e0;
+        border-radius: 6px;
+        background: #fafafa;
+        word-break: break-all;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="row">
+      <span id="dot" class="dot"></span>
+      <strong id="status">Connecting to Catea bridge...</strong>
+    </div>
+    <p id="detail">Keep this window open while writing from Obsidian.</p>
+    <code>http://127.0.0.1:38451</code>
+    <script>
+      const base = 'http://127.0.0.1:38451'
+      const dot = document.getElementById('dot')
+      const statusEl = document.getElementById('status')
+      const detailEl = document.getElementById('detail')
+      const pending = new Set()
+
+      function setStatus(ok, text, detail) {
+        dot.className = ok ? 'dot ok' : 'dot'
+        statusEl.textContent = text
+        detailEl.textContent = detail
+      }
+
+      async function poll() {
+        try {
+          const response = await fetch(`${base}/v1/actions/next?client=figma-plugin`)
+          if (response.status === 204) {
+            setStatus(true, 'Connected', 'Waiting for Catea write jobs.')
+            return
+          }
+          if (!response.ok) throw new Error(`Bridge returned ${response.status}`)
+          const action = await response.json()
+          pending.add(action.id)
+          setStatus(true, 'Rendering', `Action ${action.id}`)
+          parent.postMessage({ pluginMessage: { type: 'render', action } }, '*')
+        } catch (error) {
+          setStatus(false, 'Bridge offline', error instanceof Error ? error.message : String(error))
+        }
+      }
+
+      window.onmessage = async (event) => {
+        const message = event.data.pluginMessage
+        if (!message || message.type !== 'result') return
+        pending.delete(message.actionId)
+        await fetch(`${base}/v1/actions/${message.actionId}/result`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            ok: message.ok,
+            result: message.result,
+            error: message.error,
+          }),
+        }).catch(() => {})
+        setStatus(message.ok, message.ok ? 'Rendered' : 'Render failed', message.error || `Action ${message.actionId}`)
+      }
+
+      setInterval(() => {
+        if (pending.size === 0) void poll()
+      }, 800)
+      void poll()
+    </script>
+  </body>
+</html>
