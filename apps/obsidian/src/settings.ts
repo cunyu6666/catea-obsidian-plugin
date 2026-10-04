@@ -50,7 +50,8 @@ interface SettingsSection {
   heading?: string
   rows: SettingsRow[]
 }
-type BillingPlan = 'monthly' | 'credits_20k' | 'credits_50k' | 'credits_100k'
+type CreditPackPlan = 'credits_20k' | 'credits_50k' | 'credits_100k'
+type BillingPlan = 'monthly' | 'pro_30d' | CreditPackPlan
 type BillingCurrency = 'USD' | 'CNY'
 interface PlanPrice {
   original: string
@@ -99,9 +100,8 @@ const BILLING_APIS = [
   'https://api.pencil.chat/billing',
   'https://asgard-api-utj6.onrender.com/billing',
 ] as const
-// Route production traffic through the Render origin until api.pencil.chat no
-// longer resolves intermittently to an Alibaba Tengine HTML page.
-const BILLING_API = BILLING_APIS[1]
+// Route hosted-model traffic through Render until api.pencil.chat no longer
+// resolves intermittently to an Alibaba Tengine HTML page.
 const HOSTED_BILLING_API = BILLING_APIS[1]
 const HOSTED_MODEL_ID = 'catea-pro-hosted'
 // Keep checkout and pricing hidden until the production security review is complete.
@@ -110,10 +110,10 @@ const BILLING_UI_ENABLED = false
 const BILLING_DIAGNOSTICS_ENABLED = false
 const PRO_PRICES: Record<BillingCurrency, PlanPrice> = {
   USD: { original: '$30', sale: '$9.9', suffix: '/ month' },
-  CNY: { original: '¥180', sale: '¥60', suffix: '/ 月' },
+  CNY: { original: '¥180', sale: '¥60', suffix: '/ 30 days' },
 }
 const CREDIT_PACKS: Array<{
-  plan: Exclude<BillingPlan, 'monthly'>
+  plan: CreditPackPlan
   credits: string
   label: string
   prices: Record<BillingCurrency, string>
@@ -399,6 +399,24 @@ function addCurrencyDropdown(
   })
 }
 
+function checkoutPlan(currency: BillingCurrency): BillingPlan {
+  return currency === 'CNY' ? 'pro_30d' : 'monthly'
+}
+
+function renderCurrencyHelp(
+  parent: HTMLElement,
+  tr: (text: string) => string,
+  currency: BillingCurrency,
+) {
+  parent.createDiv({
+    cls: 'catea-currency-help',
+    text:
+      currency === 'CNY'
+        ? tr('人民币支付为一次性购买 30 天 Pro，不会自动续费；到期后可再次购买续期。')
+        : tr('美元支付为月度订阅，成功后会按月自动续费，可在支付服务中管理。'),
+  })
+}
+
 async function syncHostedBillingModel(owner: Catea, status?: BillingStatus) {
   const c = owner.agentSettings,
     license =
@@ -466,7 +484,7 @@ async function hostedProbe(url: string, license: string) {
     },
     throw: false,
   })
-  const headers = response.headers as Record<string, string>,
+  const headers = response.headers,
     contentType = headerValue(headers, 'content-type') || 'unknown',
     requestId = headerValue(headers, 'x-catea-request-id') || 'none',
     server = headerValue(headers, 'server') || 'unknown',
@@ -499,16 +517,16 @@ async function runBillingDiagnostics(owner: Catea, prefs: BillingPreferences) {
   }
   if (license) {
     try {
-      lines.push(`hosted ${new URL(HOSTED_BILLING_API).host}: ${await hostedProbe(hostedUrl, license)}`)
+      lines.push(
+        `hosted ${new URL(HOSTED_BILLING_API).host}: ${await hostedProbe(hostedUrl, license)}`,
+      )
     } catch (error) {
       lines.push(
         `hosted ${new URL(HOSTED_BILLING_API).host}: ${error instanceof Error ? error.message : String(error)}`,
       )
     }
   } else lines.push('hosted: skipped, missing license')
-  const report = lines.join('\n')
-  console.info('[Catea billing diagnostics]\n' + report)
-  return report
+  return lines.join('\n')
 }
 
 export async function syncSavedBillingStatus(owner: Catea, options: { refresh?: boolean } = {}) {
@@ -1594,6 +1612,7 @@ class SubscriptionModal extends Modal {
       this.contentEl.empty()
       this.onOpen()
     })
+    renderCurrencyHelp(el, tr, this.currency)
     const grid = el.createDiv({ cls: 'catea-plan-grid' })
     this.card(grid, {
       title: 'Free',
@@ -1672,7 +1691,7 @@ class SubscriptionModal extends Modal {
     button.setDisabled(true)
     try {
       await this.owner.saveAgentSettings()
-      const url = await createCheckout(email, 'monthly', this.currency)
+      const url = await createCheckout(email, checkoutPlan(this.currency), this.currency)
       window.open(url, '_blank', 'noopener,noreferrer')
       new Notice(tr('支付页已打开，完成后回到这里刷新套餐状态'))
       try {
@@ -1761,10 +1780,7 @@ class CreditPackModal extends Modal {
       )
     }
   }
-  private async purchase(
-    plan: Exclude<BillingPlan, 'monthly'>,
-    button: import('obsidian').ButtonComponent,
-  ) {
+  private async purchase(plan: CreditPackPlan, button: import('obsidian').ButtonComponent) {
     const tr = this.owner.t,
       email = this.billing.billingEmail || ''
     if (this.billing.billingStatus?.pro !== true) {
@@ -1826,6 +1842,7 @@ class QuickSubscribeModal extends Modal {
       this.contentEl.empty()
       this.onOpen()
     })
+    renderCurrencyHelp(el, tr, this.currency)
     new Setting(el).setName(tr('订阅邮箱')).addText((input) =>
       input
         .setPlaceholder('you@example.com')
@@ -1853,7 +1870,7 @@ class QuickSubscribeModal extends Modal {
     button.setDisabled(true)
     try {
       await this.owner.saveAgentSettings()
-      const url = await createCheckout(email, 'monthly', this.currency)
+      const url = await createCheckout(email, checkoutPlan(this.currency), this.currency)
       window.open(url, '_blank', 'noopener,noreferrer')
       new Notice(tr('支付页已打开，完成后回到这里刷新套餐状态'))
       try {
