@@ -3453,11 +3453,18 @@ test('Question controls submit current answers on Enter and ignore IME, modifier
   assert.equal(submitted.second.custom, 'Custom second')
 })
 
-test('Unverified billing exposes no pricing or subscription entry in either settings UI', async () => {
+test('Billing exposes the plan entry without credentials in either settings UI', async () => {
   const { tab } = await settingsFixture()
   const definitions = JSON.stringify(tab.getSettingDefinitions())
-  assert.doesNotMatch(definitions, /订阅|套餐|一键订阅|刷新套餐状态/)
-  assert.doesNotMatch(JSON.stringify(tab.sections()), /订阅|套餐/)
+  const sections = JSON.stringify(tab.sections())
+  assert.match(definitions, /套餐/)
+  assert.match(definitions, /当前套餐/)
+  assert.match(definitions, /同步套餐状态/)
+  assert.match(sections, /套餐/)
+  assert.doesNotMatch(
+    `${definitions}${sections}`,
+    /license_key|X-Catea-License|catea_[A-Za-z0-9_-]{20,}/,
+  )
 })
 
 test('Local auxiliary titles preserve pending retries and never use the cloud metadata client', async () => {

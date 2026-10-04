@@ -85,10 +85,7 @@ export class ModelServiceError extends Error {
   readonly status?: number
 
   constructor(detail: string, status?: number, host?: string) {
-    const visibleDetail = detail
-      .slice(0, 500)
-      .replace(/\s+/g, ' ')
-      .trim()
+    const visibleDetail = detail.slice(0, 500).replace(/\s+/g, ' ').trim()
     const reason =
       /context[_ ]length|too many tokens|maximum context|prompt is too long|input too long/i.test(
         detail,
@@ -322,7 +319,10 @@ function isEventStream(response: Response): boolean {
   return response.headers.get('content-type')?.includes('text/event-stream') === true
 }
 
-async function responseJson(response: Response, fallbackUrl: string): Promise<Record<string, unknown>> {
+async function responseJson(
+  response: Response,
+  fallbackUrl: string,
+): Promise<Record<string, unknown>> {
   const body = await response.text()
   try {
     return record(JSON.parse(body))
@@ -337,10 +337,7 @@ async function responseJson(response: Response, fallbackUrl: string): Promise<Re
         host = ''
       }
     }
-    const excerpt = body
-      .slice(0, 160)
-      .replace(/\s+/g, ' ')
-      .trim()
+    const excerpt = body.slice(0, 160).replace(/\s+/g, ' ').trim()
     throw new ModelServiceError(
       response.status === 200
         ? `Provider returned a non-JSON response with HTTP 200. Check the model base URL and API route. Response starts with: ${excerpt}`
@@ -577,7 +574,12 @@ export async function streamModel(
     try {
       data = await responseJson(response, completionUrl)
     } catch (error) {
-      if (!cateaHosted || !streaming || !(error instanceof ModelServiceError) || error.status !== 200)
+      if (
+        !cateaHosted ||
+        !streaming ||
+        !(error instanceof ModelServiceError) ||
+        error.status !== 200
+      )
         throw error
       response = await fetchCompletion(false, true)
       if (!response.ok) throw await responseError(response, completionUrl)
