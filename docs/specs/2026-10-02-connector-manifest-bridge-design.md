@@ -310,6 +310,13 @@ wired in.
 4. Add account metadata storage and secret references.
 5. Expose `connector_list` and `connector_capabilities`.
 6. Add Figma as the first executable connector through an adapter interface.
+   - Implemented first through the official Figma MCP endpoint
+     `https://mcp.figma.com/mcp`.
+   - `connector_read` maps to `get_metadata`, `get_design_context`, or
+     `get_screenshot`.
+   - `connector_create`, `connector_update`, and `connector_share` compile a
+     bounded Catea design IR into `use_figma` Plugin API code and require an
+     explicit Figma file target.
 7. Add approval and audit plumbing for `connector_share` / `connector_create`.
 
 ## 11. Open Questions

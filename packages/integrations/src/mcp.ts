@@ -18,6 +18,7 @@ export interface McpConfig {
   args?: string[]
   url?: string
   token?: string
+  headers?: Record<string, string>
   env?: Record<string, string>
   /** Environment variable NAME a stdio token is injected as; not a secret, safe to persist. */
   envSecret?: string
@@ -60,7 +61,12 @@ export class McpPool {
                   env: c.env,
                 })
               : new StreamableHTTPClientTransport(new URL(c.url!), {
-                  requestInit: { headers: c.token ? { Authorization: `Bearer ${c.token}` } : {} },
+                  requestInit: {
+                    headers: {
+                      ...(c.headers || {}),
+                      ...(c.token ? { Authorization: `Bearer ${c.token}` } : {}),
+                    },
+                  },
                 })
           this.clients.set(c.id, client)
           const deadline = new Promise<never>((_resolve, reject) => {

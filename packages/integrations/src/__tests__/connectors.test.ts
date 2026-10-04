@@ -40,17 +40,24 @@ test('connectors | email is draft-first and Figma writes native canvas', () => {
   assert.equal(figma.tools.find((tool) => tool.name === 'write_canvas')?.approval, 'required')
 })
 
-test('connectors | discovery tools expose summaries and full manifests', () => {
+test('connectors | discovery tools expose summaries and full manifests', async () => {
   assert.deepEqual(
     connectorTools.map((tool) => tool.name),
-    ['connector_list', 'connector_capabilities'],
+    [
+      'connector_list',
+      'connector_capabilities',
+      'connector_read',
+      'connector_create',
+      'connector_update',
+      'connector_share',
+    ],
   )
-  const list = JSON.parse(runConnectorTool('connector_list', {}))
+  const list = JSON.parse(await runConnectorTool('connector_list', {}))
   assert.deepEqual(
     list.map((connector: { id: string }) => connector.id),
     connectorList().map((connector) => connector.id),
   )
-  const figma = JSON.parse(runConnectorTool('connector_capabilities', { connector: 'figma' }))
+  const figma = JSON.parse(await runConnectorTool('connector_capabilities', { connector: 'figma' }))
   assert.equal(figma.id, 'figma')
   assert.equal(figma.capabilities.canvas_write, true)
 })
@@ -77,15 +84,46 @@ test('connectors | config normalization keeps only manifest-backed settings', ()
   })
 })
 
-test('connectors | discovery tools include configured enablement status', () => {
+test('connectors | discovery tools include configured enablement status', async () => {
   const configs = [{ id: 'figma', enabled: true, adapter: 'figma_official_mcp', keys: {} }]
-  const list = JSON.parse(runConnectorTool('connector_list', {}, configs))
+  const list = JSON.parse(await runConnectorTool('connector_list', {}, configs))
   const figma = list.find((connector: { id: string }) => connector.id === 'figma')
   assert.equal(figma.status.enabled, true)
   assert.equal(figma.status.adapter, 'figma_official_mcp')
 
   const manifest = JSON.parse(
-    runConnectorTool('connector_capabilities', { connector: 'figma' }, configs),
+    await runConnectorTool('connector_capabilities', { connector: 'figma' }, configs),
   )
   assert.equal(manifest.status.enabled, true)
+})
+
+test('connectors | executable Figma create routes to use_figma', async () => {
+  const calls: { tool: string; args: Record<string, unknown> }[] = []
+  const output = JSON.parse(
+    await runConnectorTool(
+      'connector_create',
+      {
+        connector: 'figma',
+        target: { file_url: 'https://www.figma.com/design/abc123/Catea?node-id=1-2' },
+        document: {
+          kind: 'figma_document',
+          version: 1,
+          nodes: [{ type: 'text', name: 'Title', text: 'Hello Figma' }],
+        },
+      },
+      {
+        configs: [{ id: 'figma', enabled: true, adapter: 'figma_official_mcp', keys: {} }],
+        figmaCall: async (tool, args) => {
+          calls.push({ tool, args })
+          return { ok: true, tool, args }
+        },
+      },
+    ),
+  )
+  assert.equal(output.ok, true)
+  assert.equal(calls[0]?.tool, 'use_figma')
+  assert.equal(calls[0]?.args.fileKey, 'abc123')
+  assert.equal(calls[0]?.args.nodeId, '1:2')
+  assert.equal(calls[0]?.args.skillNames, 'figma-use')
+  assert.match(String(calls[0]?.args.code), /figma\.createText/)
 })

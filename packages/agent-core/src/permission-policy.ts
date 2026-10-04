@@ -7,7 +7,7 @@
 export type PermissionDecision = 'allow' | 'ask' | 'deny'
 export interface PermissionRequest {
   mode: 'assist' | 'full'
-  capability: 'vault' | 'obsidian' | 'shell' | 'mcp' | 'memory' | 'link-world'
+  capability: 'vault' | 'obsidian' | 'shell' | 'mcp' | 'connector' | 'memory' | 'link-world'
   operation: 'read' | 'inspect' | 'write' | 'execute'
   resource?: string
   disabled?: boolean

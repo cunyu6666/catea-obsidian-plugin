@@ -2,7 +2,7 @@
  * [WHO]: Provides McpPreset, createPresetServer, injectSecretEnv, matchPreset, mcpPresets
  * [FROM]: Depends on ./mcp
  * [TO]: Consumed by apps/obsidian/src/main.tsx, apps/obsidian/src/settings.ts
- * [HERE]: packages/integrations/src/mcp-presets.ts - curated MCP preset registry (Figma Framelink, GitHub, Context7, DeepWiki); builds disabled credential-free server configs, matches servers back to presets and injects the stored token into the stdio environment under envSecret
+ * [HERE]: packages/integrations/src/mcp-presets.ts - curated MCP preset registry (official Figma MCP, Figma Framelink, GitHub, Context7, DeepWiki); builds disabled credential-free server configs, matches servers back to presets and injects the stored token into the stdio environment under envSecret
  */
 import type { McpConfig } from './mcp'
 
@@ -15,6 +15,7 @@ export interface McpPreset {
   desc: string
   transport: 'stdio' | 'http'
   url?: string
+  headers?: Record<string, string>
   command?: string
   args?: string[]
   /** Environment variable NAME the stored token is injected as; the name is not a secret. */
@@ -24,6 +25,14 @@ export interface McpPreset {
 }
 
 export const mcpPresets: McpPreset[] = [
+  {
+    id: 'figma-official',
+    label: 'Figma · Official MCP',
+    desc: 'Figma 官方远程 MCP：读取设计上下文，并通过 use_figma 写入真实 Figma 画布。',
+    transport: 'http',
+    url: 'https://mcp.figma.com/mcp',
+    headers: { 'X-Figma-Plugin-Bundle': 'figma_prod@2_2_126' },
+  },
   {
     id: 'figma-framelink',
     label: 'Figma · Framelink',
@@ -66,7 +75,7 @@ export function createPresetServer(preset: McpPreset): McpConfig {
     enabled: false,
     transport: preset.transport,
     ...(preset.transport === 'http'
-      ? { url: preset.url }
+      ? { url: preset.url, ...(preset.headers ? { headers: { ...preset.headers } } : {}) }
       : // Copy args so later in-place edits can never alias the module registry.
         { command: preset.command, args: [...(preset.args || [])] }),
     ...(preset.envSecret ? { envSecret: preset.envSecret } : {}),
@@ -77,7 +86,9 @@ export function createPresetServer(preset: McpPreset): McpConfig {
 export function matchPreset(server: McpConfig): McpPreset | undefined {
   return mcpPresets.find((preset) =>
     server.transport === 'http'
-      ? preset.transport === 'http' && server.url === preset.url
+      ? preset.transport === 'http' &&
+        server.url === preset.url &&
+        JSON.stringify(server.headers || {}) === JSON.stringify(preset.headers || {})
       : preset.transport === 'stdio' &&
         server.command === preset.command &&
         JSON.stringify(server.args || []) === JSON.stringify(preset.args || []),

@@ -1,12 +1,18 @@
 /**
- * [WHO]: Provides ConnectorAdapter, ConnectorAuth, ConnectorCapabilityMap, ConnectorConfig, ConnectorKey, ConnectorManifest, ConnectorTool, builtInConnectorManifests, connectorTools, connectorCapabilities, connectorConfig, connectorList, normalizeConnectorConfigs, runConnectorTool
- * [FROM]: Depends on ../../agent-core/src/providers
+ * [WHO]: Provides ConnectorAdapter, ConnectorAuth, ConnectorCapabilityMap, ConnectorConfig, ConnectorKey, ConnectorManifest, ConnectorRuntimeOptions, ConnectorTool, builtInConnectorManifests, connectorTools, connectorCapabilities, connectorConfig, connectorList, normalizeConnectorConfigs, runConnectorTool
+ * [FROM]: Depends on ../../agent-core/src/providers, ./figma-connector.ts
  * [TO]: Consumed by apps/obsidian/src/main.tsx, apps/obsidian/src/settings.ts,
- *   packages/agent-core/src/index.ts, packages/integrations/src/index.ts,
+ *   packages/agent-core/src/index.ts, packages/integrations/src/figma-connector.ts,
+ *   packages/integrations/src/index.ts,
  *   packages/integrations/src/__tests__/connectors.test.ts
  * [HERE]: packages/integrations/src/connectors.ts - built-in connector manifest registry for the first MVP apps: email and Figma; exposes read-only discovery tools so the Agent sees stable app capabilities before executable adapters are wired in
  */
 import type { ToolDefinition } from '../../agent-core/src/providers'
+import {
+  callFigmaConnector,
+  type FigmaConnectorCall,
+  type FigmaMcpCall,
+} from './figma-connector.ts'
 
 export interface ConnectorCapabilityMap {
   read: boolean
@@ -22,6 +28,11 @@ export interface ConnectorConfig {
   enabled: boolean
   adapter?: string
   keys?: Record<string, boolean>
+}
+
+export interface ConnectorRuntimeOptions {
+  configs?: ConnectorConfig[]
+  figmaCall?: FigmaMcpCall
 }
 
 export interface ConnectorAuth {
@@ -426,22 +437,107 @@ export const connectorTools: ToolDefinition[] = [
       'Show one connector manifest, including semantic tools, required keys, auth modes and adapters.',
     parameters: schema({ connector: string }, ['connector']),
   },
+  {
+    name: 'connector_read',
+    description: 'Read one external object through an enabled connector.',
+    parameters: schema(
+      {
+        connector: string,
+        mode: string,
+        file_url: string,
+        file_key: string,
+        node_id: string,
+      },
+      ['connector'],
+    ),
+  },
+  {
+    name: 'connector_create',
+    description: 'Create an external object through an enabled connector.',
+    parameters: schema(
+      {
+        connector: string,
+        target: { type: 'object' },
+        document: { type: 'object' },
+        title: string,
+        content_markdown: string,
+      },
+      ['connector'],
+    ),
+  },
+  {
+    name: 'connector_update',
+    description: 'Update an external object through an enabled connector.',
+    parameters: schema(
+      {
+        connector: string,
+        target: { type: 'object' },
+        document: { type: 'object' },
+      },
+      ['connector', 'target'],
+    ),
+  },
+  {
+    name: 'connector_share',
+    description: 'Share vault content or agent output to an external application.',
+    parameters: schema(
+      {
+        connector: string,
+        target: { type: 'object' },
+        title: string,
+        content_markdown: string,
+        document: { type: 'object' },
+      },
+      ['connector'],
+    ),
+  },
 ]
 
-export function runConnectorTool(
+function runtimeOptions(
+  options: ConnectorConfig[] | ConnectorRuntimeOptions | undefined,
+): ConnectorRuntimeOptions {
+  return Array.isArray(options) ? { configs: options } : options || {}
+}
+
+export async function runConnectorTool(
   name: string,
   args: Record<string, unknown>,
-  configs?: ConnectorConfig[],
-): string {
-  if (name === 'connector_list') return JSON.stringify(connectorList(configs), null, 2)
+  options?: ConnectorConfig[] | ConnectorRuntimeOptions,
+  signal?: AbortSignal,
+): Promise<string> {
+  const runtime = runtimeOptions(options)
+  if (name === 'connector_list') return JSON.stringify(connectorList(runtime.configs), null, 2)
   if (name === 'connector_capabilities')
     return JSON.stringify(
       {
         ...connectorCapabilities(textValue(args.connector)),
-        status: connectorConfig(configs, textValue(args.connector)),
+        status: connectorConfig(runtime.configs, textValue(args.connector)),
       },
       null,
       2,
     )
+  if (
+    name === 'connector_read' ||
+    name === 'connector_create' ||
+    name === 'connector_update' ||
+    name === 'connector_share'
+  ) {
+    const connector = textValue(args.connector)
+    const config = connectorConfig(runtime.configs, connector)
+    if (!config.enabled) throw new Error(`Connector is disabled: ${connector}`)
+    if (connector === 'figma')
+      return JSON.stringify(
+        await callFigmaConnector(
+          name.replace('connector_', '') as FigmaConnectorCall,
+          args,
+          config,
+          runtime.figmaCall,
+          signal || new AbortController().signal,
+        ),
+        null,
+        2,
+      )
+    throw new Error(`Connector runtime is not implemented yet: ${connector}`)
+  }
   throw new Error('Unknown connector tool')
 }

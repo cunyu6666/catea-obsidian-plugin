@@ -933,7 +933,27 @@ Internal note references use [[path|label]]. Only call listed tools. Preserve ra
           )
           return this.pool.call(name, args, signal)
         }
-        if (name.startsWith('connector_')) return runConnectorTool(name, args, config.connectors)
+        if (name.startsWith('connector_')) {
+          const connectorReadOnly = new Set([
+            'connector_list',
+            'connector_capabilities',
+            'connector_read',
+          ])
+          if (!connectorReadOnly.has(name))
+            await requirePermission(
+              {
+                mode: this.settings().permissionMode || 'assist',
+                capability: 'connector',
+                operation: 'write',
+                resource: `${name}:${String(args.connector || '')}`,
+              },
+              this.hooks.approve,
+              `连接器写入：${String(args.connector || 'external app')}`,
+              JSON.stringify(args, null, 2).slice(0, 4000),
+              signal,
+            )
+          return runConnectorTool(name, args, { configs: config.connectors }, signal)
+        }
         if (name.startsWith('memory_')) {
           if (!this.settings().memory) throw new Error('记忆工具已关闭')
           await requirePermission(
@@ -1021,6 +1041,9 @@ Internal note references use [[path|label]]. Only call listed tools. Preserve ra
         'web_search',
         'web_fetch',
         'link_world_admin',
+        'connector_list',
+        'connector_capabilities',
+        'connector_read',
         'obsidian_search',
         'obsidian_read',
         'session_history',
