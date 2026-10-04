@@ -102,8 +102,8 @@ const BILLING_UI_ENABLED = false
 // Internal-only diagnostics. Enable while debugging Asgard billing/model connectivity.
 const BILLING_DIAGNOSTICS_ENABLED = false
 const PRO_PRICES: Record<BillingCurrency, PlanPrice> = {
-  USD: { original: '$10', sale: '$3', suffix: '/ month' },
-  CNY: { original: '¥60', sale: '¥18', suffix: '/ 月' },
+  USD: { original: '$30', sale: '$9.9', suffix: '/ month' },
+  CNY: { original: '¥180', sale: '¥60', suffix: '/ 月' },
 }
 
 function isEmail(value: string) {
@@ -1530,9 +1530,10 @@ class SubscriptionModal extends Modal {
       price: this.currency,
       subtitle: tr('开箱即用，无需配置 API Key。'),
       features: [
-        tr('包含 Catea 托管 AI 额度'),
-        tr('更多用量，适合长文档和 Agent 工作流'),
-        tr('额度自动恢复，月度周期重置'),
+        tr('每月包含 100,000 Catea 托管 AI credits'),
+        tr('每消耗 1 个模型 token 扣除 1 credit'),
+        tr('每 5 小时重置 20,000 credits 短窗口'),
+        tr('额度用尽后可等待重置或购买 credits 包'),
         tr('高级功能优先开放：连接器、自定义 Persona、媒体生成'),
       ],
       action: pro ? tr('当前套餐') : tr('订阅 Pro'),

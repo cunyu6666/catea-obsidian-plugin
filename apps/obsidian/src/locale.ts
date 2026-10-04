@@ -679,9 +679,12 @@ Object.assign(english, {
   限时折扣: 'Limited-time offer',
   月付订阅: 'Monthly subscription',
   '开箱即用，无需配置 API Key。': 'Ready out of the box. No API key setup required.',
-  '包含 Catea 托管 AI 额度': 'Includes Catea-hosted AI usage',
-  '更多用量，适合长文档和 Agent 工作流': 'More usage for long documents and agent workflows',
-  '额度自动恢复，月度周期重置': 'Allowance restores automatically and resets monthly',
+  '每月包含 100,000 Catea 托管 AI credits':
+    'Includes 100,000 Catea-hosted AI credits every month',
+  '每消耗 1 个模型 token 扣除 1 credit': '1 model token uses 1 credit',
+  '每 5 小时重置 20,000 credits 短窗口': '20,000-credit short window resets every 5 hours',
+  '额度用尽后可等待重置或购买 credits 包':
+    'When credits run out, wait for reset or buy a credits pack',
   '高级功能优先开放：连接器、自定义 Persona、媒体生成':
     'Priority access to advanced features: connectors, custom personas, and media generation',
   '订阅 Pro': 'Subscribe to Pro',
