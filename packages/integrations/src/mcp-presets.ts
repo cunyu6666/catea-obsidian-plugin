@@ -1,7 +1,8 @@
 /**
  * [WHO]: Provides McpPreset, createPresetServer, injectSecretEnv, matchPreset, mcpPresets
  * [FROM]: Depends on ./mcp
- * [TO]: Consumed by apps/obsidian/src/main.tsx, apps/obsidian/src/settings.ts
+ * [TO]: Consumed by apps/obsidian/src/main.tsx, apps/obsidian/src/settings.ts,
+ *   packages/integrations/src/__tests__/mcp-presets.test.ts
  * [HERE]: packages/integrations/src/mcp-presets.ts - curated MCP preset registry (official Figma MCP, Figma Framelink, GitHub, Context7, DeepWiki); builds disabled credential-free server configs, matches servers back to presets and injects the stored token into the stdio environment under envSecret
  */
 import type { McpConfig } from './mcp'
@@ -16,6 +17,7 @@ export interface McpPreset {
   transport: 'stdio' | 'http'
   url?: string
   headers?: Record<string, string>
+  tokenHeader?: string
   command?: string
   args?: string[]
   /** Environment variable NAME the stored token is injected as; the name is not a secret. */
@@ -32,6 +34,7 @@ export const mcpPresets: McpPreset[] = [
     transport: 'http',
     url: 'https://mcp.figma.com/mcp',
     headers: { 'X-Figma-Plugin-Bundle': 'figma_prod@2_2_126' },
+    tokenHeader: 'X-Figma-Token',
   },
   {
     id: 'figma-framelink',
@@ -75,7 +78,11 @@ export function createPresetServer(preset: McpPreset): McpConfig {
     enabled: false,
     transport: preset.transport,
     ...(preset.transport === 'http'
-      ? { url: preset.url, ...(preset.headers ? { headers: { ...preset.headers } } : {}) }
+      ? {
+          url: preset.url,
+          ...(preset.headers ? { headers: { ...preset.headers } } : {}),
+          ...(preset.tokenHeader ? { tokenHeader: preset.tokenHeader } : {}),
+        }
       : // Copy args so later in-place edits can never alias the module registry.
         { command: preset.command, args: [...(preset.args || [])] }),
     ...(preset.envSecret ? { envSecret: preset.envSecret } : {}),
@@ -88,7 +95,8 @@ export function matchPreset(server: McpConfig): McpPreset | undefined {
     server.transport === 'http'
       ? preset.transport === 'http' &&
         server.url === preset.url &&
-        JSON.stringify(server.headers || {}) === JSON.stringify(preset.headers || {})
+        JSON.stringify(server.headers || {}) === JSON.stringify(preset.headers || {}) &&
+        server.tokenHeader === preset.tokenHeader
       : preset.transport === 'stdio' &&
         server.command === preset.command &&
         JSON.stringify(server.args || []) === JSON.stringify(preset.args || []),

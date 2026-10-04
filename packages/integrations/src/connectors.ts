@@ -32,6 +32,7 @@ export interface ConnectorConfig {
 
 export interface ConnectorRuntimeOptions {
   configs?: ConnectorConfig[]
+  getSecret?: (id: string) => string | undefined
   figmaCall?: FigmaMcpCall
 }
 
@@ -531,6 +532,7 @@ export async function runConnectorTool(
           name.replace('connector_', '') as FigmaConnectorCall,
           args,
           config,
+          runtime.getSecret?.('connector-figma-FIGMA_ACCESS_TOKEN'),
           runtime.figmaCall,
           signal || new AbortController().signal,
         ),

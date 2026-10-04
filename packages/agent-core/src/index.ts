@@ -113,6 +113,7 @@ export interface Hooks {
   approve: Approve
   ask: (questions: AskUserQuestion[], signal: AbortSignal) => Promise<AskUserQuestionAnswer>
   notice: (text: string) => void
+  getSecret?: (id: string) => string | undefined
   host?: {
     tools: ToolDefinition[]
     skill: string
@@ -952,7 +953,12 @@ Internal note references use [[path|label]]. Only call listed tools. Preserve ra
               JSON.stringify(args, null, 2).slice(0, 4000),
               signal,
             )
-          return runConnectorTool(name, args, { configs: config.connectors }, signal)
+          return runConnectorTool(
+            name,
+            args,
+            { configs: config.connectors, getSecret: this.hooks.getSecret },
+            signal,
+          )
         }
         if (name.startsWith('memory_')) {
           if (!this.settings().memory) throw new Error('记忆工具已关闭')

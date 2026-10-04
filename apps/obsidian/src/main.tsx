@@ -362,6 +362,7 @@ export default class Catea extends Base {
         notice: (text) => new Notice(humanizeError(text, this.agentSettings.language)),
         approve: (title, detail, signal) => this.confirm(title, detail, signal),
         ask: (q, signal) => this.ask(agent.session.id, q, signal),
+        getSecret: (id) => this.readSecret(id),
       })
       return agent
     }
@@ -798,6 +799,13 @@ export default class Catea extends Base {
       secrets.setSecret(this.key(id), value)
     } catch {
       new Notice(this.t('密钥无法持久保存，仅在当前运行期间使用'))
+    }
+  }
+  readSecret(id: string) {
+    try {
+      return this.secretStore()?.getSecret(this.key(id)) || undefined
+    } catch {
+      return undefined
     }
   }
   subscribe(fn: () => void) {

@@ -18,6 +18,7 @@ export interface McpConfig {
   args?: string[]
   url?: string
   token?: string
+  tokenHeader?: string
   headers?: Record<string, string>
   env?: Record<string, string>
   /** Environment variable NAME a stdio token is injected as; not a secret, safe to persist. */
@@ -64,7 +65,13 @@ export class McpPool {
                   requestInit: {
                     headers: {
                       ...(c.headers || {}),
-                      ...(c.token ? { Authorization: `Bearer ${c.token}` } : {}),
+                      ...(c.token
+                        ? {
+                            [c.tokenHeader || 'Authorization']: c.tokenHeader
+                              ? c.token
+                              : `Bearer ${c.token}`,
+                          }
+                        : {}),
                     },
                   },
                 })

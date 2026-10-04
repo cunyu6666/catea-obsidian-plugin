@@ -12,6 +12,7 @@ export type FigmaConnectorCall = 'read' | 'create' | 'update' | 'share'
 export type FigmaMcpCall = (
   tool: string,
   args: Record<string, unknown>,
+  token: string | undefined,
   signal: AbortSignal,
 ) => Promise<unknown>
 
@@ -218,6 +219,7 @@ return {
 async function defaultFigmaMcpCall(
   tool: string,
   args: Record<string, unknown>,
+  token: string | undefined,
   signal: AbortSignal,
 ): Promise<unknown> {
   const [{ Client }, { StreamableHTTPClientTransport }] = await Promise.all([
@@ -226,7 +228,12 @@ async function defaultFigmaMcpCall(
   ])
   const client = new Client({ name: 'catea-paper', version: PLUGIN_VERSION }, { capabilities: {} })
   const transport = new StreamableHTTPClientTransport(new URL('https://mcp.figma.com/mcp'), {
-    requestInit: { headers: { 'X-Figma-Plugin-Bundle': 'figma_prod@2_2_126' } },
+    requestInit: {
+      headers: {
+        'X-Figma-Plugin-Bundle': 'figma_prod@2_2_126',
+        ...(token ? { 'X-Figma-Token': token } : {}),
+      },
+    },
   })
   await client.connect(transport, { signal })
   try {
@@ -245,6 +252,7 @@ export async function callFigmaConnector(
   operation: FigmaConnectorCall,
   args: Record<string, unknown>,
   config: ConnectorConfig,
+  token: string | undefined,
   call: FigmaMcpCall = defaultFigmaMcpCall,
   signal: AbortSignal,
 ): Promise<unknown> {
@@ -260,7 +268,7 @@ export async function callFigmaConnector(
         : mode === 'screenshot'
           ? 'get_screenshot'
           : 'get_metadata'
-    return call(tool, { ...target }, signal)
+    return call(tool, { ...target }, token, signal)
   }
   const document = normalizeDocument(args, operation)
   const mcpArgs: Record<string, unknown> = {
@@ -268,5 +276,5 @@ export async function callFigmaConnector(
     skillNames: 'figma-use',
     ...target,
   }
-  return call('use_figma', mcpArgs, signal)
+  return call('use_figma', mcpArgs, token, signal)
 }
