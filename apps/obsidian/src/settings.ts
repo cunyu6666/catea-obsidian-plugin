@@ -1,7 +1,7 @@
 /**
  * [WHO]: Provides CateaSettings, syncSavedBillingStatus
  * [FROM]: Depends on obsidian, ./main, ../../../packages/agent-core/src/types, ../../../packages/agent-core/src/byok, ../../../packages/agent-core/src/vendor-presets, ../../../packages/integrations/src/data-dir, ../../../packages/integrations/src/skills, ../../../packages/integrations/src/mcp-presets, ../../../packages/personas/src, ./vendor-icons, ./local-model
- * [TO]: Consumed by apps/obsidian/src/main.tsx, apps/obsidian/src/panel.tsx
+ * [TO]: Consumed by apps/obsidian/src/main.tsx
  * [HERE]: apps/obsidian/src/settings.ts - plugin settings tab for language, paper toggles, Agent persona and capabilities, subscription status, BYOK models with a vendor-preset grid, one-click MCP presets and MCP servers; ModelModal validates through normalizeModel
  */
 import {
@@ -474,11 +474,12 @@ async function hostedProbe(url: string, license: string, stream: boolean) {
   })
   const headers = response.headers as Record<string, string>,
     contentType = headerValue(headers, 'content-type') || 'unknown',
+    requestId = headerValue(headers, 'x-catea-request-id') || 'none',
     server = headerValue(headers, 'server') || 'unknown',
     renderId = headerValue(headers, 'rndr-id') || 'none',
     cfRay = headerValue(headers, 'cf-ray') || 'none'
   const body = new TextDecoder().decode(response.arrayBuffer).replace(/\s+/g, ' ').trim()
-  return `${response.status} • ${contentType} • server=${server} • rndr=${renderId} • cf=${cfRay} • ${body.slice(0, 160)}`
+  return `${response.status} • ${contentType} • request=${requestId} • server=${server} • rndr=${renderId} • cf=${cfRay} • ${body.slice(0, 160)}`
 }
 
 async function runBillingDiagnostics(owner: Catea, prefs: BillingPreferences) {
