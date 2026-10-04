@@ -104,8 +104,8 @@ const BILLING_API = BILLING_APIS[0]
 // diagnostics fallback so operators can distinguish DNS from service failures.
 const HOSTED_BILLING_API = BILLING_APIS[0]
 const HOSTED_MODEL_ID = 'catea-pro-hosted'
-// Keep checkout and pricing hidden until the hosted service is verified end to end.
-const BILLING_UI_ENABLED = true
+// Keep checkout and pricing hidden until the production security review is complete.
+const BILLING_UI_ENABLED = false
 // Internal-only diagnostics. Enable while debugging Asgard billing/model connectivity.
 const BILLING_DIAGNOSTICS_ENABLED = false
 const PRO_PRICES: Record<BillingCurrency, PlanPrice> = {
