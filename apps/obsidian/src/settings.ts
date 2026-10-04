@@ -80,6 +80,13 @@ interface BillingStatus {
       included_credits?: number
       used_credits?: number
     }
+    topup?: {
+      used_percent?: number
+      remaining_percent?: number
+      included_credits?: number
+      used_credits?: number
+      balance_credits?: number
+    }
   }
   features?: { hosted_model?: boolean; byok?: boolean }
 }
@@ -139,7 +146,8 @@ function record(value: unknown): Record<string, unknown> {
 function quotaStatus(value: unknown) {
   const body = record(value),
     monthly = record(body.monthly),
-    window = record(body.window)
+    window = record(body.window),
+    topup = record(body.topup)
   const monthlyReset =
     typeof monthly.reset_at === 'string' || monthly.reset_at === null ? monthly.reset_at : undefined
   const windowReset =
@@ -162,6 +170,16 @@ function quotaStatus(value: unknown) {
       included_credits:
         typeof window.included_credits === 'number' ? window.included_credits : undefined,
       used_credits: typeof window.used_credits === 'number' ? window.used_credits : undefined,
+    },
+    topup: {
+      used_percent: typeof topup.used_percent === 'number' ? topup.used_percent : undefined,
+      remaining_percent:
+        typeof topup.remaining_percent === 'number' ? topup.remaining_percent : undefined,
+      included_credits:
+        typeof topup.included_credits === 'number' ? topup.included_credits : undefined,
+      used_credits: typeof topup.used_credits === 'number' ? topup.used_credits : undefined,
+      balance_credits:
+        typeof topup.balance_credits === 'number' ? topup.balance_credits : undefined,
     },
   }
 }
@@ -297,6 +315,47 @@ function renderQuotaProgress(
   })
   meta.createSpan({ text: `${tr('剩余')} ${remaining}%` })
   box.createEl('progress', { attr: { max: '100', value: String(remaining) } })
+}
+
+function formatCredits(value?: number) {
+  return typeof value === 'number' ? Math.max(0, Math.round(value)).toLocaleString() : '0'
+}
+
+function renderTopupCredits(
+  setting: Setting,
+  tr: (text: string) => string,
+  status: BillingStatus | undefined,
+  openPurchase: () => void,
+) {
+  const topup = status?.quota?.topup,
+    balance = topup?.balance_credits || 0,
+    included = topup?.included_credits || 0
+  if (balance > 0 || included > 0) {
+    const remaining =
+        typeof topup?.remaining_percent === 'number'
+          ? Math.max(0, Math.min(100, Math.round(topup.remaining_percent)))
+          : included > 0
+            ? Math.max(0, Math.min(100, Math.round((balance / included) * 100)))
+            : 0,
+      box = setting.settingEl.createDiv({ cls: 'catea-quota-progress' }),
+      meta = box.createDiv({ cls: 'catea-quota-progress__meta' })
+    setting.settingEl.addClass('catea-quota-setting')
+    meta.createSpan({
+      text: `${tr('剩余')} ${formatCredits(balance)} credits`,
+    })
+    meta.createSpan({
+      text: included > 0 ? `${remaining}%` : tr('已购买'),
+    })
+    box.createEl('progress', { attr: { max: '100', value: String(remaining) } })
+    setting.addButton((button) =>
+      button.setButtonText(tr('购买一次性 credits 包')).onClick(openPurchase),
+    )
+    return
+  }
+  setting.setDesc(tr('还没有额外额度。套餐额度用完后，可购买一次性 credits 包继续使用。'))
+  setting.addButton((button) =>
+    button.setButtonText(tr('购买一次性 credits 包')).setCta().onClick(openPurchase),
+  )
 }
 
 function defaultCurrency(language?: string): BillingCurrency {
@@ -1164,6 +1223,22 @@ export class CateaSettings extends PluginSettingTab {
               render: (s: Setting) =>
                 renderQuotaProgress(s.settingEl, tr, billingPrefs.billingStatus),
             },
+            {
+              name: tr('额外额度'),
+              render: (s: Setting) =>
+                renderTopupCredits(s, tr, billingPrefs.billingStatus, () =>
+                  new CreditPackModal(
+                    p,
+                    billingPrefs,
+                    () => this.refresh(),
+                    async (status) => {
+                      billingPrefs.billingStatus = status
+                      billingPrefs.billingLastChecked = Date.now()
+                      await syncHostedBillingModel(p, status)
+                    },
+                  ).open(),
+                ),
+            },
           ]
         : []),
       {
@@ -1562,39 +1637,6 @@ class SubscriptionModal extends Modal {
       current: pro,
       onClick: pro ? undefined : (button) => void this.subscribe(button),
     })
-    this.renderCreditPacks(el)
-  }
-  private renderCreditPacks(parent: HTMLElement) {
-    const tr = this.owner.t,
-      section = parent.createDiv({ cls: 'catea-credit-pack-section' })
-    section.createEl('h3', { text: tr('一次性 credits 包') })
-    section.createEl('p', {
-      cls: 'catea-credit-pack-section__lede',
-      text: tr(
-        '需要更多额度时可一次性购买。Credits 包不会自动续费，会在 Pro 月度额度用完后继续使用。',
-      ),
-    })
-    const grid = section.createDiv({ cls: 'catea-credit-pack-grid' })
-    for (const pack of CREDIT_PACKS) {
-      const card = grid.createDiv({ cls: 'catea-credit-pack-card' })
-      card.createDiv({ cls: 'catea-plan-card__eyebrow', text: pack.label })
-      card.createEl('h4', { text: `${pack.credits} credits` })
-      card.createDiv({
-        cls: 'catea-credit-pack-card__price',
-        text: creditPackPriceText(pack, this.currency),
-      })
-      card.createEl('p', {
-        text:
-          this.currency === 'CNY'
-            ? tr('一次性购买，支持微信支付，不会自动续费。')
-            : tr('一次性购买，不会自动续费。'),
-      })
-      new Setting(card).addButton((button) =>
-        button
-          .setButtonText(`${tr('购买')} · ${creditPackPriceText(pack, this.currency)}`)
-          .onClick(() => void this.purchaseCreditPack(pack.plan, button)),
-      )
-    }
   }
   private card(
     parent: HTMLElement,
@@ -1656,7 +1698,70 @@ class SubscriptionModal extends Modal {
       button.setDisabled(false)
     }
   }
-  private async purchaseCreditPack(
+  onClose() {
+    this.contentEl.empty()
+  }
+}
+
+class CreditPackModal extends Modal {
+  private currency: BillingCurrency
+  constructor(
+    private owner: Catea,
+    private billing: BillingPreferences,
+    private saved: () => void,
+    private updateStatus: (status: BillingStatus) => void | Promise<void>,
+  ) {
+    super(owner.app)
+    this.currency = defaultCurrency(owner.agentSettings.language)
+  }
+  onOpen() {
+    const tr = this.owner.t,
+      el = this.contentEl
+    this.titleEl.setText(tr('购买一次性 credits 包'))
+    el.addClass('catea-plan-modal')
+    el.createEl('p', {
+      cls: 'catea-plan-modal__lede',
+      text: tr(
+        '需要更多额度时可一次性购买。Credits 包不会自动续费，会在 Pro 月度额度用完后继续使用。',
+      ),
+    })
+    addCurrencyDropdown(new Setting(el).setName(tr('支付币种')), tr, this.currency, (currency) => {
+      this.currency = currency
+      this.contentEl.empty()
+      this.onOpen()
+    })
+    new Setting(el).setName(tr('订阅邮箱')).addText((input) =>
+      input
+        .setPlaceholder('you@example.com')
+        .setValue(this.billing.billingEmail || '')
+        .onChange((value) => {
+          this.billing.billingEmail = value.trim()
+        }),
+    )
+    const section = el.createDiv({ cls: 'catea-credit-pack-section' })
+    const grid = section.createDiv({ cls: 'catea-credit-pack-grid' })
+    for (const pack of CREDIT_PACKS) {
+      const card = grid.createDiv({ cls: 'catea-credit-pack-card' })
+      card.createDiv({ cls: 'catea-plan-card__eyebrow', text: pack.label })
+      card.createEl('h4', { text: `${pack.credits} credits` })
+      card.createDiv({
+        cls: 'catea-credit-pack-card__price',
+        text: creditPackPriceText(pack, this.currency),
+      })
+      card.createEl('p', {
+        text:
+          this.currency === 'CNY'
+            ? tr('一次性购买，支持微信支付，不会自动续费。')
+            : tr('一次性购买，不会自动续费。'),
+      })
+      new Setting(card).addButton((button) =>
+        button
+          .setButtonText(`${tr('购买')} · ${creditPackPriceText(pack, this.currency)}`)
+          .onClick(() => void this.purchase(pack.plan, button)),
+      )
+    }
+  }
+  private async purchase(
     plan: Exclude<BillingPlan, 'monthly'>,
     button: import('obsidian').ButtonComponent,
   ) {
