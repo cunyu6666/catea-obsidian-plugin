@@ -444,7 +444,6 @@ export function humanizeError(raw: string, language: Language = 'zh') {
   const detail = raw.trim()
   const message = detail.replace(/^(?:上下文压缩失败|Context compaction failed)[:：]\s*/i, '')
   const pick = (zh: string, en: string) => (language === 'en' ? en : zh)
-  const source = message.match(/\[([a-z0-9.-]+(?::\d+)?)\]/i)?.[1]
   const compaction = message !== detail
   let friendly: string
   if (/^(?:aborted|AbortError|Request was aborted|已停止)$/i.test(message))
@@ -535,7 +534,6 @@ export function humanizeError(raw: string, language: Language = 'zh') {
       'The model did not return a complete response. Retry or switch models.',
     )
   else friendly = translate(language, message)
-  if (source) friendly = `${friendly} ${pick(`来源：${source}`, `Source: ${source}`)}`
   return compaction
     ? `${pick('上下文整理未完成：', 'Context compression did not finish: ')}${friendly}`
     : friendly

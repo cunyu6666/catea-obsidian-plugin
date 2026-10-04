@@ -330,6 +330,8 @@ function renderTopupCredits(
   const topup = status?.quota?.topup,
     balance = topup?.balance_credits || 0,
     included = topup?.included_credits || 0
+  for (const node of Array.from(setting.settingEl.querySelectorAll('.catea-quota-progress')))
+    node.remove()
   if (balance > 0 || included > 0) {
     const remaining =
         typeof topup?.remaining_percent === 'number'
