@@ -50,7 +50,7 @@ interface SettingsSection {
   heading?: string
   rows: SettingsRow[]
 }
-type BillingPlan = 'monthly'
+type BillingPlan = 'monthly' | 'credits_20k' | 'credits_50k' | 'credits_100k'
 type BillingCurrency = 'USD' | 'CNY'
 interface PlanPrice {
   original: string
@@ -98,13 +98,33 @@ const BILLING_API = BILLING_APIS[0]
 const HOSTED_BILLING_API = BILLING_APIS[1]
 const HOSTED_MODEL_ID = 'catea-pro-hosted'
 // Keep checkout and pricing hidden until the hosted service is verified end to end.
-const BILLING_UI_ENABLED = false
+const BILLING_UI_ENABLED = true
 // Internal-only diagnostics. Enable while debugging Asgard billing/model connectivity.
 const BILLING_DIAGNOSTICS_ENABLED = false
 const PRO_PRICES: Record<BillingCurrency, PlanPrice> = {
   USD: { original: '$30', sale: '$9.9', suffix: '/ month' },
   CNY: { original: '¥180', sale: '¥60', suffix: '/ 月' },
 }
+const CREDIT_PACKS: Array<{
+  plan: Exclude<BillingPlan, 'monthly'>
+  credits: string
+  label: string
+  prices: Record<BillingCurrency, string>
+}> = [
+  {
+    plan: 'credits_20k',
+    credits: '20,000',
+    label: 'Small top-up',
+    prices: { USD: '$3', CNY: '¥18' },
+  },
+  { plan: 'credits_50k', credits: '50,000', label: 'More room', prices: { USD: '$6', CNY: '¥36' } },
+  {
+    plan: 'credits_100k',
+    credits: '100,000',
+    label: 'Best value',
+    prices: { USD: '$9.9', CNY: '¥60' },
+  },
+]
 
 function isEmail(value: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)
@@ -297,6 +317,10 @@ function priceText(currency: BillingCurrency) {
   return `${price.sale}${price.suffix}`
 }
 
+function creditPackPriceText(pack: (typeof CREDIT_PACKS)[number], currency: BillingCurrency) {
+  return pack.prices[currency]
+}
+
 function addCurrencyDropdown(
   setting: Setting,
   tr: (text: string) => string,
@@ -306,17 +330,11 @@ function addCurrencyDropdown(
   setting.addDropdown((dropdown) => {
     dropdown
       .addOption('USD', 'USD')
-      .addOption('CNY', `CNY（${tr('即将上线')}）`)
+      .addOption('CNY', `CNY（${tr('支持微信支付')}）`)
       .setValue(currency)
       .onChange((value) => {
-        onChange(value === 'CNY' ? 'USD' : (value as BillingCurrency))
+        onChange(value as BillingCurrency)
       })
-    const cnyOption = dropdown.selectEl.querySelector<HTMLOptionElement>('option[value="CNY"]')
-    if (cnyOption) {
-      cnyOption.disabled = true
-      cnyOption.title = tr('人民币支付即将上线')
-    }
-    dropdown.selectEl.title = tr('人民币支付即将上线')
   })
 }
 
@@ -1198,7 +1216,9 @@ export class CateaSettings extends PluginSettingTab {
                       new Notice('诊断完成，结果已复制并写入控制台')
                     } catch (error) {
                       new Notice(
-                        tr(error instanceof Error ? error.message : '无法读取 Pro 状态，请稍后重试'),
+                        tr(
+                          error instanceof Error ? error.message : '无法读取 Pro 状态，请稍后重试',
+                        ),
                       )
                     } finally {
                       button.setDisabled(false)
@@ -1542,6 +1562,39 @@ class SubscriptionModal extends Modal {
       current: pro,
       onClick: pro ? undefined : (button) => void this.subscribe(button),
     })
+    this.renderCreditPacks(el)
+  }
+  private renderCreditPacks(parent: HTMLElement) {
+    const tr = this.owner.t,
+      section = parent.createDiv({ cls: 'catea-credit-pack-section' })
+    section.createEl('h3', { text: tr('一次性 credits 包') })
+    section.createEl('p', {
+      cls: 'catea-credit-pack-section__lede',
+      text: tr(
+        '需要更多额度时可一次性购买。Credits 包不会自动续费，会在 Pro 月度额度用完后继续使用。',
+      ),
+    })
+    const grid = section.createDiv({ cls: 'catea-credit-pack-grid' })
+    for (const pack of CREDIT_PACKS) {
+      const card = grid.createDiv({ cls: 'catea-credit-pack-card' })
+      card.createDiv({ cls: 'catea-plan-card__eyebrow', text: pack.label })
+      card.createEl('h4', { text: `${pack.credits} credits` })
+      card.createDiv({
+        cls: 'catea-credit-pack-card__price',
+        text: creditPackPriceText(pack, this.currency),
+      })
+      card.createEl('p', {
+        text:
+          this.currency === 'CNY'
+            ? tr('一次性购买，支持微信支付，不会自动续费。')
+            : tr('一次性购买，不会自动续费。'),
+      })
+      new Setting(card).addButton((button) =>
+        button
+          .setButtonText(`${tr('购买')} · ${creditPackPriceText(pack, this.currency)}`)
+          .onClick(() => void this.purchaseCreditPack(pack.plan, button)),
+      )
+    }
   }
   private card(
     parent: HTMLElement,
@@ -1588,6 +1641,35 @@ class SubscriptionModal extends Modal {
     try {
       await this.owner.saveAgentSettings()
       const url = await createCheckout(email, 'monthly', this.currency)
+      window.open(url, '_blank', 'noopener,noreferrer')
+      new Notice(tr('支付页已打开，完成后回到这里刷新套餐状态'))
+      try {
+        await this.updateStatus(await fetchBillingStatus(email))
+        await this.owner.saveAgentSettings()
+        this.saved()
+      } catch {
+        // Checkout completion is asynchronous; status refresh can be retried from Settings.
+      }
+    } catch (error) {
+      new Notice(tr(error instanceof Error ? error.message : '支付链接创建失败，请稍后重试'))
+    } finally {
+      button.setDisabled(false)
+    }
+  }
+  private async purchaseCreditPack(
+    plan: Exclude<BillingPlan, 'monthly'>,
+    button: import('obsidian').ButtonComponent,
+  ) {
+    const tr = this.owner.t,
+      email = this.billing.billingEmail || ''
+    if (!isEmail(email)) {
+      new Notice(tr('请先填写有效邮箱'))
+      return
+    }
+    button.setDisabled(true)
+    try {
+      await this.owner.saveAgentSettings()
+      const url = await createCheckout(email, plan, this.currency)
       window.open(url, '_blank', 'noopener,noreferrer')
       new Notice(tr('支付页已打开，完成后回到这里刷新套餐状态'))
       try {

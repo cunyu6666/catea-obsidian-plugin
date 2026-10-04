@@ -669,6 +669,7 @@ Object.assign(english, {
   支付币种: 'Payment currency',
   人民币支付暂不可用: 'CNY payments are not available yet',
   即将上线: 'Coming soon',
+  支持微信支付: 'WeChat Pay supported',
   人民币支付即将上线: 'CNY payments are coming soon',
   '自备 API Key': 'Bring your own API key',
   '适合已有模型服务的用户。': 'For users who already have a model provider.',
@@ -679,12 +680,18 @@ Object.assign(english, {
   限时折扣: 'Limited-time offer',
   月付订阅: 'Monthly subscription',
   '开箱即用，无需配置 API Key。': 'Ready out of the box. No API key setup required.',
-  '每月包含 100,000 Catea 托管 AI credits':
-    'Includes 100,000 Catea-hosted AI credits every month',
+  '每月包含 100,000 Catea 托管 AI credits': 'Includes 100,000 Catea-hosted AI credits every month',
   '每消耗 1 个模型 token 扣除 1 credit': '1 model token uses 1 credit',
   '每 5 小时重置 20,000 credits 短窗口': '20,000-credit short window resets every 5 hours',
   '额度用尽后可等待重置或购买 credits 包':
     'When credits run out, wait for reset or buy a credits pack',
+  '一次性 credits 包': 'One-time credits packs',
+  '需要更多额度时可一次性购买。Credits 包不会自动续费，会在 Pro 月度额度用完后继续使用。':
+    'Buy one-time credits when you need more room. Credits packs do not renew automatically and are used after the monthly Pro allowance is exhausted.',
+  '一次性购买，支持微信支付，不会自动续费。':
+    'One-time purchase. WeChat Pay is supported. Does not renew automatically.',
+  '一次性购买，不会自动续费。': 'One-time purchase. Does not renew automatically.',
+  购买: 'Buy',
   '高级功能优先开放：连接器、自定义 Persona、媒体生成':
     'Priority access to advanced features: connectors, custom personas, and media generation',
   '订阅 Pro': 'Subscribe to Pro',

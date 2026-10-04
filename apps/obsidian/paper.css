@@ -745,6 +745,18 @@ body.gp-enabled .catea-editor-zoom-label { position: absolute; width: 1px; heigh
 .catea-plan-card .setting-item-info {display:none}
 .catea-plan-card .setting-item-control {width:100%;justify-content:stretch}
 .catea-plan-card button {width:100%;justify-content:center}
+.catea-credit-pack-section {margin-top:18px;padding:18px;border:1px solid var(--background-modifier-border);border-radius:18px;background:var(--background-secondary)}
+.catea-credit-pack-section h3 {margin:0 0 6px;font-size:17px;letter-spacing:-.02em}
+.catea-credit-pack-section__lede {margin:0;color:var(--text-muted);line-height:1.6}
+.catea-credit-pack-grid {display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:14px}
+.catea-credit-pack-card {display:flex;min-height:190px;flex-direction:column;gap:8px;padding:16px;border:1px solid var(--background-modifier-border);border-radius:16px;background:var(--background-primary)}
+.catea-credit-pack-card h4 {margin:0;font-size:18px;letter-spacing:-.02em}
+.catea-credit-pack-card__price {color:var(--interactive-accent);font-size:24px;font-weight:700;letter-spacing:-.03em}
+.catea-credit-pack-card p {margin:0;color:var(--text-muted);font-size:13px;line-height:1.45}
+.catea-credit-pack-card .setting-item {margin-top:auto;padding:0}
+.catea-credit-pack-card .setting-item-info {display:none}
+.catea-credit-pack-card .setting-item-control {width:100%;justify-content:stretch}
+.catea-credit-pack-card button {width:100%;justify-content:center}
 .catea-quota-setting {display:block}
 .catea-local-model-status {margin-top:6px;color:var(--text-muted);font-size:var(--font-ui-smaller)}
 .catea-quota-setting > .setting-item-info {margin-bottom:8px}
@@ -755,7 +767,7 @@ body.gp-enabled .catea-editor-zoom-label { position: absolute; width: 1px; heigh
 .catea-quota-progress progress::-webkit-progress-bar {border-radius:999px;background:var(--background-modifier-border)}
 .catea-quota-progress progress::-webkit-progress-value {border-radius:999px;background:var(--interactive-accent)}
 .catea-quota-progress progress::-moz-progress-bar {border-radius:999px;background:var(--interactive-accent)}
-@media(max-width:720px){.catea-plan-grid{grid-template-columns:1fr}.catea-plan-card{min-height:auto}}
+@media(max-width:720px){.catea-plan-grid,.catea-credit-pack-grid{grid-template-columns:1fr}.catea-plan-card,.catea-credit-pack-card{min-height:auto}}
 .catea-support-modal.modal {width:min(440px,calc(100vw - 32px));}
 .catea-support-modal .modal-content>p {line-height:1.7;margin:0 0 12px;}
 .catea-support-modal .catea-support-modal__note {color:var(--text-muted);font-size:var(--font-ui-small);}
