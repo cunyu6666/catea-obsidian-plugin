@@ -66,7 +66,11 @@ import {
 } from '../../integrations/src/skills'
 import { VaultTools, fileTools, type Approve } from '../../integrations/src/tools'
 import { McpPool, type McpConfig } from '../../integrations/src/mcp'
-import { connectorTools, runConnectorTool } from '../../integrations/src/connectors'
+import {
+  connectorTools,
+  runConnectorTool,
+  type ConnectorConfig,
+} from '../../integrations/src/connectors'
 import { memoryTools, memoryReadOnly } from '../../memory/src/tools'
 import { repairToolProtocol } from './protocol-repair'
 import { generateConversationTitle } from './conversation-title'
@@ -99,6 +103,7 @@ export interface Settings {
   personaId: string
   skills: string[]
   mcp: McpConfig[]
+  connectors?: ConnectorConfig[]
   memory: boolean
   shell: boolean
 }
@@ -928,7 +933,7 @@ Internal note references use [[path|label]]. Only call listed tools. Preserve ra
           )
           return this.pool.call(name, args, signal)
         }
-        if (name.startsWith('connector_')) return runConnectorTool(name, args)
+        if (name.startsWith('connector_')) return runConnectorTool(name, args, config.connectors)
         if (name.startsWith('memory_')) {
           if (!this.settings().memory) throw new Error('记忆工具已关闭')
           await requirePermission(

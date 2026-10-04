@@ -4,8 +4,10 @@ import { contractTest } from '../../../../tests/dip-contract.ts'
 import {
   builtInConnectorManifests,
   connectorCapabilities,
+  connectorConfig,
   connectorList,
   connectorTools,
+  normalizeConnectorConfigs,
   runConnectorTool,
 } from '../connectors.ts'
 
@@ -24,9 +26,7 @@ test('connectors | MVP manifests declare both read and write capability', () => 
     assert.equal(manifest.capabilities.write, true)
     assert.ok(manifest.tools.some((tool) => tool.capability === 'read'))
     assert.ok(
-      manifest.tools.some((tool) =>
-        ['write', 'draft', 'canvas_write'].includes(tool.capability),
-      ),
+      manifest.tools.some((tool) => ['write', 'draft', 'canvas_write'].includes(tool.capability)),
     )
   }
 })
@@ -55,3 +55,37 @@ test('connectors | discovery tools expose summaries and full manifests', () => {
   assert.equal(figma.capabilities.canvas_write, true)
 })
 
+test('connectors | config normalization keeps only manifest-backed settings', () => {
+  const configs = normalizeConnectorConfigs([
+    {
+      id: 'email',
+      enabled: true,
+      adapter: 'missing-adapter',
+      keys: { EMAIL_ACCESS_TOKEN: true, random: true },
+    },
+    { id: 'unknown', enabled: true },
+  ])
+  assert.deepEqual(
+    configs.map((config) => config.id),
+    ['email', 'figma'],
+  )
+  assert.equal(connectorConfig(configs, 'email').enabled, true)
+  assert.equal(connectorConfig(configs, 'email').adapter, 'smtp_mailto')
+  assert.deepEqual(connectorConfig(configs, 'email').keys, {
+    EMAIL_ACCESS_TOKEN: true,
+    EMAIL_REFRESH_TOKEN: false,
+  })
+})
+
+test('connectors | discovery tools include configured enablement status', () => {
+  const configs = [{ id: 'figma', enabled: true, adapter: 'figma_official_mcp', keys: {} }]
+  const list = JSON.parse(runConnectorTool('connector_list', {}, configs))
+  const figma = list.find((connector: { id: string }) => connector.id === 'figma')
+  assert.equal(figma.status.enabled, true)
+  assert.equal(figma.status.adapter, 'figma_official_mcp')
+
+  const manifest = JSON.parse(
+    runConnectorTool('connector_capabilities', { connector: 'figma' }, configs),
+  )
+  assert.equal(manifest.status.enabled, true)
+})

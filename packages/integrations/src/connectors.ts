@@ -1,7 +1,8 @@
 /**
- * [WHO]: Provides ConnectorAdapter, ConnectorAuth, ConnectorCapabilityMap, ConnectorKey, ConnectorManifest, ConnectorTool, builtInConnectorManifests, connectorTools, connectorCapabilities, connectorList, runConnectorTool
+ * [WHO]: Provides ConnectorAdapter, ConnectorAuth, ConnectorCapabilityMap, ConnectorConfig, ConnectorKey, ConnectorManifest, ConnectorTool, builtInConnectorManifests, connectorTools, connectorCapabilities, connectorConfig, connectorList, normalizeConnectorConfigs, runConnectorTool
  * [FROM]: Depends on ../../agent-core/src/providers
- * [TO]: Consumed by packages/agent-core/src/index.ts, packages/integrations/src/index.ts,
+ * [TO]: Consumed by apps/obsidian/src/main.tsx, apps/obsidian/src/settings.ts,
+ *   packages/agent-core/src/index.ts, packages/integrations/src/index.ts,
  *   packages/integrations/src/__tests__/connectors.test.ts
  * [HERE]: packages/integrations/src/connectors.ts - built-in connector manifest registry for the first MVP apps: email and Figma; exposes read-only discovery tools so the Agent sees stable app capabilities before executable adapters are wired in
  */
@@ -14,6 +15,13 @@ export interface ConnectorCapabilityMap {
   draft: boolean
   canvas_write: boolean
   delete: boolean
+}
+
+export interface ConnectorConfig {
+  id: string
+  enabled: boolean
+  adapter?: string
+  keys?: Record<string, boolean>
 }
 
 export interface ConnectorAuth {
@@ -138,7 +146,8 @@ export const builtInConnectorManifests: readonly ConnectorManifest[] = [
     tools: [
       {
         name: 'search_mail',
-        description: 'Search email metadata and bounded snippets by query, sender, recipient, or time.',
+        description:
+          'Search email metadata and bounded snippets by query, sender, recipient, or time.',
         approval: 'never',
         capability: 'read',
         input_schema: schema({
@@ -149,7 +158,8 @@ export const builtInConnectorManifests: readonly ConnectorManifest[] = [
       },
       {
         name: 'read_message',
-        description: 'Read one message body and headers after the user or Agent selects a message id.',
+        description:
+          'Read one message body and headers after the user or Agent selects a message id.',
         approval: 'never',
         capability: 'read',
         input_schema: schema({ message_id: string }, ['message_id']),
@@ -157,7 +167,8 @@ export const builtInConnectorManifests: readonly ConnectorManifest[] = [
       },
       {
         name: 'create_draft',
-        description: 'Create an email draft. Sending is a separate action and always requires approval.',
+        description:
+          'Create an email draft. Sending is a separate action and always requires approval.',
         approval: 'required',
         capability: 'draft',
         input_schema: schema(
@@ -205,7 +216,8 @@ export const builtInConnectorManifests: readonly ConnectorManifest[] = [
         id: 'smtp_mailto',
         type: 'smtp',
         status: 'recommended',
-        notes: 'Draft-first fallback that opens the user mail client or prepares SMTP draft content.',
+        notes:
+          'Draft-first fallback that opens the user mail client or prepares SMTP draft content.',
       },
     ],
     safety: {
@@ -257,7 +269,8 @@ export const builtInConnectorManifests: readonly ConnectorManifest[] = [
     tools: [
       {
         name: 'read_file_context',
-        description: 'Read file, page, node, component, or selection metadata for design-aware work.',
+        description:
+          'Read file, page, node, component, or selection metadata for design-aware work.',
         approval: 'never',
         capability: 'read',
         input_schema: schema({ file_key: string, node_id: string }, ['file_key']),
@@ -280,7 +293,8 @@ export const builtInConnectorManifests: readonly ConnectorManifest[] = [
       },
       {
         name: 'comment',
-        description: 'Write a Figma comment that points reviewers at generated work or an Obsidian source note.',
+        description:
+          'Write a Figma comment that points reviewers at generated work or an Obsidian source note.',
         approval: 'required',
         capability: 'write',
         input_schema: schema(
@@ -310,7 +324,8 @@ export const builtInConnectorManifests: readonly ConnectorManifest[] = [
         status: 'experimental',
         transport: 'websocket',
         host: '127.0.0.1',
-        notes: 'Routes validated Catea design IR to a companion Figma plugin running in the open file.',
+        notes:
+          'Routes validated Catea design IR to a companion Figma plugin running in the open file.',
       },
       {
         id: 'figma_rest',
@@ -330,6 +345,7 @@ export const builtInConnectorManifests: readonly ConnectorManifest[] = [
 ]
 
 function summary(manifest: ConnectorManifest) {
+  const config = connectorConfig(undefined, manifest.id)
   return {
     id: manifest.id,
     name: manifest.name,
@@ -347,11 +363,49 @@ function summary(manifest: ConnectorManifest) {
       type: adapter.type,
       status: adapter.status,
     })),
+    status: {
+      enabled: config.enabled,
+      adapter: config.adapter,
+      keys: config.keys || {},
+    },
   }
 }
 
-export function connectorList() {
-  return builtInConnectorManifests.map(summary)
+export function connectorConfig(
+  configs: ConnectorConfig[] | undefined,
+  id: string,
+): ConnectorConfig {
+  const manifest = connectorCapabilities(id)
+  const saved = configs?.find((config) => config.id === id)
+  const adapters = new Set(manifest.adapters.map((adapter) => adapter.id))
+  const fallback =
+    manifest.adapters.find((adapter) => adapter.status === 'recommended')?.id ||
+    manifest.adapters[0]?.id
+  const adapter = saved?.adapter && adapters.has(saved.adapter) ? saved.adapter : fallback
+  const keys = Object.fromEntries(
+    manifest.keys.map((key) => [key.id, saved?.keys?.[key.id] === true]),
+  )
+  return {
+    id,
+    enabled: saved?.enabled === true,
+    ...(adapter ? { adapter } : {}),
+    ...(manifest.keys.length ? { keys } : {}),
+  }
+}
+
+export function normalizeConnectorConfigs(
+  configs: ConnectorConfig[] | undefined,
+): ConnectorConfig[] {
+  return builtInConnectorManifests.map((manifest) => connectorConfig(configs, manifest.id))
+}
+
+function summaryWithConfig(configs: ConnectorConfig[] | undefined, manifest: ConnectorManifest) {
+  const config = connectorConfig(configs, manifest.id)
+  return { ...summary(manifest), status: config }
+}
+
+export function connectorList(configs?: ConnectorConfig[]) {
+  return builtInConnectorManifests.map((manifest) => summaryWithConfig(configs, manifest))
 }
 
 export function connectorCapabilities(id: string): ConnectorManifest {
@@ -374,9 +428,20 @@ export const connectorTools: ToolDefinition[] = [
   },
 ]
 
-export function runConnectorTool(name: string, args: Record<string, unknown>): string {
-  if (name === 'connector_list') return JSON.stringify(connectorList(), null, 2)
+export function runConnectorTool(
+  name: string,
+  args: Record<string, unknown>,
+  configs?: ConnectorConfig[],
+): string {
+  if (name === 'connector_list') return JSON.stringify(connectorList(configs), null, 2)
   if (name === 'connector_capabilities')
-    return JSON.stringify(connectorCapabilities(textValue(args.connector)), null, 2)
+    return JSON.stringify(
+      {
+        ...connectorCapabilities(textValue(args.connector)),
+        status: connectorConfig(configs, textValue(args.connector)),
+      },
+      null,
+      2,
+    )
   throw new Error('Unknown connector tool')
 }

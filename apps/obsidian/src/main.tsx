@@ -1,6 +1,6 @@
 /**
  * [WHO]: Provides Catea, default
- * [FROM]: Depends on ../../../packages/agent-core/src/local-model, ./DiaryPanel, ./diary, ../../../packages/integrations/src/conversation-store, ../../../packages/agent-core/src/model-client, ../../../packages/agent-core/src/byok, ../../../packages/personas/src, ./sidebar-views, ../../../typings/runtime, ./folder-icons, ./remix-skin, ./GitHistoryPanel, ./MemoryPanel, ./global-byok, ./updates, ./theme, ./note-thumbnails, ./note-previews, ./locale, ./selection, ./session-drafts, ./support-prompt, ../../../packages/agent-core/src/types, obsidian, react-dom/client, ./paper.cjs, ../../../packages/agent-core/src, ../../../packages/integrations/src/data-dir, ../../../packages/integrations/src/storage, ../../../packages/integrations/src/skills, ../../../packages/integrations/src/legacy-snapshots, ../../../packages/integrations/src/mcp-presets, ./panel, ./obsidian-tools, ./skills/obsidian.md, catea-components, ./settings, ./composition, node:fs/promises, ./local-model
+ * [FROM]: Depends on ../../../packages/agent-core/src/local-model, ./DiaryPanel, ./diary, ../../../packages/integrations/src/conversation-store, ../../../packages/agent-core/src/model-client, ../../../packages/agent-core/src/byok, ../../../packages/personas/src, ./sidebar-views, ../../../typings/runtime, ./folder-icons, ./remix-skin, ./GitHistoryPanel, ./MemoryPanel, ./global-byok, ./updates, ./theme, ./note-thumbnails, ./note-previews, ./locale, ./selection, ./session-drafts, ./support-prompt, ../../../packages/agent-core/src/types, obsidian, react-dom/client, ./paper.cjs, ../../../packages/agent-core/src, ../../../packages/integrations/src/data-dir, ../../../packages/integrations/src/storage, ../../../packages/integrations/src/skills, ../../../packages/integrations/src/legacy-snapshots, ../../../packages/integrations/src/mcp-presets, ../../../packages/integrations/src/connectors, ./panel, ./obsidian-tools, ./skills/obsidian.md, catea-components, ./settings, ./composition, node:fs/promises, ./local-model
  * [TO]: Consumed by apps/obsidian/src/folder-icons.ts, apps/obsidian/src/note-previews.ts, apps/obsidian/src/note-thumbnails.ts,
  *   apps/obsidian/src/obsidian-tools.ts, apps/obsidian/src/panel.tsx,
  *   apps/obsidian/src/selection.ts, apps/obsidian/src/settings.ts, apps/obsidian/src/GitHistoryPanel.tsx
@@ -53,6 +53,7 @@ import { readJson, writeJson, within, Serial } from '../../../packages/integrati
 import { presetSkillIds } from '../../../packages/integrations/src/skills'
 import { cleanupLegacySnapshots } from '../../../packages/integrations/src/legacy-snapshots'
 import { injectSecretEnv } from '../../../packages/integrations/src/mcp-presets'
+import { normalizeConnectorConfigs } from '../../../packages/integrations/src/connectors'
 import { Panel } from './panel'
 import { ObsidianTools, obsidianTools } from './obsidian-tools'
 import obsidianSkill from './skills/obsidian.md'
@@ -104,6 +105,7 @@ export default class Catea extends Base {
     personaId: 'aria',
     skills: [],
     mcp: [],
+    connectors: [],
     memory: true,
     shell: false,
     includeCurrentNote: true,
@@ -232,6 +234,7 @@ export default class Catea extends Base {
       ...this.agentSettings,
       ...(await readJson(await within(this.vaultPath, dataPath('config.json')), {})),
     }
+    this.agentSettings.connectors = normalizeConnectorConfigs(this.agentSettings.connectors)
     if (this.agentSettings.localAuxiliaryModel !== undefined) {
       this.agentSettings.localTitles ??= this.agentSettings.localAuxiliaryModel === true
       this.agentSettings.localDiary ??= this.agentSettings.localAuxiliaryModel === true

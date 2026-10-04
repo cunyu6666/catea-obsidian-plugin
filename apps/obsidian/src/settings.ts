@@ -1,6 +1,6 @@
 /**
  * [WHO]: Provides CateaSettings, syncSavedBillingStatus
- * [FROM]: Depends on obsidian, ./main, ../../../packages/agent-core/src/types, ../../../packages/agent-core/src/byok, ../../../packages/agent-core/src/vendor-presets, ../../../packages/integrations/src/data-dir, ../../../packages/integrations/src/skills, ../../../packages/integrations/src/mcp-presets, ../../../packages/personas/src, ./vendor-icons, ./local-model
+ * [FROM]: Depends on obsidian, ./main, ../../../packages/agent-core/src/types, ../../../packages/agent-core/src/byok, ../../../packages/agent-core/src/vendor-presets, ../../../packages/integrations/src/data-dir, ../../../packages/integrations/src/skills, ../../../packages/integrations/src/mcp-presets, ../../../packages/integrations/src/connectors, ../../../packages/personas/src, ./vendor-icons, ./local-model
  * [TO]: Consumed by apps/obsidian/src/main.tsx
  * [HERE]: apps/obsidian/src/settings.ts - plugin settings tab for language, paper toggles, Agent persona and capabilities, subscription status, BYOK models with a vendor-preset grid, one-click MCP presets and MCP servers; ModelModal validates through normalizeModel
  */
@@ -38,6 +38,10 @@ import {
   matchPreset,
   mcpPresets,
 } from '../../../packages/integrations/src/mcp-presets'
+import {
+  builtInConnectorManifests,
+  normalizeConnectorConfigs,
+} from '../../../packages/integrations/src/connectors'
 import { vendorIconDataUrl, vendorIcons, vendorMonogram } from './vendor-icons'
 import { persona, personas } from '../../../packages/personas/src'
 import type { LocalModelState } from './local-model'
@@ -1484,6 +1488,78 @@ export class CateaSettings extends PluginSettingTab {
         )
       },
     })
+    c.connectors = normalizeConnectorConfigs(c.connectors)
+    const connectors: SettingsRow[] = []
+    for (const manifest of builtInConnectorManifests) {
+      const config = c.connectors.find((item) => item.id === manifest.id)!
+      const capabilities = Object.entries(manifest.capabilities)
+        .filter(([, enabled]) => enabled)
+        .map(([key]) => key)
+        .join(', ')
+      connectors.push({
+        name: manifest.name,
+        desc: `${tr(manifest.description)} ${tr('能力')}: ${capabilities}`,
+        render: (s) => {
+          s.addToggle((toggle) =>
+            toggle.setValue(config.enabled).onChange(async (value) => {
+              config.enabled = value
+              await p.saveAgentSettings()
+              this.refresh()
+            }),
+          )
+        },
+      })
+      connectors.push({
+        name: tr('连接方式'),
+        desc: tr(manifest.adapters.find((adapter) => adapter.id === config.adapter)?.notes || ''),
+        render: (s) => {
+          s.addDropdown((dropdown) => {
+            for (const adapter of manifest.adapters)
+              dropdown.addOption(
+                adapter.id,
+                `${adapter.id} · ${tr(adapter.status === 'recommended' ? '推荐' : adapter.status === 'experimental' ? '实验' : '计划中')}`,
+              )
+            dropdown
+              .setValue(config.adapter || manifest.adapters[0]?.id || '')
+              .onChange(async (value) => {
+                config.adapter = value
+                await p.saveAgentSettings()
+                this.refresh()
+              })
+          })
+        },
+      })
+      for (const key of manifest.keys)
+        connectors.push({
+          name: key.id,
+          desc: `${tr(key.description)} ${config.keys?.[key.id] ? tr('已配置') : tr('未配置')}`,
+          render: (s) => {
+            s.addText((input) => {
+              input.inputEl.type = 'password'
+              input
+                .setPlaceholder(config.keys?.[key.id] ? tr('已配置；输入新值替换') : tr('输入密钥'))
+                .setValue('')
+                .onChange(async (value) => {
+                  const next = value.trim()
+                  if (!config.keys) config.keys = {}
+                  config.keys[key.id] = next.length > 0
+                  p.saveSecret(`connector-${manifest.id}-${key.id}`, next)
+                  await p.saveAgentSettings()
+                })
+            })
+            if (config.keys?.[key.id])
+              s.addButton((button) =>
+                button.setButtonText(tr('清除')).onClick(async () => {
+                  if (!config.keys) config.keys = {}
+                  config.keys[key.id] = false
+                  p.saveSecret(`connector-${manifest.id}-${key.id}`, '')
+                  await p.saveAgentSettings()
+                  this.refresh()
+                }),
+              )
+          },
+        })
+    }
     const updates: SettingsRow[] = [
       {
         name: tr('自动检查更新'),
@@ -1554,6 +1630,7 @@ export class CateaSettings extends PluginSettingTab {
       { heading: tr('图像生成'), rows: imageGeneration },
       ...mediaSections,
       { heading: 'Skills', rows: skills },
+      { heading: 'Connectors', rows: connectors },
       { heading: 'MCP', rows: mcp },
     ]
   }
