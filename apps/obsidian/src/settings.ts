@@ -1754,8 +1754,7 @@ class CreditPackModal extends Modal {
           this.billing.billingEmail = value.trim()
         }),
     )
-    const section = el.createDiv({ cls: 'catea-credit-pack-section' })
-    const grid = section.createDiv({ cls: 'catea-credit-pack-grid' })
+    const grid = el.createDiv({ cls: 'catea-credit-pack-grid' })
     for (const pack of CREDIT_PACKS) {
       const card = grid.createDiv({ cls: 'catea-credit-pack-card' })
       card.createDiv({ cls: 'catea-credit-pack-card__label', text: `Credits Pack · ${pack.label}` })
