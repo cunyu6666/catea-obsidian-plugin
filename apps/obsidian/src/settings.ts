@@ -456,20 +456,14 @@ function headerValue(headers: Record<string, string>, name: string) {
   return headers[name] || headers[name.toLowerCase()] || headers[name.toUpperCase()] || ''
 }
 
-async function hostedProbe(url: string, license: string, stream: boolean) {
+async function hostedProbe(url: string, license: string) {
   const response = await requestUrl({
     url,
-    method: 'POST',
+    method: 'GET',
     headers: {
-      'Content-Type': 'application/json',
+      Accept: 'application/json',
       'X-Catea-License': license,
     },
-    body: JSON.stringify({
-      model: 'catea/pro',
-      messages: [{ role: 'user', content: 'ping' }],
-      stream,
-      ...(stream ? { stream_options: { include_usage: true } } : {}),
-    }),
     throw: false,
   })
   const headers = response.headers as Record<string, string>,
@@ -486,7 +480,7 @@ async function runBillingDiagnostics(owner: Catea, prefs: BillingPreferences) {
   const email = prefs.billingEmail || prefs.billingStatus?.email || '',
     model = owner.agentSettings.models.find((item) => item.id === HOSTED_MODEL_ID),
     license = prefs.billingStatus?.license_key || model?.apiKey || '',
-    hostedUrl = `${HOSTED_BILLING_API}/hosted/v1/chat/completions`
+    hostedUrl = `${HOSTED_BILLING_API}/hosted/status`
   const lines = [
     `email: ${email || '(empty)'}`,
     `cached plan: ${prefs.billingStatus?.plan || '(none)'} / pro=${String(prefs.billingStatus?.pro)}`,
@@ -504,19 +498,12 @@ async function runBillingDiagnostics(owner: Catea, prefs: BillingPreferences) {
     lines.push(`billing/me: ${error instanceof Error ? error.message : String(error)}`)
   }
   if (license) {
-    for (const base of BILLING_APIS) {
-      const probeUrl = `${base}/hosted/v1/chat/completions`
-      for (const stream of [false, true]) {
-        try {
-          lines.push(
-            `hosted ${new URL(base).host} stream=${String(stream)}: ${await hostedProbe(probeUrl, license, stream)}`,
-          )
-        } catch (error) {
-          lines.push(
-            `hosted ${new URL(base).host} stream=${String(stream)}: ${error instanceof Error ? error.message : String(error)}`,
-          )
-        }
-      }
+    try {
+      lines.push(`hosted ${new URL(HOSTED_BILLING_API).host}: ${await hostedProbe(hostedUrl, license)}`)
+    } catch (error) {
+      lines.push(
+        `hosted ${new URL(HOSTED_BILLING_API).host}: ${error instanceof Error ? error.message : String(error)}`,
+      )
     }
   } else lines.push('hosted: skipped, missing license')
   const report = lines.join('\n')
