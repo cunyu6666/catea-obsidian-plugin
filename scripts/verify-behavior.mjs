@@ -3453,14 +3453,21 @@ test('Question controls submit current answers on Enter and ignore IME, modifier
   assert.equal(submitted.second.custom, 'Custom second')
 })
 
-test('Billing exposes the plan entry without credentials in either settings UI', async () => {
+test('Billing plan entry follows the production gate without exposing credentials', async () => {
   const { tab } = await settingsFixture()
   const definitions = JSON.stringify(tab.getSettingDefinitions())
   const sections = JSON.stringify(tab.sections())
-  assert.match(definitions, /套餐/)
-  assert.match(definitions, /当前套餐/)
-  assert.match(definitions, /同步套餐状态/)
-  assert.match(sections, /套餐/)
+  const source = await readFile('apps/obsidian/src/settings.ts', 'utf8')
+  const billingEnabled = /const BILLING_UI_ENABLED = true\b/.test(source)
+  if (billingEnabled) {
+    assert.match(definitions, /套餐/)
+    assert.match(definitions, /当前套餐/)
+    assert.match(definitions, /同步套餐状态/)
+    assert.match(sections, /套餐/)
+  } else {
+    assert.doesNotMatch(definitions, /套餐/)
+    assert.doesNotMatch(sections, /套餐/)
+  }
   assert.doesNotMatch(
     `${definitions}${sections}`,
     /license_key|X-Catea-License|catea_[A-Za-z0-9_-]{20,}/,
