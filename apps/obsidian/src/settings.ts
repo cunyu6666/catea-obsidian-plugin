@@ -40,6 +40,8 @@ import {
 } from '../../../packages/integrations/src/mcp-presets'
 import {
   builtInConnectorManifests,
+  type ConnectorConfig,
+  type ConnectorManifest,
   normalizeConnectorConfigs,
 } from '../../../packages/integrations/src/connectors'
 import { vendorIconDataUrl, vendorIcons, vendorMonogram } from './vendor-icons'
@@ -1492,14 +1494,12 @@ export class CateaSettings extends PluginSettingTab {
     const connectors: SettingsRow[] = []
     for (const manifest of builtInConnectorManifests) {
       const config = c.connectors.find((item) => item.id === manifest.id)!
-      const capabilities = Object.entries(manifest.capabilities)
-        .filter(([, enabled]) => enabled)
-        .map(([key]) => key)
-        .join(', ')
       connectors.push({
         name: manifest.name,
-        desc: `${tr(manifest.description)} ${tr('能力')}: ${capabilities}`,
+        desc: connectorStatusLabel(config, tr),
         render: (s) => {
+          s.settingEl.addClass('catea-app-setting')
+          s.descEl.setText(connectorStatusLabel(config, tr))
           s.addToggle((toggle) =>
             toggle.setValue(config.enabled).onChange(async (value) => {
               config.enabled = value
@@ -1507,58 +1507,13 @@ export class CateaSettings extends PluginSettingTab {
               this.refresh()
             }),
           )
+          s.addButton((button) =>
+            button.setButtonText(tr('配置')).onClick(() => {
+              new ConnectorConfigModal(p, manifest, config, () => this.refresh()).open()
+            }),
+          )
         },
       })
-      connectors.push({
-        name: tr('连接方式'),
-        desc: tr(manifest.adapters.find((adapter) => adapter.id === config.adapter)?.notes || ''),
-        render: (s) => {
-          s.addDropdown((dropdown) => {
-            for (const adapter of manifest.adapters)
-              dropdown.addOption(
-                adapter.id,
-                `${adapter.id} · ${tr(adapter.status === 'recommended' ? '推荐' : adapter.status === 'experimental' ? '实验' : '计划中')}`,
-              )
-            dropdown
-              .setValue(config.adapter || manifest.adapters[0]?.id || '')
-              .onChange(async (value) => {
-                config.adapter = value
-                await p.saveAgentSettings()
-                this.refresh()
-              })
-          })
-        },
-      })
-      for (const key of manifest.keys)
-        connectors.push({
-          name: key.id,
-          desc: `${tr(key.description)} ${config.keys?.[key.id] ? tr('已配置') : tr('未配置')}`,
-          render: (s) => {
-            s.addText((input) => {
-              input.inputEl.type = 'password'
-              input
-                .setPlaceholder(config.keys?.[key.id] ? tr('已配置；输入新值替换') : tr('输入密钥'))
-                .setValue('')
-                .onChange(async (value) => {
-                  const next = value.trim()
-                  if (!config.keys) config.keys = {}
-                  config.keys[key.id] = next.length > 0
-                  p.saveSecret(`connector-${manifest.id}-${key.id}`, next)
-                  await p.saveAgentSettings()
-                })
-            })
-            if (config.keys?.[key.id])
-              s.addButton((button) =>
-                button.setButtonText(tr('清除')).onClick(async () => {
-                  if (!config.keys) config.keys = {}
-                  config.keys[key.id] = false
-                  p.saveSecret(`connector-${manifest.id}-${key.id}`, '')
-                  await p.saveAgentSettings()
-                  this.refresh()
-                }),
-              )
-          },
-        })
     }
     const updates: SettingsRow[] = [
       {
@@ -1630,9 +1585,184 @@ export class CateaSettings extends PluginSettingTab {
       { heading: tr('图像生成'), rows: imageGeneration },
       ...mediaSections,
       { heading: 'Skills', rows: skills },
-      { heading: 'Connectors', rows: connectors },
+      { heading: tr('应用'), rows: connectors },
       { heading: 'MCP', rows: mcp },
     ]
+  }
+}
+
+function adapterStatusLabel(status: 'recommended' | 'experimental' | 'planned', tr: Catea['t']) {
+  return tr(status === 'recommended' ? '推荐' : status === 'experimental' ? '实验' : '计划中')
+}
+
+function connectorStatusLabel(config: ConnectorConfig, tr: Catea['t']) {
+  return config.enabled ? tr('已连接') : tr('未连接')
+}
+
+const connectorZh: Record<string, string> = {
+  'Read mailbox context and create draft-first outbound messages through Gmail, Outlook, or SMTP/IMAP adapters.':
+    '读取邮箱上下文，并通过 Gmail、Outlook 或 SMTP/IMAP 适配器创建草稿优先的外发邮件。',
+  'Read Figma file context and write Catea-generated design structures into the native Figma canvas.':
+    '读取 Figma 文件上下文，并把 Catea 生成的设计结构写入原生 Figma 画布。',
+  'Send Obsidian notes or generated articles into WeChat channels, create Official Account article drafts, and import selected WeChat conversation documents through a local desktop bridge.':
+    '将 Obsidian 笔记或生成文章发送到微信通道，创建公众号图文草稿，并通过本地桌面桥导入选定的微信对话文档。',
+  'Read the user WeRead shelf, purchased-book metadata, highlights and notes in Obsidian, and prepare article or note payloads for WeRead through supported API or bridge adapters.':
+    '在 Obsidian 中读取微信读书书架、已购图书元数据、划线和笔记，并通过支持的 API 或桥接适配器准备文章或笔记内容。',
+  'OAuth access token or provider-specific app password.': 'OAuth 访问令牌或服务商专用应用密码。',
+  'OAuth refresh token where the provider uses refreshable sessions.':
+    '服务商支持刷新会话时使用的 OAuth 刷新令牌。',
+  'Optional token for REST metadata and comments.': '用于 REST 元数据和评论的可选令牌。',
+  'Optional shared secret for a local WeChat desktop bridge process.':
+    '本地微信桌面桥进程使用的可选共享密钥。',
+  'PushPlus token for sending Markdown or HTML notes to WeChat.':
+    '用于将 Markdown 或 HTML 笔记发送到微信的 PushPlus token。',
+  'WeChat Official Account app id for draft and publish APIs.':
+    '公众号草稿和发布 API 使用的 App ID。',
+  'WeChat Official Account app secret used to mint an access token.':
+    '用于换取访问令牌的公众号 App Secret。',
+  'Optional pre-minted Official Account access token.': '可选的预生成公众号访问令牌。',
+  'Permanent image media_id used as the cover image for article drafts.':
+    '图文草稿封面图使用的永久图片 media_id。',
+  'WeRead API key, commonly beginning with wrk-.': '微信读书 API key，通常以 wrk- 开头。',
+  'Optional WeRead web cookie fallback for community-compatible sync.':
+    '用于社区兼容同步的可选微信读书网页 Cookie。',
+  'Gmail read and draft APIs; production OAuth scopes require provider review.':
+    'Gmail 读取和草稿 API；生产 OAuth scope 需要服务商审核。',
+  'Microsoft Graph Mail read, draft, and send APIs.':
+    'Microsoft Graph Mail 的读取、草稿和发送 API。',
+  'Generic IMAP read adapter for providers with app passwords.':
+    '面向支持应用密码服务商的通用 IMAP 读取适配器。',
+  'Draft-first fallback that opens the user mail client or prepares SMTP draft content.':
+    '草稿优先的兜底方式：打开用户邮件客户端或准备 SMTP 草稿内容。',
+  'Uses Figma write-to-canvas through the Figma Plugin API.':
+    '通过 Figma Plugin API 执行写入画布。',
+  'Routes validated Catea design IR to a companion Figma plugin running in the open file.':
+    '把已验证的 Catea 设计 IR 路由到当前打开文件中的配套 Figma 插件。',
+  'REST metadata and comment adapter. It is not sufficient for native canvas writes.':
+    'REST 元数据和评论适配器；不足以完成原生画布写入。',
+  'Open-source friendly push route for sending Catea Markdown to the user through a WeChat notification channel; suitable when no local WeChat client is available.':
+    '开源友好的推送路线，可通过微信通知通道发送 Catea Markdown；适合没有本地微信客户端的场景。',
+  'Routes approved send/import jobs to a local WeChat Desktop bridge; this is the product path for personal-account workflows.':
+    '把已批准的发送/导入任务路由到本地微信桌面桥；这是个人号工作流的产品路线。',
+  'Creates and updates article drafts through the official WeChat Official Account API; compatible with wechat-mp-cli-style endpoint coverage, but not equivalent to personal-account messaging.':
+    '通过官方公众号 API 创建和更新图文草稿；兼容 wechat-mp-cli 风格的端点覆盖，但不等同于个人号消息。',
+  'Future adapter for invoking an installed wechat-mp-cli-compatible command surface over the same Official Account draft and publish endpoints.':
+    '未来适配器：调用已安装的 wechat-mp-cli 兼容命令层，复用公众号草稿和发布端点。',
+  'Uses the WeRead Agent/API-key route where available; best suited for shelf, book metadata, progress, highlights and notes.':
+    '优先使用可用的微信读书 Agent/API-key 路线，适合书架、图书元数据、进度、划线和笔记。',
+  'Community-compatible cookie route for shelf and notebook sync; availability may change upstream.':
+    '社区兼容的 Cookie 路线，用于书架和笔记同步；可用性可能随上游变化。',
+  'Future local bridge for opening generated Markdown or article payloads in WeRead-supported clients.':
+    '未来本地桥：在支持微信读书的客户端中打开生成的 Markdown 或文章内容。',
+}
+
+function connectorText(owner: Catea, text: string) {
+  return owner.agentSettings.language === 'en' ? text : connectorZh[text] || text
+}
+
+class ConnectorConfigModal extends Modal {
+  constructor(
+    private owner: Catea,
+    private manifest: ConnectorManifest,
+    private config: ConnectorConfig,
+    private saved: () => void,
+  ) {
+    super(owner.app)
+  }
+  onOpen() {
+    const tr = this.owner.t,
+      el = this.contentEl
+    this.titleEl.setText(`${this.manifest.name} · ${tr('配置')}`)
+    el.addClass('catea-connector-modal')
+    this.render()
+  }
+  private render() {
+    const tr = this.owner.t,
+      el = this.contentEl,
+      manifest = this.manifest,
+      config = this.config
+    el.empty()
+    el.createEl('p', {
+      cls: 'catea-connector-modal__summary',
+      text: connectorText(this.owner, manifest.description),
+    })
+    new Setting(el)
+      .setName(tr('连接状态'))
+      .setDesc(connectorStatusLabel(config, tr))
+      .addToggle((toggle) =>
+        toggle.setValue(config.enabled).onChange(async (value) => {
+          config.enabled = value
+          await this.owner.saveAgentSettings()
+          this.saved()
+          this.render()
+        }),
+      )
+    const adapter = manifest.adapters.find((item) => item.id === config.adapter)
+    new Setting(el)
+      .setName(tr('连接方式'))
+      .setDesc(adapter ? connectorText(this.owner, adapter.notes) : '')
+      .addDropdown((dropdown) => {
+        for (const option of manifest.adapters)
+          dropdown.addOption(option.id, `${option.id} · ${adapterStatusLabel(option.status, tr)}`)
+        dropdown
+          .setValue(config.adapter || manifest.adapters[0]?.id || '')
+          .onChange(async (value) => {
+            config.adapter = value
+            await this.owner.saveAgentSettings()
+            this.saved()
+            this.render()
+          })
+      })
+    this.renderDetails(el)
+    if (manifest.keys.length) {
+      el.createEl('h3', { text: tr('密钥') })
+      for (const key of manifest.keys)
+        new Setting(el)
+          .setName(key.id)
+          .setDesc(
+            `${connectorText(this.owner, key.description)} ${config.keys?.[key.id] ? tr('已配置') : tr('未配置')}`,
+          )
+          .addText((input) => {
+            input.inputEl.type = 'password'
+            input
+              .setPlaceholder(config.keys?.[key.id] ? tr('已配置；输入新值替换') : tr('输入密钥'))
+              .setValue('')
+              .onChange(async (value) => {
+                const next = value.trim()
+                if (!config.keys) config.keys = {}
+                config.keys[key.id] = next.length > 0
+                this.owner.saveSecret(`connector-${manifest.id}-${key.id}`, next)
+                await this.owner.saveAgentSettings()
+                this.saved()
+              })
+          })
+          .addButton((button) => {
+            button.setButtonText(tr('清除'))
+            if (!config.keys?.[key.id]) button.setDisabled(true)
+            else
+              button.onClick(async () => {
+                if (!config.keys) config.keys = {}
+                config.keys[key.id] = false
+                this.owner.saveSecret(`connector-${manifest.id}-${key.id}`, '')
+                await this.owner.saveAgentSettings()
+                this.saved()
+                this.render()
+              })
+          })
+    }
+  }
+  private renderDetails(parent: HTMLElement) {
+    const tr = this.owner.t,
+      manifest = this.manifest
+    const capabilities = Object.entries(manifest.capabilities)
+      .filter(([, enabled]) => enabled)
+      .map(([key]) => key)
+      .join(', ')
+    new Setting(parent).setName(tr('能力')).setDesc(capabilities || tr('未配置'))
+    if (manifest.tools.length)
+      new Setting(parent)
+        .setName(tr('工具'))
+        .setDesc(manifest.tools.map((tool) => tool.name).join(', '))
   }
 }
 

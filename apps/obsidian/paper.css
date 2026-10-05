@@ -615,6 +615,12 @@ body.gp-enabled.gp-enabled .gp-duplicate-inline-title .inline-title { display: n
 .catea-settings__card .setting-item-control :is(input,select,textarea) {min-height:30px;font-size:12px}
 .catea-settings__card .setting-item-control :is(input,select,textarea):focus-visible,
 .catea-settings__card .setting-item-control button:focus-visible {outline:2px solid var(--interactive-accent);outline-offset:2px}
+.catea-settings__card > .setting-item.catea-app-setting {margin:8px;border:1px solid var(--background-modifier-border);border-radius:8px;background:var(--background-primary)}
+.catea-settings__card > .setting-item.catea-app-setting + .setting-item.catea-app-setting {border-top:1px solid var(--background-modifier-border)}
+.catea-app-setting .setting-item-name {font-size:14px}
+.catea-app-setting .setting-item-description {display:inline-flex;align-items:center;min-height:20px;margin-top:5px;padding:2px 8px;border-radius:999px;background:color-mix(in srgb, var(--interactive-accent) 10%, transparent);color:var(--text-normal);font-size:11px;font-weight:600}
+.catea-connector-modal__summary {margin:0 0 12px;color:var(--text-muted);font-size:var(--font-ui-small);line-height:1.6}
+.catea-connector-modal h3 {margin:18px 0 6px;color:var(--text-muted);font-size:11px;font-weight:650;letter-spacing:.02em;text-transform:uppercase}
 @media (max-width:650px) {.catea-settings {padding-inline:8px}.catea-settings__card > .setting-item {align-items:flex-start;gap:10px;padding:12px}.catea-settings__card .setting-item-info {min-width:0}}
 /* Per-editor text zoom controls; the toolbar itself keeps its normal size. */
 body.gp-enabled .catea-editor-zoom { display: flex; align-items: center; gap: 2px; margin-left: 8px; padding-left: 8px; border-left: 1px solid var(--background-modifier-border); flex-shrink: 0; }
