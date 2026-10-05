@@ -2,7 +2,7 @@
  * [WHO]: Provides RuntimeMessage, emptyUsage, fromTranscript, providerStream, streamSimple, toTranscript
  * [FROM]: Depends on ../upstream/ai/types, ../upstream/ai/events, ./providers, ./contracts, ./types
  * [TO]: Consumed by packages/agent-core/src/context.ts, packages/agent-core/src/index.ts
- * [HERE]: packages/agent-core/src/upstream-stream.ts - converts transcripts and provider reasoning into CatUI events; providerStream retries 3x at 500*2^n ms
+ * [HERE]: packages/agent-core/src/upstream-stream.ts - converts transcripts and provider reasoning into CatUI events; providerStream reconnects up to 3x before output at 500*2^n ms
  */
 import type {
   AssistantMessage,
@@ -23,7 +23,13 @@ type HostFields = {
   attachmentIds?: string[]
   anthropicContent?: Record<string, unknown>[]
   cateaCheckpoint?: string
-  cateaDelivery?: { mode: string; chunks: number; firstDeltaMs?: number; totalMs: number }
+  cateaDelivery?: {
+    mode: string
+    chunks: number
+    reconnects?: number
+    firstDeltaMs?: number
+    totalMs: number
+  }
 }
 export type RuntimeMessage = (
   UserMessage | ToolResultMessage<unknown> | (Omit<AssistantMessage, 'usage'> & { usage?: Usage })
@@ -110,7 +116,8 @@ export function providerStream(
     }
     void (async () => {
       let emitted = false
-      for (let attempt = 0; attempt < 3; attempt++) {
+      const maxReconnects = 3
+      for (let attempt = 0; attempt <= maxReconnects; attempt++) {
         try {
           const started = Date.now()
           let firstDeltaMs: number | undefined,
@@ -186,6 +193,7 @@ export function providerStream(
           message.cateaDelivery = {
             mode: delivery,
             chunks,
+            ...(attempt ? { reconnects: attempt } : {}),
             firstDeltaMs,
             totalMs: Date.now() - started,
           }
@@ -215,8 +223,9 @@ export function providerStream(
             !emitted &&
             !options.signal?.aborted &&
             (!(e instanceof ModelServiceError) ||
-              [408, 429, 500, 502, 503, 504].includes(e.status || 0))
-          if (transient && attempt < 2) {
+              e.retryable ||
+              [408, 500, 502, 503, 504, 520, 521, 522, 523, 524].includes(e.status || 0))
+          if (transient && attempt < maxReconnects) {
             await new Promise<void>((resolve, reject) => {
               const abort = () => {
                 window.clearTimeout(timer)
