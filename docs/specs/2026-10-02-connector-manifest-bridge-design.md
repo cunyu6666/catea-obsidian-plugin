@@ -291,22 +291,24 @@ connection status, sync cursors, and last checked time.
 6. A connector manifest cannot grant new permissions by itself; it only
    describes capabilities that the runtime and user enable.
 
-## 9. MVP Connectors
+## 9. Built-In Connectors
 
-The minimum MVP is intentionally limited to two applications. Both must declare
-read and write capabilities in the manifest layer before executable adapters are
-wired in.
+The first connector set covers four applications. Each application declares read
+and write capabilities in the manifest layer before executable adapters are wired
+in; executable support may arrive adapter by adapter.
 
 | Connector | First read mode | First write mode |
 |---|---|---|
 | Email | Gmail API, Microsoft Graph or IMAP search/read | Draft creation before send through Gmail API, Microsoft Graph, SMTP or a mailto fallback |
 | Figma | Figma file/node context through official MCP or REST metadata | Canvas write through official MCP `use_figma` or a local plugin bridge |
+| WeChat | User-selected desktop conversation/file import through a local bridge | Send Obsidian notes or generated documents to File Transfer/user account through a local desktop bridge |
+| WeRead | WeRead Agent/API-key or cookie route for shelf, purchased-book metadata, highlights and notes | Prepare Obsidian documents for WeRead article/note/review import through supported API or local bridge routes |
 
 ## 10. Implementation Plan
 
 1. Define a JSON schema for connector manifests.
 2. Add a manifest loader under `packages/integrations/src/connectors/`.
-3. Add built-in read-only manifests for Email and Figma.
+3. Add built-in manifests for Email, Figma, WeChat and WeRead.
 4. Add account metadata storage and secret references.
 5. Expose `connector_list` and `connector_capabilities`.
 6. Add Figma as the first executable connector through an adapter interface.
@@ -318,6 +320,19 @@ wired in.
      bounded Catea design IR into `use_figma` Plugin API code and require an
      explicit Figma file target.
 7. Add approval and audit plumbing for `connector_share` / `connector_create`.
+
+### 10.1 WeChat and WeRead Notes
+
+WeChat personal-account workflows should be treated as local-desktop bridge
+workflows, not as an official cloud API. Sending a note to the user's own WeChat
+account or importing a selected conversation document requires an explicit local
+session and user approval for writes.
+
+WeRead has a stronger read story: community and API-key based tools can read
+book shelf, book metadata, reading progress, highlights and notes. Purchased
+book text must remain bounded to the user's entitled access; full-book export is
+not a connector promise. Writing back to WeRead is modelled as a draft/preview
+surface until a supported API or local bridge path is proven.
 
 ## 11. Open Questions
 

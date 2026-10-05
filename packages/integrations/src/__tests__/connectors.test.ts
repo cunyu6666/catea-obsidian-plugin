@@ -13,10 +13,10 @@ import {
 
 contractTest('packages/integrations/src/connectors.ts')
 
-test('connectors | built-in MVP is email and Figma only', () => {
+test('connectors | built-in apps include communication, design and reading targets', () => {
   assert.deepEqual(
     builtInConnectorManifests.map((connector) => connector.id),
-    ['email', 'figma'],
+    ['email', 'figma', 'wechat', 'weread'],
   )
 })
 
@@ -38,6 +38,26 @@ test('connectors | email is draft-first and Figma writes native canvas', () => {
   assert.equal(email.tools.find((tool) => tool.name === 'create_draft')?.approval, 'required')
   assert.equal(figma.capabilities.canvas_write, true)
   assert.equal(figma.tools.find((tool) => tool.name === 'write_canvas')?.approval, 'required')
+})
+
+test('connectors | WeChat and WeRead model the requested read/write workflows separately', () => {
+  const wechat = connectorCapabilities('wechat')
+  const weread = connectorCapabilities('weread')
+  assert.equal(wechat.category, 'communication')
+  assert.equal(
+    wechat.adapters.find((adapter) => adapter.id === 'wechat_desktop_bridge')?.type,
+    'local_bridge',
+  )
+  assert.equal(
+    wechat.tools.find((tool) => tool.name === 'share_note_to_self')?.approval,
+    'required',
+  )
+  assert.equal(weread.category, 'reading')
+  assert.equal(weread.tools.find((tool) => tool.name === 'list_shelf')?.capability, 'read')
+  assert.equal(
+    weread.tools.find((tool) => tool.name === 'send_document_to_weread')?.approval,
+    'required',
+  )
 })
 
 test('connectors | discovery tools expose summaries and full manifests', async () => {
@@ -74,7 +94,7 @@ test('connectors | config normalization keeps only manifest-backed settings', ()
   ])
   assert.deepEqual(
     configs.map((config) => config.id),
-    ['email', 'figma'],
+    ['email', 'figma', 'wechat', 'weread'],
   )
   assert.equal(connectorConfig(configs, 'email').enabled, true)
   assert.equal(connectorConfig(configs, 'email').adapter, 'smtp_mailto')

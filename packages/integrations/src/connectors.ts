@@ -354,6 +354,253 @@ export const builtInConnectorManifests: readonly ConnectorManifest[] = [
       model_visible_secrets: false,
     },
   },
+  {
+    schema_version: 1,
+    id: 'wechat',
+    name: 'WeChat',
+    description:
+      'Send Obsidian notes or generated documents to the user WeChat account and import selected WeChat conversation documents back into the vault through a local desktop bridge.',
+    category: 'communication',
+    homepage: 'https://weixin.qq.com/',
+    capabilities: {
+      read: true,
+      write: true,
+      sync: true,
+      draft: true,
+      canvas_write: false,
+      delete: false,
+    },
+    auth: [
+      {
+        id: 'desktop_session',
+        type: 'local_bridge',
+        required: true,
+        notes:
+          'Requires the user to be logged in to WeChat Desktop; no account password is stored by Catea.',
+      },
+    ],
+    keys: [
+      {
+        id: 'WECHAT_BRIDGE_TOKEN',
+        storage: 'secret',
+        required: false,
+        description: 'Optional shared secret for a local WeChat desktop bridge process.',
+      },
+    ],
+    tools: [
+      {
+        name: 'share_note_to_self',
+        description:
+          'Send an Obsidian note, generated Markdown document, or exported attachment to File Transfer or the user account in WeChat.',
+        approval: 'required',
+        capability: 'write',
+        input_schema: schema(
+          {
+            title: string,
+            body_markdown: string,
+            file_path: string,
+            recipient: string,
+          },
+          ['body_markdown'],
+        ),
+        adapters: ['wechat_desktop_bridge'],
+      },
+      {
+        name: 'import_conversation_document',
+        description:
+          'Import a user-selected WeChat message, file, or conversation excerpt into an Obsidian document.',
+        approval: 'never',
+        capability: 'read',
+        input_schema: schema({
+          conversation: string,
+          message_id: string,
+          since: string,
+          limit: { type: 'integer', minimum: 1, maximum: 50 },
+        }),
+        adapters: ['wechat_desktop_bridge'],
+      },
+      {
+        name: 'draft_reply',
+        description:
+          'Prepare a WeChat reply or document share payload; final send requires explicit user approval.',
+        approval: 'required',
+        capability: 'draft',
+        input_schema: schema(
+          {
+            conversation: string,
+            body_markdown: string,
+            attachment_path: string,
+          },
+          ['body_markdown'],
+        ),
+        adapters: ['wechat_desktop_bridge'],
+      },
+    ],
+    adapters: [
+      {
+        id: 'wechat_desktop_bridge',
+        type: 'local_bridge',
+        status: 'experimental',
+        transport: 'websocket',
+        host: '127.0.0.1',
+        notes:
+          'Routes approved send/import jobs to a local WeChat Desktop bridge; this is the product path for personal-account workflows.',
+      },
+      {
+        id: 'wechat_official_account_api',
+        type: 'rest',
+        status: 'planned',
+        endpoint: 'https://api.weixin.qq.com/',
+        notes:
+          'Official Account and enterprise-style APIs are not equivalent to personal WeChat account messaging; use only for owned official-account workflows.',
+      },
+    ],
+    safety: {
+      external_write_approval: 'always',
+      default_mode: 'draft_or_preview',
+      audit_log: true,
+      model_visible_secrets: false,
+    },
+  },
+  {
+    schema_version: 1,
+    id: 'weread',
+    name: 'WeRead',
+    description:
+      'Read the user WeRead shelf, purchased-book metadata, highlights and notes in Obsidian, and prepare article or note payloads for WeRead through supported API or bridge adapters.',
+    category: 'reading',
+    homepage: 'https://weread.qq.com/',
+    capabilities: {
+      read: true,
+      write: true,
+      sync: true,
+      draft: true,
+      canvas_write: false,
+      delete: false,
+    },
+    auth: [
+      {
+        id: 'weread_api_key',
+        type: 'api_key',
+        required: false,
+        scopes: ['shelf', 'books', 'notes', 'highlights'],
+        notes: 'Preferred when the user has a WeRead API key or Agent API credential.',
+      },
+      {
+        id: 'weread_cookie',
+        type: 'cookie',
+        required: false,
+        notes: 'Fallback used by existing community sync tools; should stay vault-local.',
+      },
+    ],
+    keys: [
+      {
+        id: 'WEREAD_API_KEY',
+        storage: 'secret',
+        required: false,
+        description: 'WeRead API key, commonly beginning with wrk-.',
+      },
+      {
+        id: 'WEREAD_COOKIE',
+        storage: 'secret',
+        required: false,
+        description: 'Optional WeRead web cookie fallback for community-compatible sync.',
+      },
+    ],
+    tools: [
+      {
+        name: 'list_shelf',
+        description:
+          'List the user WeRead shelf, including purchased books, reading status and metadata.',
+        approval: 'never',
+        capability: 'read',
+        input_schema: schema({
+          include_archived: { type: 'boolean' },
+          limit: { type: 'integer', minimum: 1, maximum: 200 },
+        }),
+        adapters: ['weread_agent_api', 'weread_cookie_api'],
+      },
+      {
+        name: 'read_book_context',
+        description:
+          'Read bounded book context that the user is entitled to access, including metadata, table of contents, progress, highlights and personal notes.',
+        approval: 'never',
+        capability: 'read',
+        input_schema: schema(
+          {
+            book_id: string,
+            include_chapters: { type: 'boolean' },
+            include_notes: { type: 'boolean' },
+          },
+          ['book_id'],
+        ),
+        adapters: ['weread_agent_api', 'weread_cookie_api'],
+      },
+      {
+        name: 'sync_notes_to_vault',
+        description:
+          'Synchronize WeRead highlights, comments and book metadata into Obsidian Markdown documents.',
+        approval: 'required',
+        capability: 'sync',
+        input_schema: schema({
+          book_id: string,
+          output_folder: string,
+          mode: { type: 'string', enum: ['book', 'shelf'] },
+        }),
+        adapters: ['weread_agent_api', 'weread_cookie_api'],
+      },
+      {
+        name: 'send_document_to_weread',
+        description:
+          'Prepare an Obsidian document for WeRead import, article reading, review, or future supported write surface.',
+        approval: 'required',
+        capability: 'write',
+        input_schema: schema(
+          {
+            title: string,
+            body_markdown: string,
+            source_path: string,
+            target: { type: 'string', enum: ['article', 'note', 'review'] },
+          },
+          ['title', 'body_markdown'],
+        ),
+        adapters: ['weread_local_bridge', 'weread_agent_api'],
+      },
+    ],
+    adapters: [
+      {
+        id: 'weread_agent_api',
+        type: 'rest',
+        status: 'recommended',
+        endpoint: 'https://i.weread.qq.com/api/agent/gateway',
+        notes:
+          'Uses the WeRead Agent/API-key route where available; best suited for shelf, book metadata, progress, highlights and notes.',
+      },
+      {
+        id: 'weread_cookie_api',
+        type: 'rest',
+        status: 'experimental',
+        endpoint: 'https://weread.qq.com/',
+        notes:
+          'Community-compatible cookie route for shelf and notebook sync; availability may change upstream.',
+      },
+      {
+        id: 'weread_local_bridge',
+        type: 'local_bridge',
+        status: 'planned',
+        transport: 'websocket',
+        host: '127.0.0.1',
+        notes:
+          'Future local bridge for opening generated Markdown or article payloads in WeRead-supported clients.',
+      },
+    ],
+    safety: {
+      external_write_approval: 'always',
+      default_mode: 'draft_or_preview',
+      audit_log: true,
+      model_visible_secrets: false,
+    },
+  },
 ]
 
 function summary(manifest: ConnectorManifest) {

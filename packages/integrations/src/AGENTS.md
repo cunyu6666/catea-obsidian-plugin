@@ -9,7 +9,7 @@ package builds on.
 ## Member List
 
 conversation-store.ts: Vault-backed conversation persistence with serialized writes, a 500-session index, eviction cleanup and delete rollback.
-connectors.ts: Built-in connector manifest registry for the first MVP apps, email and Figma; declares read/write capabilities, auth/key requirements, semantic tools and adapter routes, exposes connector discovery tools and dispatches enabled connector actions to runtime adapters.
+connectors.ts: Built-in connector manifest registry for Email, Figma, WeChat and WeRead; declares read/write capabilities, auth/key requirements, semantic tools and adapter routes, exposes connector discovery tools and dispatches enabled connector actions to runtime adapters.
 data-dir.ts: Single compile-time root for all vault-local plugin state; `scripts/build.mjs` injects `CATEA_DATA_DIR` so a development bundle reads and writes `.catea-dev` instead of the released plugin's `.catea`, and falls back to `.catea` when unbundled.
 figma-connector.ts: Figma runtime adapter for the connector bridge; parses Figma targets, compiles bounded Catea design IR into Plugin API JavaScript, and calls the official Figma MCP `get_metadata`, `get_design_context`, `get_screenshot` and `use_figma` tools.
 find-skill.md: Preset skill prompt that ships inside the bundle; discovers skills through the skills.sh HTTP search API and gates any third-party text behind user confirmation before `skill_create`.
