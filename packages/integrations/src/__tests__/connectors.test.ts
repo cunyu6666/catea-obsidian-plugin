@@ -45,6 +45,10 @@ test('connectors | WeChat and WeRead model the requested read/write workflows se
   const weread = connectorCapabilities('weread')
   assert.equal(wechat.category, 'communication')
   assert.equal(
+    wechat.adapters.find((adapter) => adapter.id === 'wechat_pushplus')?.status,
+    'recommended',
+  )
+  assert.equal(
     wechat.adapters.find((adapter) => adapter.id === 'wechat_desktop_bridge')?.type,
     'local_bridge',
   )
@@ -52,12 +56,41 @@ test('connectors | WeChat and WeRead model the requested read/write workflows se
     wechat.tools.find((tool) => tool.name === 'share_note_to_self')?.approval,
     'required',
   )
+  assert.equal(
+    wechat.tools.find((tool) => tool.name === 'create_official_article_draft')?.capability,
+    'draft',
+  )
   assert.equal(weread.category, 'reading')
   assert.equal(weread.tools.find((tool) => tool.name === 'list_shelf')?.capability, 'read')
   assert.equal(
     weread.tools.find((tool) => tool.name === 'send_document_to_weread')?.approval,
     'required',
   )
+})
+
+test('connectors | executable WeChat share routes to PushPlus with stored secrets', async () => {
+  const calls: { url: string; init: RequestInit }[] = []
+  const output = JSON.parse(
+    await runConnectorTool(
+      'connector_share',
+      {
+        connector: 'wechat',
+        title: 'Catea note',
+        content_markdown: '# Shared',
+      },
+      {
+        configs: [{ id: 'wechat', enabled: true, adapter: 'wechat_pushplus', keys: {} }],
+        getSecret: (id) => (id === 'connector-wechat-PUSHPLUS_TOKEN' ? 'push-token' : undefined),
+        wechatHttpCall: async (url, init) => {
+          calls.push({ url, init })
+          return { code: 200, msg: 'ok' }
+        },
+      },
+    ),
+  )
+  assert.equal(output.adapter, 'wechat_pushplus')
+  assert.equal(calls[0]?.url, 'https://www.pushplus.plus/send')
+  assert.equal(JSON.parse(String(calls[0]?.init.body)).token, 'push-token')
 })
 
 test('connectors | discovery tools expose summaries and full manifests', async () => {

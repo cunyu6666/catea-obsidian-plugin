@@ -24,6 +24,7 @@ skills.ts: Resolves enabled skills from `.catea/skills/<id>/SKILL.md` or the rea
 storage.ts: Vault confinement through `within()` with realpath checks and explicit symlink rejection, atomic temp+rename JSON writes, the `Serial` promise queue, and the shared `errnoCode` structural narrowing helper.
 tools.ts: Filesystem tool surface (time/read/ls/find/grep/write/edit/bash) with approval gates and original/modified records for successful structured writes; 1 MB text cap, 10000-file walk, 300-line read, 80 grep hits, 100 KB write, 60 s bash.
 web.ts: `web_search` and `web_fetch` via Exa MCP, Jina, DuckDuckGo or direct fetch; `link_world_admin` diagnoses Agent Reach and `link_world_exec` runs approved CLI arguments; blocks local and private hosts for page requests.
+wechat-connector.ts: WeChat runtime adapter for the connector bridge; pushes Markdown to WeChat notification channels through PushPlus and creates or updates WeChat Official Account article drafts through the official draft API.
 
 ## Notes
 

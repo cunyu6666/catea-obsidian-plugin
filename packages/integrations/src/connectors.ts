@@ -1,6 +1,6 @@
 /**
  * [WHO]: Provides ConnectorAdapter, ConnectorAuth, ConnectorCapabilityMap, ConnectorConfig, ConnectorKey, ConnectorManifest, ConnectorRuntimeOptions, ConnectorTool, builtInConnectorManifests, connectorTools, connectorCapabilities, connectorConfig, connectorList, normalizeConnectorConfigs, runConnectorTool
- * [FROM]: Depends on ../../agent-core/src/providers, ./figma-connector.ts
+ * [FROM]: Depends on ../../agent-core/src/providers, ./figma-connector.ts, ./wechat-connector.ts
  * [TO]: Consumed by apps/obsidian/src/main.tsx, apps/obsidian/src/settings.ts,
  *   packages/agent-core/src/index.ts, packages/integrations/src/figma-connector.ts,
  *   packages/integrations/src/index.ts,
@@ -13,6 +13,12 @@ import {
   type FigmaConnectorCall,
   type FigmaMcpCall,
 } from './figma-connector.ts'
+import {
+  callWeChatConnector,
+  type WeChatConnectorCall,
+  type WeChatHttpCall,
+  type WeChatSecrets,
+} from './wechat-connector.ts'
 
 export interface ConnectorCapabilityMap {
   read: boolean
@@ -34,6 +40,7 @@ export interface ConnectorRuntimeOptions {
   configs?: ConnectorConfig[]
   getSecret?: (id: string) => string | undefined
   figmaCall?: FigmaMcpCall
+  wechatHttpCall?: WeChatHttpCall
 }
 
 export interface ConnectorAuth {
@@ -359,7 +366,7 @@ export const builtInConnectorManifests: readonly ConnectorManifest[] = [
     id: 'wechat',
     name: 'WeChat',
     description:
-      'Send Obsidian notes or generated documents to the user WeChat account and import selected WeChat conversation documents back into the vault through a local desktop bridge.',
+      'Send Obsidian notes or generated articles into WeChat channels, create Official Account article drafts, and import selected WeChat conversation documents through a local desktop bridge.',
     category: 'communication',
     homepage: 'https://weixin.qq.com/',
     capabilities: {
@@ -374,9 +381,25 @@ export const builtInConnectorManifests: readonly ConnectorManifest[] = [
       {
         id: 'desktop_session',
         type: 'local_bridge',
-        required: true,
+        required: false,
         notes:
           'Requires the user to be logged in to WeChat Desktop; no account password is stored by Catea.',
+      },
+      {
+        id: 'pushplus_token',
+        type: 'api_key',
+        required: false,
+        scopes: ['send:self', 'send:topic'],
+        notes:
+          'Fastest no-client route for sending notes to the user through a WeChat notification channel.',
+      },
+      {
+        id: 'official_account_app',
+        type: 'api_key',
+        required: false,
+        scopes: ['draft:add', 'draft:update', 'draft:get', 'freepublish:submit'],
+        notes:
+          'Official Account API route for owned public-account article drafts; it is not personal WeChat messaging.',
       },
     ],
     keys: [
@@ -385,6 +408,36 @@ export const builtInConnectorManifests: readonly ConnectorManifest[] = [
         storage: 'secret',
         required: false,
         description: 'Optional shared secret for a local WeChat desktop bridge process.',
+      },
+      {
+        id: 'PUSHPLUS_TOKEN',
+        storage: 'secret',
+        required: false,
+        description: 'PushPlus token for sending Markdown or HTML notes to WeChat.',
+      },
+      {
+        id: 'WECHAT_OFFICIAL_APP_ID',
+        storage: 'secret',
+        required: false,
+        description: 'WeChat Official Account app id for draft and publish APIs.',
+      },
+      {
+        id: 'WECHAT_OFFICIAL_APP_SECRET',
+        storage: 'secret',
+        required: false,
+        description: 'WeChat Official Account app secret used to mint an access token.',
+      },
+      {
+        id: 'WECHAT_OFFICIAL_ACCESS_TOKEN',
+        storage: 'secret',
+        required: false,
+        description: 'Optional pre-minted Official Account access token.',
+      },
+      {
+        id: 'WECHAT_OFFICIAL_THUMB_MEDIA_ID',
+        storage: 'secret',
+        required: false,
+        description: 'Permanent image media_id used as the cover image for article drafts.',
       },
     ],
     tools: [
@@ -404,6 +457,42 @@ export const builtInConnectorManifests: readonly ConnectorManifest[] = [
           ['body_markdown'],
         ),
         adapters: ['wechat_desktop_bridge'],
+      },
+      {
+        name: 'push_note_to_wechat',
+        description:
+          'Push a Markdown or HTML note to the user through a WeChat notification channel without requiring a local WeChat client.',
+        approval: 'required',
+        capability: 'write',
+        input_schema: schema(
+          {
+            title: string,
+            content_markdown: string,
+            topic: string,
+            to: string,
+          },
+          ['content_markdown'],
+        ),
+        adapters: ['wechat_pushplus'],
+      },
+      {
+        name: 'create_official_article_draft',
+        description:
+          'Create or update a WeChat Official Account article draft from Obsidian Markdown through the official draft API.',
+        approval: 'required',
+        capability: 'draft',
+        input_schema: schema(
+          {
+            title: string,
+            content_markdown: string,
+            author: string,
+            digest: string,
+            source_url: string,
+            thumb_media_id: string,
+          },
+          ['title', 'content_markdown'],
+        ),
+        adapters: ['wechat_official_account_api'],
       },
       {
         name: 'import_conversation_document',
@@ -438,6 +527,14 @@ export const builtInConnectorManifests: readonly ConnectorManifest[] = [
     ],
     adapters: [
       {
+        id: 'wechat_pushplus',
+        type: 'rest',
+        status: 'recommended',
+        endpoint: 'https://www.pushplus.plus/send',
+        notes:
+          'Open-source friendly push route for sending Catea Markdown to the user through a WeChat notification channel; suitable when no local WeChat client is available.',
+      },
+      {
         id: 'wechat_desktop_bridge',
         type: 'local_bridge',
         status: 'experimental',
@@ -449,10 +546,17 @@ export const builtInConnectorManifests: readonly ConnectorManifest[] = [
       {
         id: 'wechat_official_account_api',
         type: 'rest',
-        status: 'planned',
+        status: 'experimental',
         endpoint: 'https://api.weixin.qq.com/',
         notes:
-          'Official Account and enterprise-style APIs are not equivalent to personal WeChat account messaging; use only for owned official-account workflows.',
+          'Creates and updates article drafts through the official WeChat Official Account API; compatible with wechat-mp-cli-style endpoint coverage, but not equivalent to personal-account messaging.',
+      },
+      {
+        id: 'wechat_mp_cli',
+        type: 'rest',
+        status: 'planned',
+        notes:
+          'Future adapter for invoking an installed wechat-mp-cli-compatible command surface over the same Official Account draft and publish endpoints.',
       },
     ],
     safety: {
@@ -786,6 +890,26 @@ export async function runConnectorTool(
         null,
         2,
       )
+    if (connector === 'wechat') {
+      const secrets = Object.fromEntries(
+        connectorCapabilities('wechat').keys.map((key) => [
+          key.id,
+          runtime.getSecret?.(`connector-wechat-${key.id}`),
+        ]),
+      ) as WeChatSecrets
+      return JSON.stringify(
+        await callWeChatConnector(
+          name.replace('connector_', '') as WeChatConnectorCall,
+          args,
+          config,
+          secrets,
+          runtime.wechatHttpCall,
+          signal || new AbortController().signal,
+        ),
+        null,
+        2,
+      )
+    }
     throw new Error(`Connector runtime is not implemented yet: ${connector}`)
   }
   throw new Error('Unknown connector tool')
