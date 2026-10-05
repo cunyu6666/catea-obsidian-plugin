@@ -83,8 +83,9 @@ function openAiUsage(value: unknown): TokenUsage | undefined {
 export class ModelServiceError extends Error {
   readonly reason: 'context' | 'tools' | 'other'
   readonly status?: number
+  readonly retryable: boolean
 
-  constructor(detail: string, status?: number, host?: string) {
+  constructor(detail: string, status?: number, host?: string, retryable = false) {
     const visibleDetail = detail.slice(0, 500).replace(/\s+/g, ' ').trim()
     const reason =
       /context[_ ]length|too many tokens|maximum context|prompt is too long|input too long/i.test(
@@ -105,6 +106,7 @@ export class ModelServiceError extends Error {
     this.name = 'ModelServiceError'
     this.reason = reason
     this.status = status
+    this.retryable = retryable
   }
 }
 
@@ -344,6 +346,7 @@ async function responseJson(
         : body.slice(0, 2_000),
       response.status,
       host,
+      response.status === 200,
     )
   }
 }

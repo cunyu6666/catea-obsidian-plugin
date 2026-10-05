@@ -26,7 +26,7 @@ providers.ts: `streamModel` maps transcripts to OpenAI or Anthropic requests and
 protocol-repair.ts: Places interrupted tool results immediately after their calls in saved transcripts and journals before a session resumes.
 transport.ts: `serviceFetch` streams over Node http/https with a 120 s timeout and rejects redirects; falls back to Electron net only on X.509 chain errors, then to buffered requestUrl.
 types.ts: Shared type declarations for models, transcripts, attachments, tools and search configuration; type-only, emits no runtime code, and holds several currently unreferenced interfaces.
-upstream-stream.ts: Defines the RuntimeMessage adapter contract and converts provider answer and reasoning deltas into CatUI messages; `providerStream` retries 3x at 500*2^n ms and records delivery diagnostics; `streamSimple` throws to force host injection.
+upstream-stream.ts: Defines the RuntimeMessage adapter contract and converts provider answer and reasoning deltas into CatUI messages; `providerStream` reconnects up to three times before any output at 500*2^n ms and records delivery diagnostics; `streamSimple` throws to force host injection.
 vendor-presets.ts: Curated official-vendor BYOK presets (21 vendors); `createVendorModel` prefills protocol, endpoint, default model and context window through `normalizeModel` so users only supply an API key; `matchVendorPreset` detects a preset by protocol and normalized baseUrl.
 version.ts: Exports `PLUGIN_VERSION`, the single runtime source for the plugin version; a governance test keeps it equal to manifest.json and versions.json.
 

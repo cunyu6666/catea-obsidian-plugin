@@ -682,6 +682,91 @@ test('Agent stream forwards provider reasoning before the answer', async () => {
     'Check the note.',
   )
 })
+test('Agent stream reconnects up to three times before output for transient failures', async () => {
+  const { providerStream } = await load(
+    'packages/agent-core/src/upstream-stream.ts',
+    {
+      './providers': `export class ModelServiceError extends Error {
+        constructor(message, status, retryable=false) {
+          super(message); this.status=status; this.retryable=retryable
+        }
+      }`,
+    },
+    { window: { setTimeout: (callback) => setTimeout(callback, 0), clearTimeout } },
+  )
+  let requests = 0
+  const client = {
+    async *stream() {
+      requests++
+      if (requests <= 3) throw new Error('temporary DNS failure')
+      yield { type: 'delta', text: 'Connected.' }
+      yield { type: 'done', reply: { text: 'Connected.', calls: [] } }
+    },
+  }
+  const events = []
+  const modelInfo = { id: model.model, api: 'openai-completions', provider: 'catea' }
+  for await (const event of providerStream(
+    model,
+    () => new Map(),
+    client,
+  )(modelInfo, { messages: [], systemPrompt: '', tools: [] }))
+    events.push(event)
+  assert.equal(requests, 4, 'the initial request is followed by at most three reconnects')
+  const done = events.find((event) => event.type === 'done')
+  assert.equal(done?.message.content[0].text, 'Connected.')
+  assert.equal(done?.message.cateaDelivery.reconnects, 3)
+})
+test('Agent stream does not reconnect quota failures or failures after output starts', async () => {
+  const errorTypes = {}
+  const { providerStream } = await load(
+    'packages/agent-core/src/upstream-stream.ts',
+    {
+      './providers': `export class ModelServiceError extends Error {
+        constructor(message, status, retryable=false) {
+          super(message); this.status=status; this.retryable=retryable
+        }
+      }
+      globalThis.errorTypes.ModelServiceError = ModelServiceError`,
+    },
+    {
+      errorTypes,
+      window: { setTimeout: (callback) => setTimeout(callback, 0), clearTimeout },
+    },
+  )
+  const modelInfo = { id: model.model, api: 'openai-completions', provider: 'catea' }
+  let quotaRequests = 0
+  const quotaClient = {
+    async *stream() {
+      quotaRequests++
+      throw new errorTypes.ModelServiceError('quota', 429)
+    },
+  }
+  for await (const _event of providerStream(
+    model,
+    () => new Map(),
+    quotaClient,
+  )(modelInfo, { messages: [], systemPrompt: '', tools: [] })) {
+    // Drain the error event.
+  }
+  assert.equal(quotaRequests, 1)
+
+  let partialRequests = 0
+  const partialClient = {
+    async *stream() {
+      partialRequests++
+      yield { type: 'delta', text: 'Partial' }
+      throw new Error('connection closed')
+    },
+  }
+  for await (const _event of providerStream(
+    model,
+    () => new Map(),
+    partialClient,
+  )(modelInfo, { messages: [], systemPrompt: '', tools: [] })) {
+    // Drain the partial response and error event.
+  }
+  assert.equal(partialRequests, 1)
+})
 test('Malformed optional JSON fields cannot become executable tool arguments', async () => {
   const { reply } = await parse(
     'anthropic',
@@ -707,6 +792,23 @@ test('Provider errors never disclose response bodies', async () => {
     (error) => {
       assert.equal(error.message.includes('private note'), false)
       assert.equal(error.message.includes('secret key'), false)
+      return true
+    },
+  )
+})
+test('A non-JSON HTTP 200 response is classified for a safe pre-output reconnect', async () => {
+  await assert.rejects(
+    () =>
+      parse(
+        'openai',
+        new Response('<!DOCTYPE html><html><body>gateway page</body></html>', {
+          status: 200,
+          headers: { 'content-type': 'text/html' },
+        }),
+      ),
+    (error) => {
+      assert.equal(error.status, 200)
+      assert.equal(error.retryable, true)
       return true
     },
   )
