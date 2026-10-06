@@ -44,4 +44,15 @@ test('technical failures use actionable bilingual wording', () => {
     humanizeError('文件超过 1 MB，请缩小范围', 'en'),
     'The file exceeds 1 MB. Narrow the read to the part you need.',
   )
+  assert.match(
+    humanizeError(
+      'CATEA_ERROR {"code":"window_quota_exceeded","resetAt":"2026-10-06T12:30:00Z"}',
+      'zh',
+    ),
+    /套餐时段额度已用完.*重置/,
+  )
+  assert.match(
+    humanizeError('CATEA_ERROR {"code":"upstream_rate_limited"}', 'en'),
+    /temporarily unavailable/i,
+  )
 })

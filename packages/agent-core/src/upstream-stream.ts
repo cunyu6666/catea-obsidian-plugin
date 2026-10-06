@@ -246,9 +246,11 @@ export function providerStream(
           message.errorMessage =
             e instanceof ModelServiceError && e.reason === 'context'
               ? 'context_length_exceeded: Context window exceeded; original history is preserved.'
-              : e instanceof Error
-                ? e.message
-                : String(e)
+              : e instanceof ModelServiceError && e.code
+                ? `CATEA_ERROR ${JSON.stringify({ code: e.code, resetAt: e.resetAt, requestId: e.requestId })}`
+                : e instanceof Error
+                  ? e.message
+                  : String(e)
           stream.push({ type: 'error', reason: message.stopReason, error: message })
           stream.end(message)
           return
