@@ -84,8 +84,17 @@ export class ModelServiceError extends Error {
   readonly reason: 'context' | 'tools' | 'other'
   readonly status?: number
   readonly retryable: boolean
+  readonly code?: string
+  readonly resetAt?: string
+  readonly requestId?: string
 
-  constructor(detail: string, status?: number, host?: string, retryable = false) {
+  constructor(
+    detail: string,
+    status?: number,
+    host?: string,
+    retryable = false,
+    metadata: { code?: string; resetAt?: string; requestId?: string } = {},
+  ) {
     const visibleDetail = detail.slice(0, 500).replace(/\s+/g, ' ').trim()
     const reason =
       /context[_ ]length|too many tokens|maximum context|prompt is too long|input too long/i.test(
@@ -101,12 +110,32 @@ export class ModelServiceError extends Error {
         : `${t('modelRequestFailed', {
             status,
             detail: status === 200 && visibleDetail ? visibleDetail : t('modelErrorDetailHidden'),
-          })}${host ? ` [${host}]` : ''}`,
+          })}${host && !metadata.code ? ` [${host}]` : ''}`,
     )
     this.name = 'ModelServiceError'
     this.reason = reason
     this.status = status
     this.retryable = retryable
+    this.code = metadata.code
+    this.resetAt = metadata.resetAt
+    this.requestId = metadata.requestId
+  }
+}
+
+function structuredModelError(value: unknown): {
+  message: string
+  code?: string
+  resetAt?: string
+  requestId?: string
+  retryable: boolean
+} {
+  const error = record(record(value).error)
+  return {
+    message: string(error.message),
+    code: string(error.code) || undefined,
+    resetAt: string(error.reset_at) || undefined,
+    requestId: string(error.request_id) || undefined,
+    retryable: error.retryable === true,
   }
 }
 
@@ -304,6 +333,12 @@ async function responseError(response: Response, fallbackUrl = ''): Promise<Erro
   // Provider error bodies can echo request fields, including the model ID or prompt.
   // Classify the detail for retries, but never put the raw body in chat or storage.
   const body = (await response.text()).slice(0, 2_000)
+  let structured = structuredModelError(undefined)
+  try {
+    structured = structuredModelError(JSON.parse(body))
+  } catch {
+    // Non-JSON provider bodies are classified without exposing them to users.
+  }
   let host = ''
   try {
     host = new URL(response.url || fallbackUrl).host
@@ -314,7 +349,17 @@ async function responseError(response: Response, fallbackUrl = ''): Promise<Erro
       host = ''
     }
   }
-  return new ModelServiceError(body, response.status, host)
+  return new ModelServiceError(
+    structured.message || body,
+    response.status,
+    host,
+    structured.retryable,
+    {
+      code: structured.code,
+      resetAt: structured.resetAt,
+      requestId: structured.requestId,
+    },
+  )
 }
 
 function isEventStream(response: Response): boolean {
@@ -451,8 +496,14 @@ export async function streamModel(
       } catch {
         continue
       }
-      if (frame.event === 'error' || data.type === 'error')
-        throw new ModelServiceError(string(record(data.error).message))
+      if (frame.event === 'error' || data.type === 'error') {
+        const error = structuredModelError(data)
+        throw new ModelServiceError(error.message, undefined, undefined, error.retryable, {
+          code: error.code,
+          resetAt: error.resetAt,
+          requestId: error.requestId,
+        })
+      }
       if (data.type === 'message_start') {
         inputTokens = anthropicInputTokens(record(data.message).usage) ?? inputTokens
         outputTokens = tokenCount(record(record(data.message).usage).output_tokens) ?? outputTokens
@@ -618,7 +669,14 @@ export async function streamModel(
     } catch {
       continue
     }
-    if (data.error) throw new ModelServiceError(string(record(data.error).message))
+    if (data.error) {
+      const error = structuredModelError(data)
+      throw new ModelServiceError(error.message, undefined, undefined, error.retryable, {
+        code: error.code,
+        resetAt: error.resetAt,
+        requestId: error.requestId,
+      })
+    }
     if (data.usage) usage = openAiUsage(data.usage)
     if (records(data.choices)[0]?.finish_reason === 'length') stopReason = 'length'
     const delta = record(records(data.choices)[0]?.delta)

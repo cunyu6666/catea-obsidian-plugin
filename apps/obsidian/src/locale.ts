@@ -416,6 +416,60 @@ export function humanizeError(raw: string, language: Language = 'zh') {
     return language === 'en'
       ? 'This message is too long for Catea Lite. Shorten it and try again.'
       : '这条消息超过 Catea Lite 的上下文容量，请缩短后重试。'
+  if (raw.startsWith('CATEA_ERROR ')) {
+    try {
+      const error = JSON.parse(raw.slice('CATEA_ERROR '.length)) as {
+        code?: string
+        resetAt?: string
+      }
+      const reset = error.resetAt
+        ? new Date(error.resetAt).toLocaleString(language === 'en' ? 'en-US' : 'zh-CN', {
+            month: 'short',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+          })
+        : ''
+      const suffix = reset
+        ? language === 'en'
+          ? ` It resets at ${reset}.`
+          : ` 将于 ${reset} 重置。`
+        : ''
+      if (error.code === 'window_quota_exceeded')
+        return language === 'en'
+          ? `The current plan usage window is full.${suffix}`
+          : `当前套餐时段额度已用完。${suffix}`
+      if (error.code === 'monthly_quota_exceeded')
+        return language === 'en'
+          ? `Your monthly and extra credits are used up.${suffix}`
+          : `本月套餐额度和额外额度已用完。${suffix}`
+      if (error.code === 'subscription_expired')
+        return language === 'en'
+          ? 'Your Pro plan has expired. Renew it in Settings → Plan.'
+          : 'PRO 套餐已到期，请在设置 → 套餐中续订。'
+      if (error.code === 'subscription_required')
+        return language === 'en'
+          ? 'An active Pro plan is required. Open Settings → Plan to subscribe.'
+          : '当前没有有效的 PRO 套餐，请在设置 → 套餐中订阅。'
+      if (error.code === 'authorization_required' || error.code === 'authorization_failed')
+        return language === 'en'
+          ? 'Catea Pro authorization failed. Refresh the plan status and try again.'
+          : 'Catea Pro 授权未通过，请刷新套餐状态后重试。'
+      if (error.code?.startsWith('content_safety_'))
+        return language === 'en'
+          ? 'This request could not be processed under the AI usage policy.'
+          : '根据 AI 使用规范，当前请求无法处理。'
+      if (error.code === 'upstream_rejected_request' || error.code?.startsWith('invalid_'))
+        return language === 'en'
+          ? 'The model cannot process this request. Remove unsupported tools or attachments and retry.'
+          : '模型无法处理这次请求，请移除不支持的工具或附件后重试。'
+      return language === 'en'
+        ? 'The Catea model service is temporarily unavailable. Try again later.'
+        : 'Catea 模型服务暂时不可用，请稍后重试。'
+    } catch {
+      /* Fall through for malformed diagnostics. */
+    }
+  }
   if (raw.startsWith('MCP_UNAVAILABLE ')) {
     try {
       const issue = JSON.parse(raw.slice('MCP_UNAVAILABLE '.length)) as {
