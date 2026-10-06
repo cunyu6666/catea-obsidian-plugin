@@ -1495,18 +1495,11 @@ export class CateaSettings extends PluginSettingTab {
     for (const manifest of builtInConnectorManifests) {
       const config = c.connectors.find((item) => item.id === manifest.id)!
       connectors.push({
-        name: manifest.name,
+        name: connectorName(p, manifest.id),
         desc: connectorStatusLabel(config, tr),
         render: (s) => {
           s.settingEl.addClass('catea-app-setting')
           s.descEl.setText(connectorStatusLabel(config, tr))
-          s.addToggle((toggle) =>
-            toggle.setValue(config.enabled).onChange(async (value) => {
-              config.enabled = value
-              await p.saveAgentSettings()
-              this.refresh()
-            }),
-          )
           s.addButton((button) =>
             button.setButtonText(tr('配置')).onClick(() => {
               new ConnectorConfigModal(p, manifest, config, () => this.refresh()).open()
@@ -1591,12 +1584,24 @@ export class CateaSettings extends PluginSettingTab {
   }
 }
 
-function adapterStatusLabel(status: 'recommended' | 'experimental' | 'planned', tr: Catea['t']) {
-  return tr(status === 'recommended' ? '推荐' : status === 'experimental' ? '实验' : '计划中')
-}
-
 function connectorStatusLabel(config: ConnectorConfig, tr: Catea['t']) {
   return config.enabled ? tr('已连接') : tr('未连接')
+}
+
+function connectorName(owner: Catea, id: string) {
+  const zh: Record<string, string> = {
+    email: '邮箱',
+    figma: 'Figma',
+    wechat: '微信',
+    weread: '微信读书',
+  }
+  const en: Record<string, string> = {
+    email: 'Email',
+    figma: 'Figma',
+    wechat: 'WeChat',
+    weread: 'WeRead',
+  }
+  return owner.agentSettings.language === 'en' ? en[id] || id : zh[id] || id
 }
 
 const connectorZh: Record<string, string> = {
@@ -1660,6 +1665,88 @@ function connectorText(owner: Catea, text: string) {
   return owner.agentSettings.language === 'en' ? text : connectorZh[text] || text
 }
 
+const connectorPrimaryKeys: Record<string, string[]> = {
+  email: ['EMAIL_ACCESS_TOKEN', 'EMAIL_REFRESH_TOKEN'],
+  figma: ['FIGMA_ACCESS_TOKEN'],
+  wechat: ['PUSHPLUS_TOKEN'],
+  weread: ['WEREAD_API_KEY', 'WEREAD_COOKIE'],
+}
+
+const connectorDefaultAdapters: Record<string, string> = {
+  email: 'smtp_mailto',
+  figma: 'figma_local_plugin_bridge',
+  wechat: 'wechat_pushplus',
+  weread: 'weread_agent_api',
+}
+
+function connectorIntro(owner: Catea, id: string) {
+  const zh: Record<string, string> = {
+    email: '配置邮箱凭据后，Catea 可以读取邮件上下文并创建草稿。发送邮件仍会单独确认。',
+    figma:
+      '打开 Figma 桌面端并运行 Catea Figma Bridge 后，Catea 可以把 Obsidian 中生成的内容写入当前 Figma 文件。',
+    wechat:
+      '配置微信推送或公众号凭据后，Catea 可以把笔记和生成文章发送到微信相关通道。个人微信对话仍走本地桌面桥。',
+    weread: '配置微信读书凭据后，Catea 可以读取书架、划线、笔记，并把内容同步到 Obsidian。',
+  }
+  const en: Record<string, string> = {
+    email:
+      'After email credentials are configured, Catea can read mailbox context and create drafts. Sending still asks for confirmation.',
+    figma:
+      'Open Figma Desktop and run the Catea Figma Bridge so Catea can write generated Obsidian content into the current Figma file.',
+    wechat:
+      'Configure WeChat push or Official Account credentials so Catea can send notes and generated articles into WeChat channels. Personal chat import still uses a local desktop bridge.',
+    weread:
+      'Configure WeRead credentials so Catea can read your shelf, highlights and notes, then sync them into Obsidian.',
+  }
+  return owner.agentSettings.language === 'en' ? en[id] || '' : zh[id] || ''
+}
+
+function connectorTestHint(owner: Catea, id: string) {
+  const zh: Record<string, string> = {
+    email: '最小测试：确认邮箱凭据可以从安全存储读取。',
+    figma: '最小测试：检查本机 Figma Bridge 是否在线；如果未运行，则确认 Figma Token 是否已保存。',
+    wechat: '最小测试：确认微信推送或公众号凭据可以从安全存储读取，不会实际发送消息。',
+    weread: '最小测试：确认微信读书凭据可以从安全存储读取；后续可在对话里发起读取书架或文章。',
+  }
+  const en: Record<string, string> = {
+    email: 'Minimal test: confirm email credentials can be read from secure storage.',
+    figma:
+      'Minimal test: check whether the local Figma Bridge is online; if it is not running, confirm that the Figma token is saved.',
+    wechat:
+      'Minimal test: confirm WeChat push or Official Account credentials can be read from secure storage. No message is sent.',
+    weread:
+      'Minimal test: confirm WeRead credentials can be read from secure storage. Reading a shelf or article can be started from chat afterward.',
+  }
+  return owner.agentSettings.language === 'en' ? en[id] || '' : zh[id] || ''
+}
+
+function configuredConnectorKeys(
+  owner: Catea,
+  manifest: ConnectorManifest,
+  config: ConnectorConfig,
+) {
+  const visible = new Set(connectorPrimaryKeys[manifest.id] || manifest.keys.map((key) => key.id))
+  return manifest.keys
+    .filter((key) => visible.has(key.id))
+    .filter((key) => {
+      if (config.keys?.[key.id] !== true) return false
+      return Boolean(owner.readSecret(`connector-${manifest.id}-${key.id}`))
+    })
+}
+
+async function checkLocalFigmaBridge() {
+  const controller = new AbortController()
+  const timeout = window.setTimeout(() => controller.abort(), 1500)
+  try {
+    const response = await fetch('http://127.0.0.1:38451/health', { signal: controller.signal })
+    return response.ok
+  } catch {
+    return false
+  } finally {
+    window.clearTimeout(timeout)
+  }
+}
+
 class ConnectorConfigModal extends Modal {
   constructor(
     private owner: Catea,
@@ -1672,8 +1759,10 @@ class ConnectorConfigModal extends Modal {
   onOpen() {
     const tr = this.owner.t,
       el = this.contentEl
-    this.titleEl.setText(`${this.manifest.name} · ${tr('配置')}`)
+    this.titleEl.setText(`${connectorName(this.owner, this.manifest.id)} · ${tr('配置')}`)
     el.addClass('catea-connector-modal')
+    const adapter = connectorDefaultAdapters[this.manifest.id]
+    if (adapter) this.config.adapter = adapter
     this.render()
   }
   private render() {
@@ -1684,39 +1773,28 @@ class ConnectorConfigModal extends Modal {
     el.empty()
     el.createEl('p', {
       cls: 'catea-connector-modal__summary',
-      text: connectorText(this.owner, manifest.description),
+      text:
+        connectorIntro(this.owner, manifest.id) || connectorText(this.owner, manifest.description),
     })
+    new Setting(el).setName(tr('连接状态')).setDesc(connectorStatusLabel(config, tr))
     new Setting(el)
-      .setName(tr('连接状态'))
-      .setDesc(connectorStatusLabel(config, tr))
-      .addToggle((toggle) =>
-        toggle.setValue(config.enabled).onChange(async (value) => {
-          config.enabled = value
-          await this.owner.saveAgentSettings()
-          this.saved()
-          this.render()
-        }),
+      .setName(tr('连通性测试'))
+      .setDesc(connectorTestHint(this.owner, manifest.id))
+      .addButton((button) =>
+        button
+          .setButtonText(tr('测试连接'))
+          .setCta()
+          .onClick(async () => {
+            await this.testConnection(button)
+          }),
       )
-    const adapter = manifest.adapters.find((item) => item.id === config.adapter)
-    new Setting(el)
-      .setName(tr('连接方式'))
-      .setDesc(adapter ? connectorText(this.owner, adapter.notes) : '')
-      .addDropdown((dropdown) => {
-        for (const option of manifest.adapters)
-          dropdown.addOption(option.id, `${option.id} · ${adapterStatusLabel(option.status, tr)}`)
-        dropdown
-          .setValue(config.adapter || manifest.adapters[0]?.id || '')
-          .onChange(async (value) => {
-            config.adapter = value
-            await this.owner.saveAgentSettings()
-            this.saved()
-            this.render()
-          })
-      })
-    this.renderDetails(el)
     if (manifest.keys.length) {
-      el.createEl('h3', { text: tr('密钥') })
-      for (const key of manifest.keys)
+      el.createEl('h3', { text: tr('配置项') })
+      for (const key of manifest.keys.filter((item) =>
+        (connectorPrimaryKeys[manifest.id] || manifest.keys.map((entry) => entry.id)).includes(
+          item.id,
+        ),
+      ))
         new Setting(el)
           .setName(key.id)
           .setDesc(
@@ -1731,6 +1809,7 @@ class ConnectorConfigModal extends Modal {
                 const next = value.trim()
                 if (!config.keys) config.keys = {}
                 config.keys[key.id] = next.length > 0
+                config.enabled = false
                 this.owner.saveSecret(`connector-${manifest.id}-${key.id}`, next)
                 await this.owner.saveAgentSettings()
                 this.saved()
@@ -1743,6 +1822,7 @@ class ConnectorConfigModal extends Modal {
               button.onClick(async () => {
                 if (!config.keys) config.keys = {}
                 config.keys[key.id] = false
+                config.enabled = false
                 this.owner.saveSecret(`connector-${manifest.id}-${key.id}`, '')
                 await this.owner.saveAgentSettings()
                 this.saved()
@@ -1751,18 +1831,30 @@ class ConnectorConfigModal extends Modal {
           })
     }
   }
-  private renderDetails(parent: HTMLElement) {
-    const tr = this.owner.t,
-      manifest = this.manifest
-    const capabilities = Object.entries(manifest.capabilities)
-      .filter(([, enabled]) => enabled)
-      .map(([key]) => key)
-      .join(', ')
-    new Setting(parent).setName(tr('能力')).setDesc(capabilities || tr('未配置'))
-    if (manifest.tools.length)
-      new Setting(parent)
-        .setName(tr('工具'))
-        .setDesc(manifest.tools.map((tool) => tool.name).join(', '))
+  private async testConnection(button: import('obsidian').ButtonComponent) {
+    const tr = this.owner.t
+    button.setDisabled(true).setButtonText(tr('正在测试…'))
+    try {
+      const keys = configuredConnectorKeys(this.owner, this.manifest, this.config)
+      const figmaBridgeOk =
+        this.manifest.id === 'figma' && this.config.adapter === 'figma_local_plugin_bridge'
+          ? await checkLocalFigmaBridge()
+          : false
+      if (!keys.length && !figmaBridgeOk) throw new Error(tr('请先完成必要配置'))
+      this.config.enabled = true
+      await this.owner.saveAgentSettings()
+      this.saved()
+      new Notice(tr('连接测试通过'))
+      this.render()
+    } catch (error) {
+      this.config.enabled = false
+      await this.owner.saveAgentSettings()
+      this.saved()
+      new Notice(error instanceof Error ? error.message : tr('连接测试失败'))
+      this.render()
+    } finally {
+      button.setDisabled(false).setButtonText(tr('测试连接'))
+    }
   }
 }
 
