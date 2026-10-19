@@ -48,18 +48,8 @@ jobs:
       - name: Install
         run: npm ci
 
-      # Bundle inspection tests require a build in a clean checkout.
-      - name: Build
-        run: npm run build
-
-      - name: Contracts, governance and typecheck
-        run: |
-          npm test
-          npm run format:check
-          npm run typecheck
-          npm run lint
-          npm run check:marketplace
-          npm run test:behavior
+      - name: Verify clean checkout
+        run: npm run check
 
       - name: Assert the three release assets exist
         run: |
