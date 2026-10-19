@@ -1,6 +1,6 @@
 /**
  * [WHO]: Provides Approve, VaultTools, fileTools
- * [FROM]: Depends on ../../agent-core/src/i18n, ../../agent-core/src/permission-policy, node:fs/promises, node:path, node:child_process, ./storage, ../../agent-core/src/providers, ../../agent-core/src/types
+ * [FROM]: Depends on ../../agent-core/src/i18n, ../../agent-core/src/permission-policy, node:fs/promises, node:path, node:child_process, ./storage, ./vault-path, ../../agent-core/src/providers, ../../agent-core/src/types
  * [TO]: Consumed by apps/obsidian/src/obsidian-tools.ts, packages/agent-core/src/index.ts,
  *   packages/integrations/src/index.ts
  * [HERE]: packages/integrations/src/tools.ts - filesystem tool surface (time/read/ls/find/grep/write/edit/bash) with per-write original/modified records; 1 MB text cap, 10000-file walk, 300-line read, 80 grep hits, 100 KB write, 60 s bash
@@ -11,6 +11,7 @@ import { readFile, readdir, stat, mkdir, writeFile } from 'node:fs/promises'
 import { dirname } from 'node:path'
 import { spawn } from 'node:child_process'
 import { errnoCode, within } from './storage'
+import { vaultPath, writableVaultPath, isOperationLog } from './vault-path'
 import type { ToolDefinition } from '../../agent-core/src/providers'
 import type { FileChange } from '../../agent-core/src/types'
 export type Approve = (title: string, detail: string, signal: AbortSignal) => Promise<boolean>
@@ -92,7 +93,7 @@ export class VaultTools {
   }
   async run(name: string, a: Record<string, unknown>, signal: AbortSignal): Promise<string> {
     signal.throwIfAborted()
-    const path = textValue(a.path || '')
+    let path = textValue(a.path || '')
     if (name === 'time')
       return JSON.stringify({
         iso: new Date().toISOString(),
@@ -104,8 +105,7 @@ export class VaultTools {
       })
     if (name === 'AskUserQuestion') return this.ask(textValue(a.question || ''), signal)
     if (name === 'read') {
-      if (!path || path.split(/[\\/]/).some((p) => p.startsWith('.')))
-        throw new Error('隐藏目录请使用专门的 Skill 或记忆工具')
+      path = vaultPath(path)
       const lines = (await this.text(path)).split('\n'),
         start = Math.max(0, Number(a.offset) || 0),
         limit = Math.min(300, Math.max(1, Number(a.limit) || 120))
@@ -116,7 +116,7 @@ export class VaultTools {
       }).slice(0, 24000)
     }
     if (name === 'ls') {
-      if (path.split(/[\\/]/).some((p) => p.startsWith('.'))) throw new Error('不列出隐藏目录')
+      path = vaultPath(path, true)
       return JSON.stringify(
         (await readdir(await within(this.vault, path), { withFileTypes: true }))
           .filter((d) => !d.name.startsWith('.'))
@@ -149,8 +149,7 @@ export class VaultTools {
       return JSON.stringify(hits)
     }
     if (name === 'write' || name === 'edit') {
-      if (!path || path.split(/[\\/]/).some((p) => p.startsWith('.')) || /^raw(?:\/|$)/.test(path))
-        throw new Error('不改写隐藏目录或 raw 原始素材')
+      path = writableVaultPath(path)
       const target = await within(this.vault, path)
       let before: string | null = null
       try {
@@ -166,7 +165,7 @@ export class VaultTools {
         after = before.replace(old, () => textValue(a.newText ?? ''))
       }
       if (after.length > 100000) throw new Error('单次写入上限 100 KB')
-      if (path === 'wiki/log.md' && before !== null && !after.startsWith(before))
+      if (isOperationLog(path) && before !== null && !after.startsWith(before))
         throw new Error('wiki/log.md 只能追加')
       await requirePermission(
         { mode: this.permissionMode(), capability: 'vault', operation: 'write', resource: path },

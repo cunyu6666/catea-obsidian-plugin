@@ -20,7 +20,8 @@ mcp-presets.ts: Curated MCP preset registry (Figma Framelink, GitHub, Context7, 
 skill-creator.md: Preset skill prompt that ships inside the bundle; authoring method adapted from `anthropics/skills` (Apache-2.0) with the evaluation harness replaced by Catea's real tool surface.
 skills.ts: Resolves enabled skills from `.catea/skills/<id>/SKILL.md` or the read-only bundled presets, lists and describes them with source and enabled state, validates and writes new packages through `createSkill`, and reads path-guarded resources; content capped at 48000 chars, traversal rejected, presets never writable.
 storage.ts: Vault confinement through `within()` with realpath checks and explicit symlink rejection, atomic temp+rename JSON writes, the `Serial` promise queue, and the shared `errnoCode` structural narrowing helper.
-tools.ts: Filesystem tool surface (time/read/ls/find/grep/write/edit/bash) with approval gates and original/modified records for successful structured writes; 1 MB text cap, 10000-file walk, 300-line read, 80 grep hits, 100 KB write, 60 s bash.
+tools.ts: Filesystem tool surface (time/read/ls/find/grep/write/edit/bash) with shared canonical-path and protected-file guards, approval gates and original/modified records for successful structured writes; 1 MB text cap, 10000-file walk, 300-line read, 80 grep hits, 100 KB write, 60 s bash.
+vault-path.ts: Shared canonical relative paths for filesystem and Obsidian tools; collapses separators, rejects traversal, hidden and platform-ambiguous names, and protects raw materials and the operation log case-insensitively.
 web.ts: `web_search` and `web_fetch` via Exa MCP, Jina, DuckDuckGo or direct fetch; `link_world_admin` diagnoses Agent Reach and `link_world_exec` runs approved CLI arguments; blocks local and private hosts for page requests.
 
 public-network.ts: Public URL normalization and connection-bound DNS validation rejecting private, reserved and mixed address sets for untrusted web requests.
@@ -29,7 +30,7 @@ public-network.ts: Public URL normalization and connection-bound DNS validation 
 
 - Member descriptions above name `.catea/...` because that is the released default. Every path is built through `dataPath()` from `data-dir.ts`, so a development bundle relocates the whole tree to `.catea-dev/` and cannot read or write the released plugin's state. New state paths must go through `dataPath()` rather than hardcoding the directory.
 - `web.ts` is adapted from CatUI link-world (GPL-3.0) and carries an attribution line above its P3 header; unlike the `upstream/` trees it is hand-maintained.
-- The `tool()` schema helper and several write-guard rules are duplicated between `tools.ts` and `apps/obsidian/src/obsidian-tools.ts`; the read caps differ (1 MB vs 2 MB). Consolidating them is a known, deliberate open item.
+- Path and protected-file rules are shared through `vault-path.ts`. The `tool()` schema helper remains duplicated between `tools.ts` and `apps/obsidian/src/obsidian-tools.ts`; the read caps deliberately differ (1 MB vs 2 MB).
 - `skill-creator.md` and `find-skill.md` are bundled prompt text, not vault data: presets are never written to `.catea/skills/`, so an upgrade cannot rewrite a skill, and `createSkill` refuses their ids. A vault directory of the same id shadows the preset content instead. They are imported as text by the esbuild `.md` loader.
 
 ## Tests
