@@ -21,9 +21,8 @@ skill-creator.md: Preset skill prompt that ships inside the bundle; authoring me
 skills.ts: Resolves enabled skills from `.catea/skills/<id>/SKILL.md` or the read-only bundled presets, lists and describes them with source and enabled state, validates and writes new packages through `createSkill`, and reads path-guarded resources; content capped at 48000 chars, traversal rejected, presets never writable.
 storage.ts: Vault confinement through `within()` with realpath checks and explicit symlink rejection, atomic temp+rename JSON writes, the `Serial` promise queue, and the shared `errnoCode` structural narrowing helper.
 tools.ts: Filesystem tool surface (time/read/ls/find/grep/write/edit/bash) with shared canonical-path and protected-file guards, approval gates and original/modified records for successful structured writes; 1 MB text cap, 10000-file walk, 300-line read, 80 grep hits, 100 KB write, 60 s bash.
-web.ts: `web_search` and `web_fetch` via Exa MCP, Jina, DuckDuckGo or direct fetch; `link_world_admin` diagnoses Agent Reach and `link_world_exec` runs approved CLI arguments; blocks local and private hosts for page requests.
-
 vault-path.ts: Shared canonical relative paths for filesystem and Obsidian tools; collapses separators, rejects traversal, hidden and platform-ambiguous names, and protects raw materials and the operation log case-insensitively.
+web.ts: `web_search` and `web_fetch` via Exa MCP, Jina, DuckDuckGo or direct fetch; `link_world_admin` diagnoses Agent Reach and `link_world_exec` runs approved CLI arguments; blocks local and private hosts for page requests.
 
 ## Notes
 
