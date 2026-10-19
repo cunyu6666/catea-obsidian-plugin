@@ -8,7 +8,7 @@ enforce, so a change can be checked before it is proposed.
 - **Node 24 or newer.** `npm test` runs on Node's built-in test runner and relies
   on native TypeScript type stripping. Verified on v24.21.0.
 - **Nothing else.** The design system is vendored under `packages/design-system` and
-  linked through npm workspaces, so `npm ci && npm run build` works from a clean
+  linked through npm workspaces, so `npm ci && npm run check` works from a clean
   checkout of this repository alone. That is the same thing Obsidian's release build
   verification runs, and it is why the build lives in CI.
 
@@ -107,8 +107,10 @@ are checked against `SOURCE_HASHES.json`, and its build-time patch against
 (the scope rule covers `apps/*/src` and `packages/*/src`), and `__tests__/`
 (a contract test for a contract test is circular).
 
-Run `npm ci` once, then `npm run check` before proposing a change. CI runs the
-same gates from a clean checkout. Use `npm run format` to apply the repository
+Run `npm ci` once, then `npm run check` before proposing a change. It builds
+before bundle-inspection tests; running `npm test` alone still requires a prior
+build. CI and both release paths run the same check from a clean checkout.
+Use `npm run format` to apply the repository
 style.
 
 ## Commits
@@ -143,8 +145,8 @@ To cut a release:
    `version.ts`, and add an entry to `versions.json` mapping the new version to
    `minAppVersion`. `versions.json` is what lets older Obsidian builds resolve a
    compatible older release.
-2. `npm run build`
-3. `node scripts/release.mjs` — dry run. It runs the gates, checks the three
+2. `npm run check` — builds from current source, then runs all gates.
+3. `node scripts/release.mjs` — dry run. It reruns the same check, checks the three
    release assets and the built version, and reports every policy problem at once.
 4. `node scripts/release.mjs --publish` with `GH_TOKEN` set to create the release.
 

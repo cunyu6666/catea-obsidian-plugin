@@ -127,7 +127,8 @@ npm run build      # esbuild bundle -> dist/catea-paper/
 npm run dev:build  # same bundle re-identified as catea-paper-dev -> dist/catea-paper-dev/
 npm run dev:install # dev:build, then install it into a vault beside the released plugin
 npm run dev:watch  # dev:install, then rebuild and re-copy on every source change
-npm test           # node --test; run after npm ci because behavior tests bundle fixtures
+npm test           # node --test; run after npm run build because bundle tests inspect dist
+npm run check      # builds, then runs every gate; safe from a clean checkout after npm ci
 npm run typecheck  # scoped tsc over owned code only
 npm run lint       # official Obsidian rules for host and adapter source
 npm run format:check # Prettier check over owned TypeScript and JavaScript

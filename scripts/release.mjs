@@ -63,25 +63,17 @@ log(`version: ${version} (minAppVersion ${minAppVersion}, id ${manifest.id})`)
 
 // ---- 2. gates --------------------------------------------------------------
 
-for (const [label, argv] of [
-  ['contracts and governance', ['test']],
-  ['typecheck', ['run', 'typecheck']],
-  ['official plugin lint', ['run', 'lint']],
-  ['marketplace type regression', ['run', 'check:marketplace']],
-  ['adapter regressions', ['run', 'test:behavior']],
-]) {
-  const result = run('npm', argv)
-  if (!result.ok) fail(`${label} failed; fix it before releasing:\n${result.out}`)
-  const summary = result.out
-    .split('\n')
-    .filter((line) => /^ℹ (tests|pass|fail)|^typecheck:/.test(line))
-    .join(' | ')
-  log(`${label}: ${summary || 'ok'}`)
-}
+const checked = run('npm', ['run', 'check'])
+if (!checked.ok) fail(`clean-check failed; fix it before releasing:\n${checked.out}`)
+const summary = checked.out
+  .split('\n')
+  .filter((line) => /^ℹ (tests|pass|fail)|^typecheck:|^main\.js:/.test(line))
+  .join(' | ')
+log(`clean-check: ${summary || 'ok'}`)
 
 // ---- 3. build output -------------------------------------------------------
 
-if (!existsSync(OUT)) fail(`no build output at dist/catea-paper; run npm run build first`)
+if (!existsSync(OUT)) fail(`no build output at dist/catea-paper after npm run check`)
 for (const asset of ASSETS) {
   const file = resolve(OUT, asset)
   if (!existsSync(file) || !statSync(file).isFile())
