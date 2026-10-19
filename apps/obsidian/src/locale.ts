@@ -6,6 +6,11 @@
  */
 export type Language = 'zh' | 'en'
 const english: Record<string, string> = {
+  联网工具不读取本机或私有网络地址: 'Web tools cannot read local or private network addresses',
+  公开网页地址解析失败: 'The public web address could not be resolved',
+  公开网页响应超过大小限制: 'The public web response exceeds the size limit',
+  '仅支持不含凭据的公开 HTTP(S) 网页':
+    'Only public HTTP(S) pages without credentials are supported',
   'Catea Lite 未就绪': 'Catea Lite unavailable',
   '开启 Catea Lite →': 'Enable Catea Lite →',
   '本次生成已停止，回复已保留。': 'Generation stopped. Your partial reply has been kept.',

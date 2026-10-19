@@ -1,7 +1,7 @@
 // Adapted from CatUI link-world/index.ts (GPL-3.0); see THIRD_PARTY_NOTICES.md.
 /**
  * [WHO]: Provides runWeb, runLinkWorld, webSources, webTools, linkWorldTools
- * [FROM]: Depends on ../../agent-core/src/i18n, @modelcontextprotocol/sdk/client/index.js, @modelcontextprotocol/sdk/client/streamableHttp.js, node:child_process, node:util, node:path, ../../agent-core/src/transport, ../../agent-core/src/providers, ../../agent-core/src/version, ./storage
+ * [FROM]: Depends on ../../agent-core/src/i18n, @modelcontextprotocol/sdk/client/index.js, @modelcontextprotocol/sdk/client/streamableHttp.js, node:child_process, node:util, node:path, ../../agent-core/src/transport, ../../agent-core/src/providers, ../../agent-core/src/version, ./storage, ./public-network
  * [TO]: Consumed by packages/agent-core/src/index.ts
  * [HERE]: packages/integrations/src/web.ts - web_search and web_fetch via Exa MCP, Jina, DuckDuckGo or direct fetch; link-world diagnostics and approved agent-reach CLI execution; blocks local and private hosts
  */
@@ -15,6 +15,7 @@ import { serviceFetch } from '../../agent-core/src/transport'
 import type { ToolDefinition } from '../../agent-core/src/providers'
 import { PLUGIN_VERSION } from '../../agent-core/src/version'
 import { errnoCode } from './storage'
+import { publicLookup, publicUrl } from './public-network'
 const exec = promisify(execFile)
 const JINA_READER_BASE = 'https://r.jina.ai',
   JINA_SEARCH_BASE = 'https://s.jina.ai',
@@ -81,25 +82,13 @@ export const linkWorldTools: ToolDefinition[] = [
     },
   },
 ]
-function publicUrl(input: string) {
-  const u = new URL(/^https?:\/\//i.test(input) ? input : `https://${input}`)
-  if (!['https:', 'http:'].includes(u.protocol) || u.username || u.password)
-    throw new Error('仅支持不含凭据的公开 HTTP(S) 网页')
-  const h = u.hostname.toLowerCase().replace(/^\[|\]$/g, '')
-  if (
-    h === 'localhost' ||
-    h.endsWith('.local') ||
-    h.endsWith('.localhost') ||
-    h === '::1' ||
-    h.includes(':') ||
-    /^(0|10|127|169\.254|192\.168|172\.(1[6-9]|2\d|3[01]))\./.test(h)
-  )
-    throw new Error('联网工具不读取本机或私有网络地址')
-  return u.toString()
-}
 async function webRequest(url: string, init: RequestInit = {}) {
   init.signal?.throwIfAborted()
-  return serviceFetch(publicUrl(url), { method: 'GET', headers: init.headers, signal: init.signal })
+  return serviceFetch(
+    publicUrl(url),
+    { method: 'GET', headers: init.headers, signal: init.signal },
+    { lookup: publicLookup, maxBytes: 2 * 1024 * 1024 },
+  )
 }
 async function agentReachCommand(signal: AbortSignal): Promise<string | undefined> {
   const candidates = [

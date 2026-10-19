@@ -6,12 +6,18 @@
  */
 import { requestUrl } from 'obsidian'
 import { request as httpsRequest } from 'node:https'
-import { request as httpRequest } from 'node:http'
+import { request as httpRequest, type RequestOptions } from 'node:http'
+
+interface RequestPolicy {
+  lookup: NonNullable<RequestOptions['lookup']>
+  maxBytes: number
+}
 
 // Direct Node transport preserves streaming in Obsidian without a proxy or CORS workaround.
 function nodeFetch(
   input: string,
   init: Omit<RequestInit, 'body'> & { body?: string } = {},
+  policy?: RequestPolicy,
 ): Promise<Response> {
   const url = new URL(input)
   if (!['https:', 'http:'].includes(url.protocol)) throw new Error('仅支持 HTTP(S) 模型接口')
@@ -22,6 +28,7 @@ function nodeFetch(
         method: init.method || 'GET',
         headers: Object.fromEntries(new Headers(init.headers)),
         signal: init.signal || undefined,
+        ...(policy ? { lookup: policy.lookup, agent: false } : {}),
       },
       (response) => {
         if ((response.statusCode || 0) >= 300 && (response.statusCode || 0) < 400) {
@@ -34,7 +41,15 @@ function nodeFetch(
           if (value) headers.set(key, Array.isArray(value) ? value.join(', ') : value)
         const body = new ReadableStream<Uint8Array>({
           start(controller) {
-            response.on('data', (chunk: Buffer) => controller.enqueue(new Uint8Array(chunk)))
+            let received = 0
+            response.on('data', (chunk: Buffer) => {
+              received += chunk.byteLength
+              if (policy && received > policy.maxBytes) {
+                response.destroy(new Error('公开网页响应超过大小限制'))
+                return
+              }
+              controller.enqueue(new Uint8Array(chunk))
+            })
             response.on('end', () => controller.close())
             response.on('error', (error) => controller.error(error))
           },
@@ -57,10 +72,12 @@ function nodeFetch(
 export async function serviceFetch(
   input: string,
   init: Omit<RequestInit, 'body'> & { body?: string } = {},
+  policy?: RequestPolicy,
 ): Promise<Response> {
   try {
-    return await nodeFetch(input, init)
+    return await nodeFetch(input, init, policy)
   } catch (error) {
+    if (policy) throw error
     const code =
       typeof error === 'object' && error !== null && 'code' in error
         ? (error as { code?: unknown }).code

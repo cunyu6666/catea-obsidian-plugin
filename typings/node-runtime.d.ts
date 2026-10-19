@@ -179,6 +179,8 @@ declare module 'node:http' {
     method: string
     headers: Record<string, string>
     signal?: AbortSignal
+    lookup?: import('node:net').LookupFunction
+    agent?: false
   }
   export function request(
     url: URL,
@@ -188,4 +190,35 @@ declare module 'node:http' {
 }
 declare module 'node:https' {
   export { request } from 'node:http'
+}
+declare module 'node:dns' {
+  export interface LookupOptions {
+    family?: number | 'IPv4' | 'IPv6'
+    all?: boolean
+  }
+  export interface LookupAddress {
+    address: string
+    family: number
+  }
+  export function lookup(
+    hostname: string,
+    options: { all: true },
+    callback: (error: NodeJS.ErrnoException | null, addresses: LookupAddress[]) => void,
+  ): void
+}
+declare module 'node:net' {
+  export type LookupFunction = (
+    hostname: string,
+    options: import('node:dns').LookupOptions,
+    callback: (
+      error: NodeJS.ErrnoException | null,
+      address: string | import('node:dns').LookupAddress[],
+      family?: number,
+    ) => void,
+  ) => void
+  export function isIP(input: string): number
+  export class BlockList {
+    addSubnet(network: string, prefix: number, type?: 'ipv4' | 'ipv6'): void
+    check(address: string, type?: 'ipv4' | 'ipv6'): boolean
+  }
 }

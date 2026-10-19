@@ -75,8 +75,13 @@ billing and hosted inference; there is no telemetry. Network destinations are:
 | The `agent-reach` CLI, if the user has installed it | diagnostics and explicit commands after approval; the CLI is not a generic search/fetch provider |
 | Any MCP server the user explicitly enables | tool calls the agent makes |
 
-Web tools can be disabled in settings. `web_fetch` rejects loopback, `.local`,
-and RFC1918 URLs; `link_world_exec` calls an external CLI only after explicit
+Web tools can be disabled in settings. Page requests normalize host aliases and
+reject local, private and reserved IP addresses. Direct requests use a
+connection-bound DNS lookup that rejects mixed public/private answers, reject
+redirects, and cap response bodies at 2 MiB. They do not use a host-network
+fallback that could bypass this policy. Explicitly configured BYOK and MCP
+endpoints retain their separate trust boundary and may be local.
+`link_world_exec` calls an external CLI only after explicit
 approval and is not constrained by that URL guard. Fetched page content is
 treated as untrusted data, never as instructions.
 
