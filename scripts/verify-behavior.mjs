@@ -4097,3 +4097,82 @@ test('Lite identity is canonical, needs no key, and cannot reach the remote mode
     }
   }, /local runtime/)
 })
+
+for (const failure of ['partial-write', 'rename', 'compromised', 'expired']) {
+  test(`Global BYOK preserves its prior envelope and cleans temporary files after ${failure}`, async () => {
+    const fs = await import('node:fs/promises')
+    const root = await mkdtemp(join(tmpdir(), 'catea-byok-failure-'))
+    const path = join(root, 'byok.enc')
+    const cipher = {
+      isEncryptionAvailable: () => true,
+      encryptString: (value) => Buffer.from(value).reverse(),
+      decryptString: (value) => Buffer.from(value).reverse().toString(),
+    }
+    const profile = { models: [{ id: 'fixture', apiKey: 'fixture-key' }], deletedIds: ['deleted'] }
+    const before = JSON.stringify({
+      version: 1,
+      ciphertext: cipher.encryptString(JSON.stringify(profile)).toString('base64'),
+    })
+    let compromise,
+      releases = 0,
+      renames = 0,
+      clock = 0,
+      mode = failure
+    class Clock extends Date {
+      static now() {
+        return clock
+      }
+    }
+    const fixture = {
+      ...fs,
+      async writeFile(...args) {
+        await fs.writeFile(...args)
+        if (mode === 'partial-write') throw new Error('Fixture write failure')
+        if (mode === 'compromised') compromise(new Error('Fixture lost lease'))
+        if (mode === 'expired') clock += 60_000
+      },
+      async rename(...args) {
+        renames++
+        if (mode === 'rename') throw new Error('Fixture rename failure')
+        await fs.rename(...args)
+      },
+    }
+    try {
+      await fs.writeFile(path, before)
+      const { GlobalByokStore } = await load(
+        'apps/obsidian/src/global-byok.ts',
+        {
+          'proper-lockfile': 'export const lock=(...args)=>globalThis.lockFixture(...args)',
+          'node:fs/promises': ['mkdir', 'readFile', 'writeFile', 'rename', 'rm']
+            .map((name) => `export const ${name}=(...args)=>globalThis.fsFixture.${name}(...args)`)
+            .join(';'),
+        },
+        {
+          Date: Clock,
+          fsFixture: fixture,
+          lockFixture: async (_path, options) => {
+            compromise = options.onCompromised
+            return async () => {
+              releases++
+            }
+          },
+        },
+      )
+      const store = new GlobalByokStore(path, cipher)
+      await store.load()
+      await assert.rejects(
+        store.save({ models: [], deletedIds: ['fixture', 'deleted'] }),
+        /Fixture|锁已失效/,
+      )
+      assert.equal(await fs.readFile(path, 'utf8'), before)
+      assert.deepEqual(await fs.readdir(root), ['byok.enc'])
+      assert.equal(renames, mode === 'rename' ? 1 : 0)
+      assert.equal(releases, mode === 'compromised' ? 0 : 1)
+      mode = 'healthy'
+      await store.save(profile)
+      assert.equal(JSON.stringify(await store.load()), JSON.stringify(profile))
+    } finally {
+      await rm(root, { recursive: true, force: true })
+    }
+  })
+}

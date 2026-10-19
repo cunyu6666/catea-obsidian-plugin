@@ -1,11 +1,12 @@
 /**
  * [WHO]: Provides ByokProfile, GlobalByokStore, mergeByokProfiles
- * [FROM]: Depends on node:fs/promises, node:path, ../../../packages/agent-core/src/types
+ * [FROM]: Depends on node:fs/promises, node:path, proper-lockfile, ../../../packages/agent-core/src/types
  * [TO]: Consumed by apps/obsidian/src/main.tsx
  * [HERE]: apps/obsidian/src/global-byok.ts - encrypted, machine-local BYOK model storage shared by Obsidian vaults
  */
-import { mkdir, readFile, rename, writeFile } from 'node:fs/promises'
+import { mkdir, readFile, rename, writeFile, rm } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
+import { lock } from 'proper-lockfile'
 import type { ModelConfig } from '../../../packages/agent-core/src/types'
 
 // Structural narrowing instead of an ErrnoException cast. Kept file-local
@@ -100,21 +101,54 @@ export class GlobalByokStore {
   }
 
   async save(profile: ByokProfile): Promise<void> {
+    const revision = this.revision
     const encrypted = Buffer.from(this.cipher.encryptString(JSON.stringify(profile)))
     await mkdir(dirname(this.path), { recursive: true, mode: 0o700 })
-    let current: string | null
+    let compromised = false
+    const deadline = Date.now() + 50_000
+    let release: () => Promise<void>
     try {
-      current = await readFile(this.path, 'utf8')
+      release = await lock(this.path, {
+        realpath: false,
+        stale: 60_000,
+        update: 10_000,
+        retries: { retries: 10, minTimeout: 50, maxTimeout: 100, factor: 1.2 },
+        onCompromised: () => {
+          compromised = true
+        },
+      })
     } catch (error) {
-      if (errnoCode(error) !== 'ENOENT') throw error
-      current = null
+      if (errnoCode(error) === 'ELOCKED')
+        throw new Error('本机 BYOK 正在被其他知识库更新，请稍后重试')
+      throw error
     }
-    if (current !== this.revision)
-      throw new Error('另一知识库更新了本机 BYOK，请重新打开当前知识库后重试')
     const temp = `${this.path}.${crypto.randomUUID()}.tmp`
-    const next = JSON.stringify({ version: 1, ciphertext: encrypted.toString('base64') })
-    await writeFile(temp, next, { mode: 0o600 })
-    await rename(temp, this.path)
-    this.revision = next
+    const assertLock = () => {
+      if (compromised || Date.now() >= deadline)
+        throw new Error('本机 BYOK 写入锁已失效，请稍后重试')
+    }
+    try {
+      let current: string | null
+      try {
+        current = await readFile(this.path, 'utf8')
+      } catch (error) {
+        if (errnoCode(error) !== 'ENOENT') throw error
+        current = null
+      }
+      assertLock()
+      if (current !== revision)
+        throw new Error('另一知识库更新了本机 BYOK，请重新打开当前知识库后重试')
+      const next = JSON.stringify({ version: 1, ciphertext: encrypted.toString('base64') })
+      await writeFile(temp, next, { mode: 0o600, flag: 'wx' })
+      assertLock()
+      await rename(temp, this.path)
+      this.revision = next
+    } finally {
+      try {
+        await rm(temp, { force: true })
+      } finally {
+        if (!compromised) await release()
+      }
+    }
   }
 }

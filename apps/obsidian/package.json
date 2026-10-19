@@ -9,6 +9,7 @@
     "@wllama/wllama": "2.4.0",
     "catea-components": "^0.1.0",
     "motion": "^12.43.0",
+    "proper-lockfile": "4.1.2",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-markdown": "^10.1.0",

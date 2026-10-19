@@ -1,5 +1,12 @@
 # Source notices
 
+## Shared BYOK file lock
+
+The machine-local BYOK store uses `proper-lockfile` 4.1.2 (MIT) for cooperative
+cross-process locking. Source: https://github.com/moxystudio/node-proper-lockfile.
+Its bundled dependencies `graceful-fs` (ISC), `retry` (MIT), and `signal-exit` (ISC)
+retain their original notices in `BYOK-LOCK-LICENSE.txt` and in the bundle header.
+
 ## Local auxiliary model
 
 Catea Lite is the product display name for Qwen3-0.6B, not a separately trained

@@ -22,7 +22,7 @@ memory-labels.ts: Display names and one-line descriptions for the 19 memory type
 memory-icons.ts: One Remix Icon 4.9.1 line glyph per memory type, inlined as SVG strings following the `vendor-icons.ts` precedent so no build step or asset directory is involved; `memoryIconUrl()` returns a CSS-ready data URL for mask rendering.
 folder-icons.ts: Folder context-menu picker with ten Remix line icons and ten colors, persisted per path, tracking folder rename and deletion.
 git-history.ts: Shell-free Git inspection with timeout and output caps; history and commit stats are scoped to the vault.
-global-byok.ts: Stores BYOK model profiles in an encrypted machine-local file under Obsidian userData, with migration from vault-local profiles and deletion tombstones.
+global-byok.ts: Stores BYOK model profiles in an encrypted machine-local file under Obsidian userData, with migration from vault-local profiles and deletion tombstones. A bounded proper-lockfile lease serializes cross-process revision checks and temp+rename publication; stale writers fail explicitly and failed writes clean up their temporary files.
 composition.ts: Injects separate local chat and optional title clients with a dynamic model collection, creates shared conversation storage and memory, routes background memory diagnostics to the console without toast notifications, then injects them into each tab's Agent at the Obsidian boundary.
 DiagramDialog.tsx: Portals children into a native `<dialog>` opened with `showModal()`, giving Escape handling, focus trap and focus restore for diagram zoom.
 MermaidDiagram.tsx: Renders Mermaid through Obsidian `loadMermaid` after a 180 ms debounce; zoom clamped to 0.25-4x.
