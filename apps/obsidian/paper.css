@@ -167,7 +167,7 @@ body.gp-enabled .workspace-split.mod-horizontal > * > .workspace-leaf-resize-han
   background:linear-gradient(to right,transparent 0%,var(--gp-accent) 22%,var(--gp-accent) 78%,transparent 100%);
 }
 body.gp-enabled .workspace-leaf-resize-handle:is(:hover,.is-active,.mobile-tap)::after {opacity:1;}
-body.gp-enabled.gp-hide-ribbon .workspace-ribbon.mod-left {display:none;}
+body.gp-enabled.gp-hide-ribbon .workspace-ribbon:is(.mod-left,.mod-primary) {display:none;}
 body.gp-enabled.gp-hide-status .status-bar {display:none;}
 body.gp-enabled.gp-enabled.gp-hide-properties .mod-root .metadata-container {display:none;}
 body.gp-enabled.gp-enabled.gp-toolbar-on :is(#editingToolbarModalBar,#editingToolbarPopoverBar) {display:none;}
@@ -190,7 +190,7 @@ body.gp-enabled button.copy-code-button svg {display:block;margin:0;}
 @media(prefers-reduced-transparency:reduce){body.gp-enabled :is(.mod-left-split,.mod-right-split){background:var(--gp-shell-background);backdrop-filter:none;}}
 
 /* A single shell surface for navigation, explorer and extension panels. */
-body.gp-enabled :is(.workspace-sidedock-vault-profile,.workspace-ribbon.mod-left:before) {background:var(--gp-shell-background);}
+body.gp-enabled :is(.workspace-sidedock-vault-profile,.workspace-ribbon:is(.mod-left,.mod-primary):before) {background:var(--gp-shell-background);}
 body.gp-enabled .mod-right-split .catui-acp-view {--catui-background:var(--gp-shell-background);background:var(--gp-shell-background);}
 /* Keep the native virtual tree geometry: label inset 24 - icon offset 20
    + half icon width 8 = guide inset 12. */
@@ -375,9 +375,9 @@ body.gp-enabled .catui-acp-view .catui-send-button:not(:disabled):hover {backgro
 
 /* Collapsing the explorer activates a more specific native ribbon background.
    Pin both states (and the titlebar cap) to the same opaque shell surface. */
-body.gp-enabled.gp-enabled .workspace-ribbon.mod-left,
-body.gp-enabled.gp-enabled .workspace-ribbon.mod-left.is-collapsed,
-body.gp-enabled.gp-enabled .workspace-ribbon.mod-left::before {
+body.gp-enabled.gp-enabled .workspace-ribbon:is(.mod-left,.mod-primary),
+body.gp-enabled.gp-enabled .workspace-ribbon:is(.mod-left,.mod-primary).is-collapsed,
+body.gp-enabled.gp-enabled .workspace-ribbon:is(.mod-left,.mod-primary)::before {
   background:var(--gp-shell-background);
   border-inline-end:0;box-shadow:none;transition:none;
 }
@@ -455,7 +455,7 @@ body.gp-enabled.mod-macos.is-hidden-frameless:not(.is-fullscreen) .mod-root .wor
 
 /* Vertical native ribbon dock: keep the original actions and their handlers.
    Neighbour magnification follows the React Bits Dock reference along the Y axis. */
-body.gp-enabled .workspace-ribbon.mod-left {
+body.gp-enabled .workspace-ribbon:is(.mod-left,.mod-primary) {
   --ribbon-width: 48px;
   width: 48px;
   flex-basis: 48px;
@@ -463,7 +463,7 @@ body.gp-enabled .workspace-ribbon.mod-left {
   align-items: center;
   padding: 12px 3px;
 }
-body.gp-enabled .workspace-ribbon.mod-left .side-dock-actions {
+body.gp-enabled .workspace-ribbon:is(.mod-left,.mod-primary) .side-dock-actions {
   position: fixed;
   top: 50%;
   left: 3px;
@@ -484,7 +484,7 @@ body.gp-enabled .workspace-ribbon.mod-left .side-dock-actions {
   background: #111615;
   box-shadow: 0 10px 28px rgba(12, 24, 18, .22);
 }
-body.gp-enabled .workspace-ribbon.mod-left .side-dock-actions::-webkit-scrollbar { display: none; }
+body.gp-enabled .workspace-ribbon:is(.mod-left,.mod-primary) .side-dock-actions::-webkit-scrollbar { display: none; }
 body.gp-enabled .side-dock-actions .side-dock-ribbon-action {
   --dock-size: 30px;
   --dock-icon: 18px;

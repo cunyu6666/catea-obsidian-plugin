@@ -596,7 +596,9 @@ export default class Catea extends Base {
           .map((leaf) => leaf.view.containerEl.ownerDocument),
       ])
       for (const doc of docs) {
-        const dock = doc.querySelector('.workspace-ribbon.mod-left .side-dock-actions')
+        const dock = doc.querySelector(
+          '.workspace-ribbon:is(.mod-left,.mod-primary) .side-dock-actions',
+        )
         if (dock) decorate(dock)
         if (documents.has(doc)) continue
         documents.add(doc)
