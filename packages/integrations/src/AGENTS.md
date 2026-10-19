@@ -23,6 +23,8 @@ storage.ts: Vault confinement through `within()` with realpath checks and explic
 tools.ts: Filesystem tool surface (time/read/ls/find/grep/write/edit/bash) with approval gates and original/modified records for successful structured writes; 1 MB text cap, 10000-file walk, 300-line read, 80 grep hits, 100 KB write, 60 s bash.
 web.ts: `web_search` and `web_fetch` via Exa MCP, Jina, DuckDuckGo or direct fetch; `link_world_admin` diagnoses Agent Reach and `link_world_exec` runs approved CLI arguments; blocks local and private hosts for page requests.
 
+public-network.ts: Public URL normalization and connection-bound DNS validation rejecting private, reserved and mixed address sets for untrusted web requests.
+
 ## Notes
 
 - Member descriptions above name `.catea/...` because that is the released default. Every path is built through `dataPath()` from `data-dir.ts`, so a development bundle relocates the whole tree to `.catea-dev/` and cannot read or write the released plugin's state. New state paths must go through `dataPath()` rather than hardcoding the directory.
