@@ -42,7 +42,7 @@ const dependencyRoot = (name) => {
   return directory
 }
 const skillLicenses = await Promise.all(
-  ['SKILL-CREATOR-LICENSE.txt', 'FIND-SKILL-LICENSE.txt'].map(
+  ['SKILL-CREATOR-LICENSE.txt', 'FIND-SKILL-LICENSE.txt', 'BYOK-LOCK-LICENSE.txt'].map(
     async (name) => `${name}\n${await readFile(resolve(root, name), 'utf8')}`,
   ),
 )
@@ -189,7 +189,7 @@ await copyFile(resolve(root, 'LICENSE'), resolve(out, 'LICENSE'))
 await copyFile(resolve(root, 'THIRD_PARTY_NOTICES.md'), resolve(out, 'THIRD_PARTY_NOTICES.md'))
 await copyFile(resolve(root, 'TABLER-LICENSE.txt'), resolve(out, 'TABLER-LICENSE.txt'))
 await copyFile(resolve(root, 'REMIX-LICENSE.txt'), resolve(out, 'REMIX-LICENSE.txt'))
-for (const name of ['SKILL-CREATOR-LICENSE.txt', 'FIND-SKILL-LICENSE.txt'])
+for (const name of ['SKILL-CREATOR-LICENSE.txt', 'FIND-SKILL-LICENSE.txt', 'BYOK-LOCK-LICENSE.txt'])
   await copyFile(resolve(root, name), resolve(out, name))
 await copyFile(resolve(root, 'LOCAL-MODEL-LICENSE.txt'), resolve(out, 'LOCAL-MODEL-LICENSE.txt'))
 

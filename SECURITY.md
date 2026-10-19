@@ -46,6 +46,18 @@ rejects the `basic_text` fallback. Existing vault-local models are imported on
 first open; the vault copy of model metadata is then cleared. A vault's selected
 model remains in its `.catea/config.json`.
 
+Shared-profile saves use a `proper-lockfile` directory lease, with a 60-second
+stale threshold and 10-second renewal. Lock acquisition retries for under one
+second of scheduled backoff, then fails explicitly rather than waiting forever.
+The revision captured at the start of a save is compared again while holding the
+lock; another vault's changes are never blindly merged. Detected lock loss aborts
+before publication. A crashed process's lock can be reclaimed after it becomes
+stale; do not manually remove a live lock. A 50-second save deadline also rejects
+an operation that resumes after its lease window. These are cooperative local-filesystem
+guarantees, not an OS-enforced transaction, fencing protocol, or power-loss
+durability guarantee. A process suspended beyond the lease requires particular
+care; full protection against arbitrary filesystem stalls is not claimed.
+
 MCP bearer tokens remain in Obsidian's vault-scoped secret storage, keyed
 `catea-mcp-<id>`. For stdio preset servers, the stored value is injected into
 the child-process environment under the configured variable name at connect

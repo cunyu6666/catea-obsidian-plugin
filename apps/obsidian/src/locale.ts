@@ -956,6 +956,10 @@ export function pendingReplyText(messageId: string, language: Language = 'zh'): 
 
 Object.assign(english, {
   日记: 'Diary',
+  '本机 BYOK 正在被其他知识库更新，请稍后重试':
+    'Another vault is updating the local BYOK profile. Please try again shortly.',
+  '本机 BYOK 写入锁已失效，请稍后重试':
+    'The local BYOK write lock was lost. Please try again shortly.',
   打开日记: 'Open diary',
   返回: 'Back',
   自定义: 'Customize',
