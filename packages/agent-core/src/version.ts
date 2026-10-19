@@ -5,4 +5,4 @@
  * [HERE]: packages/agent-core/src/version.ts - single runtime source for the plugin version; a governance test keeps it equal to manifest.json so the version cannot drift
  */
 
-export const PLUGIN_VERSION = '0.3.23'
+export const PLUGIN_VERSION = '0.3.24'
