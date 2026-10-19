@@ -1183,6 +1183,201 @@ test('MCP preset rows add a disabled server, route the key into env and clear se
   assert.deepEqual(secrets().at(-1), [`mcp-${server.id}`, ''])
 })
 
+test('Vault log protection canonicalizes aliases before write approval', async () => {
+  const { mkdtemp, mkdir, writeFile, readFile, rm } = await import('node:fs/promises')
+  const { tmpdir } = await import('node:os')
+  const { join } = await import('node:path')
+  const root = await mkdtemp(join(tmpdir(), 'catea-log-alias-'))
+  try {
+    await mkdir(join(root, 'wiki'))
+    await writeFile(join(root, 'wiki/log.md'), 'Original log\n')
+    const { VaultTools } = await load('packages/integrations/src/tools.ts')
+    let approvals = 0
+    const tools = new VaultTools(
+      root,
+      async () => {
+        approvals++
+        return true
+      },
+      async () => '',
+    )
+    await assert.rejects(
+      tools.run(
+        'write',
+        { path: 'wiki//log.md', content: 'Overwritten' },
+        new AbortController().signal,
+      ),
+      /只能追加/,
+    )
+    assert.equal(approvals, 0)
+    assert.equal(await readFile(join(root, 'wiki/log.md'), 'utf8'), 'Original log\n')
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+test('Shared vault paths reject traversal, hidden paths and platform aliases consistently', async () => {
+  const { vaultPath, writableVaultPath, isOperationLog } = await load(
+    'packages/integrations/src/vault-path.ts',
+  )
+  assert.equal(vaultPath('wiki//notes\\draft.md'), 'wiki/notes/draft.md')
+  assert.equal(vaultPath('', true), '')
+  for (const path of [
+    '',
+    '../note.md',
+    './wiki/log.md',
+    'wiki/../log.md',
+    '/wiki/log.md',
+    '\\wiki\\log.md',
+    'C:\\wiki\\log.md',
+    '.catea/config.json',
+    'wiki/.hidden.md',
+    'wiki/log.md:stream',
+    'wiki/log.md\0',
+    'wiki/log.md.',
+    'wiki /log.md',
+  ])
+    assert.throws(() => vaultPath(path), /相对路径/, path)
+  for (const path of ['raw/file.md', 'RAW\\file.md', 'raw//file.md'])
+    assert.throws(() => writableVaultPath(path), /raw/, path)
+  for (const path of ['wiki/log.md', 'wiki//log.md', 'wiki\\log.md', 'Wiki/LOG.md'])
+    assert.equal(isOperationLog(path), true, path)
+  assert.equal(isOperationLog('notes/log.md'), false)
+})
+
+test('Vault aliases retain append approvals, canonical change records and symlink rejection', async () => {
+  const { mkdir, writeFile, symlink } = await import('node:fs/promises')
+  const root = await mkdtemp(join(tmpdir(), 'catea-path-policy-'))
+  try {
+    await mkdir(join(root, 'wiki'))
+    await writeFile(join(root, 'wiki/log.md'), 'Original\n')
+    const { VaultTools } = await load('packages/integrations/src/tools.ts')
+    const changes = [],
+      details = []
+    const tools = new VaultTools(
+      root,
+      async (_title, detail) => {
+        details.push(JSON.parse(detail))
+        return true
+      },
+      async () => '',
+      () => 'assist',
+      (change) => changes.push(change),
+    )
+    const signal = new AbortController().signal
+    for (const path of ['wiki//log.md', 'wiki\\log.md'])
+      await assert.rejects(
+        tools.run('edit', { path, oldText: 'Original', newText: 'Replaced' }, signal),
+        /只能追加/,
+      )
+    await tools.run('write', { path: 'wiki\\log.md', content: 'Original\nAppended\n' }, signal)
+    await tools.run('write', { path: 'notes//new.md', content: 'New note' }, signal)
+    assert.equal(changes[0].filePath, 'wiki/log.md')
+    assert.equal(details[0].path, 'wiki/log.md')
+    assert.equal(changes[1].filePath, 'notes/new.md')
+    assert.equal(await readFile(join(root, 'wiki/log.md'), 'utf8'), 'Original\nAppended\n')
+    assert.equal(details.length, 2)
+    await symlink(join(root, 'wiki'), join(root, 'alias'), 'dir')
+    await assert.rejects(
+      tools.run('write', { path: 'alias/log.md', content: 'Replaced' }, signal),
+      /符号链接/,
+    )
+    assert.equal(details.length, 2)
+    const racing = new VaultTools(
+      root,
+      async () => {
+        await writeFile(join(root, 'notes/new.md'), 'Concurrent')
+        return true
+      },
+      async () => '',
+    )
+    await assert.rejects(
+      racing.run('write', { path: 'notes//new.md', content: 'Overwrite' }, signal),
+      /确认期间/,
+    )
+    assert.equal(await readFile(join(root, 'notes/new.md'), 'utf8'), 'Concurrent')
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+test('Native Obsidian tools share aliases and protect log edits, properties, moves and deletion', async () => {
+  class FixtureFile {}
+  const log = Object.assign(new FixtureFile(), {
+    path: 'wiki/log.md',
+    extension: 'md',
+    stat: { size: 9 },
+  })
+  const note = Object.assign(new FixtureFile(), {
+    path: 'note.md',
+    extension: 'md',
+    stat: { size: 9 },
+  })
+  const seen = []
+  const plugin = {
+    app: {
+      vault: {
+        getAbstractFileByPath(path) {
+          seen.push(path)
+          return path === log.path ? log : path === note.path ? note : null
+        },
+        read: async () => 'Original\n',
+      },
+      workspace: { getLeavesOfType: () => [], getActiveFile: () => null, on: () => ({}) },
+    },
+    agentSettings: { permissionMode: 'assist' },
+    registerEvent() {},
+  }
+  const { ObsidianTools } = await load(
+    'apps/obsidian/src/obsidian-tools.ts',
+    {
+      obsidian:
+        'export const TFile=globalThis.FixtureFile; export class TFolder{}; export class MarkdownView{}; export const getAllTags=()=>[]; export const getFrontMatterInfo=()=>({exists:false}); export const parseYaml=()=>({})',
+    },
+    { FixtureFile },
+  )
+  let approvals = 0
+  const tools = new ObsidianTools(plugin, async () => {
+    approvals++
+    return true
+  })
+  const signal = new AbortController().signal
+  for (const path of ['wiki//log.md', 'wiki\\log.md']) {
+    await assert.rejects(
+      tools.run('obsidian_edit', { path, oldText: 'Original', newText: 'Overwrite' }, signal),
+      /追加/,
+    )
+    await assert.rejects(
+      tools.run('obsidian_properties', { path, action: 'set', key: 'title', value: 'New' }, signal),
+      /追加/,
+    )
+    await assert.rejects(tools.run('obsidian_manage', { path, action: 'trash' }, signal), /日志/)
+    await assert.rejects(
+      tools.run('obsidian_manage', { path, action: 'rename', newPath: 'archive.md' }, signal),
+      /日志/,
+    )
+  }
+  await assert.rejects(
+    tools.run(
+      'obsidian_manage',
+      { path: 'note.md', action: 'rename', newPath: 'wiki//log.md' },
+      signal,
+    ),
+    /目标路径不可用/,
+  )
+  await assert.rejects(
+    tools.run(
+      'obsidian_manage',
+      { path: 'RAW\\new.md', action: 'create', content: 'Disallowed' },
+      signal,
+    ),
+    /raw/,
+  )
+  assert.equal(approvals, 0)
+  assert.ok(seen.includes('wiki/log.md'))
+  assert.ok(!seen.some((path) => path.includes('//') || path.includes('\\')))
+})
+
 test('Certificate fallback lazily loads the host transport without relaxing TLS', async () => {
   let called = false
   const { serviceFetch } = await load(

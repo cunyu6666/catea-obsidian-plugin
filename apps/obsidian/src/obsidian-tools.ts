@@ -1,6 +1,6 @@
 /**
  * [WHO]: Provides ObsidianTools, obsidianTools
- * [FROM]: Depends on ../../../packages/agent-core/src/i18n, ../../../packages/agent-core/src/permission-policy, ../../../packages/agent-core/src/types, obsidian, ./main, ../../../packages/agent-core/src/providers, ../../../packages/integrations/src/tools
+ * [FROM]: Depends on ../../../packages/agent-core/src/i18n, ../../../packages/agent-core/src/permission-policy, ../../../packages/agent-core/src/types, obsidian, ./main, ../../../packages/agent-core/src/providers, ../../../packages/integrations/src/tools, ../../../packages/integrations/src/vault-path
  * [TO]: Consumed by apps/obsidian/src/main.tsx
  * [HERE]: apps/obsidian/src/obsidian-tools.ts - eight obsidian_* tools over the Obsidian API with hidden-path guards; search 50 hits, read 300 lines x 2000 chars, note cap 2 MB, write cap 100 KB
  */
@@ -11,6 +11,11 @@ import type Catea from './main'
 import type { ToolDefinition } from '../../../packages/agent-core/src/providers'
 import type { FileChange } from '../../../packages/agent-core/src/types'
 import type { Approve } from '../../../packages/integrations/src/tools'
+import {
+  vaultPath,
+  writableVaultPath,
+  isOperationLog,
+} from '../../../packages/integrations/src/vault-path'
 const str = { type: 'string' },
   integer = { type: 'integer', minimum: 0 }
 const tool = (
@@ -145,15 +150,7 @@ export class ObsidianTools {
     return this.plugin.app
   }
   private path(value: unknown) {
-    const path = textValue(value).replace(/\\/g, '/')
-    if (
-      !path ||
-      path.startsWith('/') ||
-      path.split('/').some((p) => !p || p.startsWith('.')) ||
-      path.includes(':')
-    )
-      throw new Error('请使用知识库内的完整相对路径，不访问隐藏目录')
-    return path
+    return vaultPath(textValue(value))
   }
   private file(value: unknown) {
     const path = this.path(value),
@@ -162,7 +159,7 @@ export class ObsidianTools {
     return file
   }
   private writable(path: string) {
-    if (/^raw(?:\/|$)/.test(path)) throw new Error('raw 原始资料不可修改')
+    writableVaultPath(path)
     if (!/\.md$/i.test(path)) throw new Error('此工具只修改 Markdown 笔记')
   }
   private view(file: TFile) {
@@ -342,7 +339,7 @@ export class ObsidianTools {
       return JSON.stringify({ created: path })
     }
     const file = this.file(a.path),
-      path = file.path
+      path = this.path(file.path)
     if (name === 'obsidian_open') {
       const target = textValue(a.target || 'current')
       if (!['current', 'tab', 'split'].includes(target)) throw new Error('无效打开方式')
@@ -380,7 +377,7 @@ export class ObsidianTools {
           properties: key ? { [key]: Object.hasOwn(values, key) ? values[key] : null } : values,
         })
       this.writable(path)
-      if (path === 'wiki/log.md') throw new Error('日志只允许追加')
+      if (isOperationLog(path)) throw new Error('日志只允许追加')
       if (
         !['set', 'remove'].includes(action) ||
         !key ||
@@ -439,7 +436,7 @@ export class ObsidianTools {
         throw new Error('原文必须唯一匹配，请重新读取')
       const after = before.replace(oldText, () => newText)
       if (after.length > 100000) throw new Error('单次修改最多 100 KB')
-      if (path === 'wiki/log.md' && !after.startsWith(before)) throw new Error('日志只允许追加')
+      if (isOperationLog(path) && !after.startsWith(before)) throw new Error('日志只允许追加')
       await this.approved('修改笔记', { path, before, after }, signal)
       if (file.path !== path || (await this.content(file)) !== before)
         throw new Error('笔记已变化，请重新读取并确认')
@@ -451,11 +448,11 @@ export class ObsidianTools {
       return JSON.stringify({ updated: path })
     }
     if (name === 'obsidian_manage') {
-      if (path === 'wiki/log.md') throw new Error('不可移动或删除操作日志')
+      if (isOperationLog(path)) throw new Error('不可移动或删除操作日志')
       if (a.action === 'rename') {
         const newPath = this.path(a.newPath)
         this.writable(newPath)
-        if (newPath === 'wiki/log.md' || this.app.vault.getAbstractFileByPath(newPath))
+        if (isOperationLog(newPath) || this.app.vault.getAbstractFileByPath(newPath))
           throw new Error('目标路径不可用')
         await this.approved(
           '移动或重命名笔记',
