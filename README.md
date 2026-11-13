@@ -47,9 +47,7 @@ Catea can write a daily diary in your AI companion's own voice, based on complet
 
 After a local calendar day ends, Catea writes one entry per persona that had a conversation. It only records days when Catea was running and there were completed conversations. Unopened days are never backfilled, even if older conversations are later synced into the vault. By default, it uses your current chat model and consumes model usage; relevant conversation excerpts are sent to that endpoint. Turn off **Write a diary every day** in the diary panel to pause automatic generation. Entries and profile images stay in the vault under `.catea/diary/index.json`.
 
-For local inference, open **Settings → Catea → Local assistant** and enable **Local chat**, **Conversation titles**, or **Diaries** independently. Catea Lite downloads about 462 MB once, without a key or chat credits. Local chat then appears in the sidebar model picker with a **32K context** and supports text conversations only. Progress and retry appear beside the shared download; **Delete download** turns off all three features and frees its disk space. See [local inference](./docs/LOCAL_MODEL.md) for verification and limits.
-
-This feature is in the working source and is not yet in a published release.
+For local inference, open **Settings → Catea → Local assistant** and enable **Local chat**, **Conversation titles**, or **Diaries** independently. Catea Lite downloads about 462 MB once, without a key or chat credits. Local chat then appears in the sidebar model picker with a **32K context** and supports text conversations only. Progress and retry appear beside the shared download; **Delete download** turns off all three features and frees its disk space. Companion diary and Catea Lite have shipped since **0.3.23**. See [local inference](./docs/LOCAL_MODEL.md) for verification and limits.
 
 ## Choose how you connect
 
