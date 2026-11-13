@@ -3,6 +3,29 @@
 Notable changes per release. The version is the one in `manifest.json`; the GitHub
 release tag is that same number with no `v` prefix.
 
+## 0.3.25
+
+### Fixed
+
+- Serialize shared BYOK profile writes across Obsidian processes with a directory
+  lease so concurrent vaults cannot corrupt the encrypted key store.
+- Canonicalize paths before protected-file checks so vault and Obsidian tools
+  cannot bypass confinement through relative or link forms.
+- Bind public web requests to validated DNS answers instead of trusting a second
+  resolution after the safety check.
+- Build release assets before bundle inspection tests on clean checkouts so
+  `npm run check` does not require a prior manual build.
+
+## 0.3.24
+
+### Fixed
+
+- Adapt left ribbon selectors to the Obsidian 1.14 sidedock DOM so the Catea
+  ribbon control remains findable after the host layout change.
+- Restore production billing safeguards on the hosted service path. Subscription,
+  pricing and quota settings stay hidden while end-to-end verification is pending;
+  existing credentials and model compatibility are retained.
+
 ## 0.3.23
 
 ### Added

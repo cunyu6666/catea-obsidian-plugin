@@ -1,6 +1,7 @@
 # Catea Architecture
 
-Status: 2026-09-29, version 0.3.17.
+Status: 2026-11-13, version 0.3.25. Hosted Pro UI remains hidden pending billing
+verification; BYOK is the supported connection path in the product UI.
 
 Catea is a desktop-only Obsidian plugin. The agent loop, model transport, tools,
 memory adapter, and UI all run inside the Obsidian host process. There is no Catea

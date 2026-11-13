@@ -170,4 +170,5 @@ This small model trades richer persona prose and reasoning quality for a
 local runtime. Small-model diaries may still misstate or omit facts; the limited
 samples do not establish general factual accuracy. Windows, Linux, older Obsidian
 installers, GPU acceleration and large-vault diary backlogs have not been tested
-here. The feature is in working source and has not been published.
+here. Catea Lite has shipped since release **0.3.23**; those platform and quality
+limits still apply.
